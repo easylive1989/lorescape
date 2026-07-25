@@ -196,14 +196,14 @@ flutter_launcher_icons:
   min_sdk_android: 21
 
 flutter_native_splash:
-  color: "#1B1611"
+  color: "#F9F9F9"
   image: assets/images/splash_mark.png
-  color_dark: "#1B1611"
+  color_dark: "#F9F9F9"
   image_dark: assets/images/splash_mark.png
   android_12:
-    color: "#1B1611"
+    color: "#F9F9F9"
     image: assets/images/splash_mark.png
-    color_dark: "#1B1611"
+    color_dark: "#F9F9F9"
     image_dark: assets/images/splash_mark.png
   android: true
   ios: true

@@ -2,11 +2,12 @@ import 'package:context_app/app/config/lorescape_tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-/// 全螢幕品牌 splash：深墨底上的 Lorescape 山形 mark，約 1.8s 後導向 `/`。
+/// 全螢幕品牌 splash：淺底上的 Lorescape App icon，約 1.8s 後導向 `/`。
 ///
-/// mark 直接用品牌線稿資源 `assets/images/splash_mark.png`（與原生系統
-/// splash 的靜態 mark 為同一張），首幀即完整顯示、無縫交棒、logo 不跳動；
-/// 只有字標淡入與整體淡出會動。
+/// mark 直接用真實 App icon 資源 `assets/images/splash_mark.png`（與原生
+/// 系統 splash 為同一張），首幀即完整顯示、無縫交棒、logo 不跳動；只有字標
+/// 淡入與整體淡出會動。底色 [_splashBg] 刻意配合 icon 自帶的 near-white
+/// 背景，讓 icon 與底無縫（非主題色，故為 splash 專用常數）。
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -17,6 +18,11 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   static const _markAsset = 'assets/images/splash_mark.png';
+
+  /// Splash background — matches the App icon's own near-white background so
+  /// the icon blends seamlessly. Keep in sync with pubspec `flutter_native_splash`
+  /// and `tool/generate_splash_mark.py` `SPLASH_BG`.
+  static const _splashBg = Color(0xFFF9F9F9);
 
   late final AnimationController _controller;
   bool _precached = false;
@@ -55,14 +61,13 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    final tokens = context.tokens;
-    final bg = tokens.inkBg;
-    final line = tokens.paper;
+    final line = context.tokens.ink; // 深墨字標（淺底）
 
+    // Material 提供 DefaultTextStyle，Text 才不會出現「缺 Material」的黃色底線。
     return Semantics(
       label: 'Lorescape',
-      child: ColoredBox(
-        color: bg,
+      child: Material(
+        color: _splashBg,
         child: Center(
           child: AnimatedBuilder(
             animation: _controller,
