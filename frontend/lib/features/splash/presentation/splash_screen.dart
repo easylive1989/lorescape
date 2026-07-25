@@ -3,7 +3,10 @@ import 'package:context_app/features/splash/presentation/mountain_painter.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-/// 全螢幕品牌 splash：深墨底上的山形描線動畫，約 1.8s 後導向 `/`。
+/// 全螢幕品牌 splash：深墨底上的山形品牌動畫，約 1.8s 後導向 `/`。
+///
+/// 山形首幀即完整繪出（接續原生系統 splash 的靜態 mark、無縫交棒、logo 不
+/// 跳動）；動畫只跑足跡逐段淡入 → 字標淡入 → 整體淡出。
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -53,10 +56,12 @@ class _SplashScreenState extends State<SplashScreen>
               final v = _controller.value; // 0..1 over 1.8s
               double interval(double a, double b) =>
                   ((v - a) / (b - a)).clamp(0.0, 1.0);
-              final strokeT = interval(0.0, 0.56); // 0–1.0s
-              final footT = interval(0.5, 0.78); // 0.9–1.4s
-              final wordT = interval(0.67, 0.94); // 1.2–1.7s
-              final fadeOut = 1.0 - interval(0.94, 1.0); // 1.7–1.8s
+              // 山形與足跡首幀即完整（對齊原生 splash 的靜態 mark，無縫
+              // 交棒、logo 不跳動）；只有字標淡入與整體淡出會動。
+              const strokeT = 1.0;
+              const footT = 1.0;
+              final wordT = interval(0.35, 0.68); // 字標淡入
+              final fadeOut = 1.0 - interval(0.85, 1.0); // 整體淡出→導向
 
               return Opacity(
                 opacity: fadeOut,
