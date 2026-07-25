@@ -11,6 +11,7 @@ import 'package:context_app/features/narration/presentation/screens/narration_sc
 import 'package:context_app/features/narration/domain/models/narration_content.dart';
 import 'package:context_app/features/onboarding/presentation/controllers/onboarding_controller.dart';
 import 'package:context_app/features/onboarding/presentation/screens/onboarding_welcome_screen.dart';
+import 'package:context_app/features/splash/presentation/splash_screen.dart';
 import 'package:context_app/features/subscription/presentation/screens/subscription_screen.dart';
 import 'package:context_app/features/trip/presentation/screens/trip_detail_screen.dart';
 import 'package:context_app/features/trip/presentation/screens/trip_edit_screen.dart';
@@ -25,7 +26,7 @@ class RouterConfig {
 
   static GoRouter createRouter(Ref ref) {
     return GoRouter(
-      initialLocation: '/',
+      initialLocation: '/splash',
       // Feeds GA4 screen_view with real screen names; see
       // routeObserversProvider.
       observers: ref.read(routeObserversProvider),
@@ -55,6 +56,11 @@ class RouterConfig {
         return null;
       },
       routes: [
+        GoRoute(
+          path: '/splash',
+          name: 'splash',
+          builder: (context, state) => const SplashScreen(),
+        ),
         GoRoute(
           path: '/',
           name: 'home',
