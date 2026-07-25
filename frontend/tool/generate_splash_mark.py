@@ -18,7 +18,7 @@ REPO = Path(__file__).resolve().parents[2]
 SRC = REPO / "marketing" / "brand" / "launch_icon_light.png"
 OUT = REPO / "frontend" / "assets" / "images" / "splash_mark.png"
 SIZE = 512
-MARGIN = 0.10  # empty border fraction
+MARGIN = 0.20  # empty border fraction
 BLUE = (26, 83, 148)  # brand blue #1A5394, matches the icon stroke
 SPLASH_BG = "#F9F9F9"  # keep in sync with pubspec + SplashScreen bg
 

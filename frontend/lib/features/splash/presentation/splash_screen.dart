@@ -84,8 +84,8 @@ class _SplashScreenState extends State<SplashScreen>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const SizedBox(
-                      width: 160,
-                      height: 160,
+                      width: 210,
+                      height: 210,
                       child: Image(
                         image: AssetImage(_markAsset),
                         fit: BoxFit.contain,
