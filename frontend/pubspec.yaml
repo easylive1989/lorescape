@@ -135,6 +135,7 @@ dev_dependencies:
   # E2E testing with Patrol
   patrol: ^3.20.0
   mocktail: ^1.0.4
+  flutter_native_splash: ^2.4.7
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -152,6 +153,7 @@ flutter:
     - assets/images/categories/
     - assets/images/onboarding/
     - assets/images/subscription/
+    - assets/images/splash_mark.png
     - assets/translations/
     # 由 tool/build_map_style.py 產生，勿手改（見 docs/adr/0005-map-tile-provider.md）
     - assets/map/
@@ -192,4 +194,18 @@ flutter_launcher_icons:
   ios: true
   image_path: "assets/icon/launch_icon_light.png"
   min_sdk_android: 21
+
+flutter_native_splash:
+  color: "#1B1611"
+  image: assets/images/splash_mark.png
+  color_dark: "#1B1611"
+  image_dark: assets/images/splash_mark.png
+  android_12:
+    color: "#1B1611"
+    image: assets/images/splash_mark.png
+    color_dark: "#1B1611"
+    image_dark: assets/images/splash_mark.png
+  android: true
+  ios: true
+  web: false
 
