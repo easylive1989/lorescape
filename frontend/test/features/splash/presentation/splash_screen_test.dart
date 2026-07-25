@@ -12,12 +12,12 @@ GoRouter _testRouter() => GoRouter(
     );
 
 void main() {
-  testWidgets('播放約 1.8s 後導向 /（顯示 HOME）', (tester) async {
+  testWidgets('播放約 2.4s 後導向 /（顯示 HOME）', (tester) async {
     await tester.pumpWidget(MaterialApp.router(routerConfig: _testRouter()));
     // 一開始在 splash，不是 HOME。
     expect(find.text('HOME'), findsNothing);
     // 推進超過動畫時長。
-    await tester.pump(const Duration(milliseconds: 1900));
+    await tester.pump(const Duration(milliseconds: 2500));
     await tester.pumpAndSettle();
     expect(find.text('HOME'), findsOneWidget);
   });

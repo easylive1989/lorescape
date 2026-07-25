@@ -1,13 +1,12 @@
 import 'package:context_app/app/config/lorescape_tokens.dart';
+import 'package:context_app/features/splash/presentation/splash_mark_painter.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-/// 全螢幕品牌 splash：淺底上的 Lorescape App icon，約 1.8s 後導向 `/`。
-///
-/// mark 直接用真實 App icon 資源 `assets/images/splash_mark.png`（與原生
-/// 系統 splash 為同一張），首幀即完整顯示、無縫交棒、logo 不跳動；只有字標
-/// 淡入與整體淡出會動。底色 [_splashBg] 刻意配合 icon 自帶的 near-white
-/// 背景，讓 icon 與底無縫（非主題色，故為 splash 專用常數）。
+/// 依 Claude Design 稿重製的品牌 splash：紙感米白底上，山形 mark（輪廓接續
+/// 原生 splash）→ 山體填色與雪頂淡入 → 5 枚足跡逐一彈入 → serif 字標、分隔線、
+/// 副標、頁尾依序登場，約 2.4s 後導向 `/`。
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -17,15 +16,12 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
-  static const _markAsset = 'assets/images/splash_mark.png';
-
-  /// Splash background — matches the App icon's own near-white background so
-  /// the icon blends seamlessly. Keep in sync with pubspec `flutter_native_splash`
-  /// and `tool/generate_splash_mark.py` `SPLASH_BG`.
-  static const _splashBg = Color(0xFFF9F9F9);
+  // 設計稿的 splash 專用色（非主題色）。
+  static const _brand = Color(0xFF12558C);
+  static const _slope = Color(0xFFF1EEE8);
+  static const _snow = Color(0xFFFFFFFF);
 
   late final AnimationController _controller;
-  bool _precached = false;
 
   @override
   void initState() {
@@ -33,24 +29,13 @@ class _SplashScreenState extends State<SplashScreen>
     _controller =
         AnimationController(
           vsync: this,
-          duration: const Duration(milliseconds: 1800),
+          duration: const Duration(milliseconds: 2400),
         )..addStatusListener((status) {
           if (status == AnimationStatus.completed && mounted) {
             context.go('/');
           }
         });
     _controller.forward();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Decode the mark ahead of the first paint so it shows immediately and
-    // the native → Flutter handoff stays seamless.
-    if (!_precached) {
-      _precached = true;
-      precacheImage(const AssetImage(_markAsset), context);
-    }
   }
 
   @override
@@ -61,52 +46,126 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    final line = context.tokens.ink; // 深墨字標（淺底）
+    final tokens = context.tokens;
+    final paper = tokens.paper;
+    final ink = tokens.ink;
+    final ink3 = tokens.ink3;
+    final lineStrong = tokens.lineStrong;
 
-    // Material 提供 DefaultTextStyle，Text 才不會出現「缺 Material」的黃色底線。
     return Semantics(
       label: 'Lorescape',
       child: Material(
-        color: _splashBg,
-        child: Center(
+        color: paper,
+        child: DecoratedBox(
+          // 極淡暈影（呼應設計稿 radial vignette）。
+          decoration: const BoxDecoration(
+            gradient: RadialGradient(
+              center: Alignment(0, -0.16),
+              radius: 1.1,
+              colors: [Colors.transparent, Color(0x175E5341)],
+              stops: [0.4, 1.0],
+            ),
+          ),
           child: AnimatedBuilder(
             animation: _controller,
             builder: (context, _) {
-              final v = _controller.value; // 0..1 over 1.8s
-              double interval(double a, double b) =>
+              final v = _controller.value;
+              double iv(double a, double b) =>
                   ((v - a) / (b - a)).clamp(0.0, 1.0);
-              final wordT = interval(0.35, 0.68); // 字標淡入
-              final fadeOut = 1.0 - interval(0.85, 1.0); // 整體淡出→導向
 
-              return Opacity(
-                opacity: fadeOut,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const SizedBox(
-                      width: 210,
-                      height: 210,
-                      child: Image(
-                        image: AssetImage(_markAsset),
-                        fit: BoxFit.contain,
-                        gaplessPlayback: true,
-                      ),
+              final strokeT = iv(0.08, 0.5); // 山形描線畫出
+              final fillOpacity = iv(0.42, 0.68); // 填色 + 雪頂淡入
+              final dashPops = <double>[
+                for (var i = 0; i < 5; i++) iv(0.5 + i * 0.05, 0.72 + i * 0.05),
+              ];
+              final wordT = iv(0.64, 0.82);
+              final ruleT = iv(0.72, 0.9);
+              final subT = iv(0.76, 0.94);
+              final footT = iv(0.85, 1.0);
+
+              Widget rise(double t, Widget child) => Opacity(
+                opacity: t,
+                child: Transform.translate(
+                  offset: Offset(0, (1 - t) * 14),
+                  child: child,
+                ),
+              );
+
+              return Stack(
+                children: [
+                  Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 196,
+                          height: 196,
+                          child: CustomPaint(
+                            painter: SplashMarkPainter(
+                              strokeProgress: strokeT,
+                              fillOpacity: fillOpacity,
+                              dashPops: dashPops,
+                              brand: _brand,
+                              slope: _slope,
+                              snow: _snow,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 28),
+                        rise(
+                          wordT,
+                          Text(
+                            'Lorescape',
+                            style: GoogleFonts.notoSerifTc(
+                              fontSize: 32,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 6,
+                              color: ink,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 15),
+                        Transform.scale(
+                          scaleX: ruleT,
+                          child: Container(
+                            width: 52,
+                            height: 1,
+                            color: lineStrong,
+                          ),
+                        ),
+                        const SizedBox(height: 13),
+                        rise(
+                          subT,
+                          Text(
+                            '口袋裡的旅行說書人',
+                            style: GoogleFonts.notoSansTc(
+                              fontSize: 12.5,
+                              letterSpacing: 3.5,
+                              color: ink3,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 24),
-                    Opacity(
-                      opacity: wordT,
-                      child: Text(
-                        'Lorescape',
-                        style: TextStyle(
-                          color: line,
-                          fontSize: 28,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 1,
+                  ),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 46,
+                    child: rise(
+                      footT,
+                      Text(
+                        'FIELD JOURNAL EDITION',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.notoSansTc(
+                          fontSize: 10.5,
+                          letterSpacing: 2.7,
+                          color: ink3,
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               );
             },
           ),
