@@ -10,10 +10,14 @@ import 'package:go_router/go_router.dart';
 class TripEmptyState extends StatelessWidget {
   const TripEmptyState({super.key});
 
-  /// 插圖尚未進版控時 `Image.asset` 會丟例外，由 `errorBuilder` 退回等高留白，
+  /// 插圖尚未進版控時 `Image.asset` 會丟例外，由 `errorBuilder` 退回等尺寸留白，
   /// 程式碼因此不必等素材就緒。詳見設計文件的「缺圖時的行為」。
   static const String _illustration = 'assets/images/empty_trip.png';
   static const double _illustrationSize = 200;
+
+  /// 素材是 1024×1024 的來源圖，直接以原尺寸解碼會佔約 4MB RGBA；
+  /// 依 3x 裝置的顯示密度換算成目標解碼寬度，避免在 200px 的版位上浪費記憶體。
+  static const int _illustrationCacheWidth = 600;
 
   @override
   Widget build(BuildContext context) {
@@ -27,15 +31,17 @@ class TripEmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // 純裝飾，語意交給下方的標題與按鈕承擔。
-            ExcludeSemantics(
-              child: Image.asset(
-                _illustration,
+            Image.asset(
+              _illustration,
+              width: _illustrationSize,
+              height: _illustrationSize,
+              cacheWidth: _illustrationCacheWidth,
+              fit: BoxFit.contain,
+              // 純裝飾，語意交給下方的標題與按鈕承擔。
+              excludeFromSemantics: true,
+              errorBuilder: (_, _, _) => const SizedBox(
                 width: _illustrationSize,
                 height: _illustrationSize,
-                fit: BoxFit.contain,
-                errorBuilder: (_, _, _) =>
-                    const SizedBox(height: _illustrationSize),
               ),
             ),
             const SizedBox(height: 24),

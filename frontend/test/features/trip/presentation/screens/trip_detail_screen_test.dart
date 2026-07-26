@@ -151,21 +151,34 @@ void main() {
     );
 
     testWidgets(
-      'given a trip with no entries, when the user taps the explore CTA, '
-      'then the app leaves the trip and lands on the explore tab',
+      'given a trip pushed from home with no entries, when the user taps '
+      'the explore CTA, then the app lands on the explore tab and the trip '
+      'is not left on the back stack',
       (tester) async {
+        final trip = buildTrip(id: 'empty', name: 'Empty Trip');
+        final tripRepo = InMemoryTripRepository();
+        final journeyRepo = InMemoryJourneyRepository();
+        await tripRepo.save(trip);
         final visitedLocations = <String>[];
 
-        await _givenEmptyTripScreenWithRouter(
+        await _givenTripDetailScreenWithRouter(
           tester,
+          tripId: 'empty',
+          tripRepo: tripRepo,
+          journeyRepo: journeyRepo,
           visitedLocations: visitedLocations,
         );
 
         await tester.tap(find.text('trip.empty_cta'));
         await tester.pumpAndSettle();
 
-        // 用 go 而非 push：空旅程不該留在返回堆疊裡。
         expect(visitedLocations, contains('/?tab=explore'));
+        // 用 go 而非 push：確認旅程路由被取代，返回堆疊裡沒留下它——若退回
+        // push，這裡會變成能 pop。
+        final homeContext = tester.element(
+          find.byKey(const ValueKey('home-screen')),
+        );
+        expect(Navigator.canPop(homeContext), isFalse);
       },
     );
 
@@ -533,6 +546,7 @@ Future<void> _givenTripDetailScreenWithRouter(
   required InMemoryTripRepository tripRepo,
   required InMemoryJourneyRepository journeyRepo,
   List<Object?>? playerExtras,
+  List<String>? visitedLocations,
 }) async {
   await pumpRouterApp(
     tester,
@@ -547,15 +561,19 @@ Future<void> _givenTripDetailScreenWithRouter(
       ),
       GoRoute(
         path: '/',
-        builder: (_, __) => Scaffold(
-          key: const ValueKey('home-screen'),
-          body: Builder(
-            builder: (context) => ElevatedButton(
-              onPressed: () => context.push('/detail'),
-              child: const Text('to-detail'),
+        builder: (_, state) {
+          // 只在呼叫方要驗證落點時記錄，其餘測試不受影響。
+          visitedLocations?.add(state.uri.toString());
+          return Scaffold(
+            key: const ValueKey('home-screen'),
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () => context.push('/detail'),
+                child: const Text('to-detail'),
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
       GoRoute(
         path: '/detail',
@@ -569,36 +587,6 @@ Future<void> _givenTripDetailScreenWithRouter(
   );
   await tester.tap(find.text('to-detail'));
   await tester.pumpAndSettle();
-}
-
-/// 直接開在一本沒有任何記錄的旅程上，並記下每次落在首頁的完整 URI。
-Future<void> _givenEmptyTripScreenWithRouter(
-  WidgetTester tester, {
-  required List<String> visitedLocations,
-}) async {
-  await pumpRouterApp(
-    tester,
-    initialLocation: '/trip/empty',
-    routes: [
-      GoRoute(
-        path: '/',
-        builder: (_, state) {
-          visitedLocations.add(state.uri.toString());
-          return const Scaffold(key: ValueKey('home-screen'));
-        },
-      ),
-      GoRoute(
-        path: '/trip/:id',
-        builder: (_, _) => const TripDetailScreen(tripId: 'empty'),
-      ),
-    ],
-    overrides: [
-      tripRepositoryProvider.overrideWithValue(InMemoryTripRepository()),
-      journeyRepositoryProvider.overrideWithValue(InMemoryJourneyRepository()),
-    ],
-  );
-  await tester.pump(const Duration(milliseconds: 20));
-  await tester.pump(const Duration(milliseconds: 20));
 }
 
 Future<void> _whenUserEntersSelectionMode(WidgetTester tester) async {

@@ -71,7 +71,16 @@ class RouterConfig {
               'journey' => 2,
               _ => 0,
             };
-            return MainScreen(initialIndex: index);
+            // GoRouter 的 pageKey 只看路徑（見 go_router 原始碼
+            // match.dart 的 `ValueKey<String>(newMatchedPath)`），同樣是
+            // `/` 但 tab 參數不同時會重用同一個 Page，MainScreen 的
+            // State 也就跟著留用——但 initialIndex 只在 initState 讀一次，
+            // 新的 tab 進不去。這裡用 tab 值當 widget key，逼 tab 改變時
+            // 強制重建 State，讓新的 initialIndex 生效。
+            return MainScreen(
+              key: ValueKey('main-screen-${tab ?? 'default'}'),
+              initialIndex: index,
+            );
           },
         ),
         GoRoute(
