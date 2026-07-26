@@ -1,3 +1,4 @@
+import 'package:context_app/features/explore/domain/models/place.dart';
 import 'package:context_app/features/journey/domain/models/journey_entry.dart';
 import 'package:context_app/features/journey/providers.dart';
 import 'package:context_app/features/trip/domain/models/trip.dart';
@@ -36,6 +37,42 @@ void main() {
 
         _thenTripNameIsVisible('Kyoto Temples');
         _thenNotebookPagerIsShown();
+      },
+    );
+
+    testWidgets(
+      'given a trip entry in reading mode, when the user taps replay, '
+      'then the player route receives that entry place, narration and autoplay',
+      (tester) async {
+        final trip = buildTrip(id: 'kyoto', name: 'Kyoto Temples');
+        final entry = buildJourneyEntry(
+          id: 'e1',
+          tripId: 'kyoto',
+          place: buildPlace(name: 'Kinkaku-ji', address: '1 Kinkakujicho'),
+        );
+        final tripRepo = InMemoryTripRepository();
+        final journeyRepo = InMemoryJourneyRepository();
+        await tripRepo.save(trip);
+        await journeyRepo.save(entry);
+        final playerExtras = <Object?>[];
+
+        await _givenTripDetailScreenWithRouter(
+          tester,
+          tripId: 'kyoto',
+          tripRepo: tripRepo,
+          journeyRepo: journeyRepo,
+          playerExtras: playerExtras,
+        );
+
+        await tester.tap(find.text('common.replay'));
+        await tester.pumpAndSettle();
+
+        final extra = playerExtras.single as Map<String, dynamic>;
+        expect((extra['place'] as Place).name, 'Kinkaku-ji');
+        expect((extra['place'] as Place).address, '1 Kinkakujicho');
+        expect(extra['narrationContent'], entry.narrationContent);
+        // 按下「重聽」本身就是要聽，不該再多按一次播放鍵。
+        expect(extra['autoPlay'], isTrue);
       },
     );
 
@@ -418,10 +455,19 @@ Future<void> _givenTripDetailScreenWithRouter(
   required String? tripId,
   required InMemoryTripRepository tripRepo,
   required InMemoryJourneyRepository journeyRepo,
+  List<Object?>? playerExtras,
 }) async {
   await pumpRouterApp(
     tester,
     routes: [
+      GoRoute(
+        name: 'player',
+        path: '/player',
+        builder: (_, state) {
+          playerExtras?.add(state.extra);
+          return const Scaffold(key: ValueKey('player-screen'));
+        },
+      ),
       GoRoute(
         path: '/',
         builder: (_, __) => Scaffold(

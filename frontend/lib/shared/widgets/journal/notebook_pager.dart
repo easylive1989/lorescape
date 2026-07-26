@@ -15,6 +15,7 @@ class NotebookPage {
     required this.text,
     this.address,
     this.imageUrl,
+    this.onPlay,
     this.onShare,
     this.onDelete,
   });
@@ -24,6 +25,9 @@ class NotebookPage {
   final String text;
   final String? address;
   final String? imageUrl;
+
+  /// 重新進入播放頁重聽這則記錄；null 時不顯示重聽鍵。
+  final VoidCallback? onPlay;
   final VoidCallback? onShare;
   final VoidCallback? onDelete;
 }
@@ -384,27 +388,42 @@ class _PageFooter extends StatelessWidget {
             '${'${index + 1}'.padLeft(2, '0')} / ${'$total'.padLeft(2, '0')}',
             style: TextStyle(fontSize: 13, letterSpacing: 0.5, color: ink3),
           ),
-          Row(
-            children: [
-              if (page.onShare != null)
-                _FooterAction(
-                  icon: Icons.ios_share,
-                  label: 'common.share'.tr(),
-                  onTap: page.onShare!,
-                ),
-              if (page.onDelete != null) ...[
-                const SizedBox(width: 18),
-                _FooterAction(
-                  icon: Icons.delete_outline,
-                  label: 'common.delete'.tr(),
-                  onTap: page.onDelete!,
-                ),
-              ],
-            ],
-          ),
+          Row(children: _actions()),
         ],
       ),
     );
+  }
+
+  /// 只排出有 callback 的動作，並在彼此之間插入間距——用 list 組而不是寫死
+  /// 三段 `if`，才不會在中間那顆缺席時留下多餘的空白。
+  List<Widget> _actions() {
+    final actions = <Widget>[
+      if (page.onPlay != null)
+        _FooterAction(
+          icon: Icons.play_circle_outline,
+          label: 'common.replay'.tr(),
+          onTap: page.onPlay!,
+        ),
+      if (page.onShare != null)
+        _FooterAction(
+          icon: Icons.ios_share,
+          label: 'common.share'.tr(),
+          onTap: page.onShare!,
+        ),
+      if (page.onDelete != null)
+        _FooterAction(
+          icon: Icons.delete_outline,
+          label: 'common.delete'.tr(),
+          onTap: page.onDelete!,
+        ),
+    ];
+
+    return [
+      for (var i = 0; i < actions.length; i += 1) ...[
+        if (i > 0) const SizedBox(width: 18),
+        actions[i],
+      ],
+    ];
   }
 }
 

@@ -1,6 +1,7 @@
 import 'package:context_app/features/export/domain/models/pdf_export_result.dart';
 import 'package:context_app/features/export/domain/services/trip_pdf_export_service.dart';
 import 'package:context_app/features/export/providers.dart';
+import 'package:context_app/features/journey/domain/models/journey_entry.dart';
 import 'package:context_app/features/journey/domain/models/journey_item.dart';
 import 'package:context_app/shared/widgets/journal/notebook_pager.dart';
 import 'package:context_app/features/journey/providers.dart';
@@ -423,6 +424,20 @@ class _ItemsList extends StatelessWidget {
     required this.onToggleSelection,
   });
 
+  /// 重聽已體驗過的記錄：記錄本身就存著完整敘事文字，播放頁只要拿到地點與
+  /// [NarrationContent] 就能重新合成語音，不必再打一次生成 API。
+  void _openPlayer(BuildContext context, JourneyEntry entry) {
+    context.pushNamed(
+      'player',
+      extra: {
+        'place': entry.place.toPlace(),
+        'narrationContent': entry.narrationContent,
+        // 按下「重聽」的意圖就是要聽，不必再多按一次播放鍵。
+        'autoPlay': true,
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return itemsAsync.when(
@@ -456,6 +471,7 @@ class _ItemsList extends StatelessWidget {
                     text: entry.narrationContent.text,
                     address: entry.place.address,
                     imageUrl: entry.place.imageUrl,
+                    onPlay: () => _openPlayer(context, entry),
                   ),
                 },
             ],
