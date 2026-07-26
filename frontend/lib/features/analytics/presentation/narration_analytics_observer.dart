@@ -111,7 +111,6 @@ class NarrationAnalyticsObserver extends Notifier<void> {
   }
 
   Future<void> _emitStarted(NarrationState next) async {
-    if (!await _consentEnabled()) return;
     final isFirstLifetime = await _readAndMarkFirstLifetime();
 
     final event = NarrationStarted(
@@ -122,7 +121,7 @@ class NarrationAnalyticsObserver extends Notifier<void> {
       source: NarrationEventSource.explore,
       isFirstLifetimeNarration: isFirstLifetime,
     );
-    await ref.read(analyticsServiceProvider).logEvent(event);
+    await ref.read(analyticsEmitterProvider).emitAndWait(event);
   }
 
   void _maybeEmitProgress(NarrationState next) {
@@ -152,7 +151,6 @@ class NarrationAnalyticsObserver extends Notifier<void> {
     int elapsedChars,
     int totalChars,
   ) async {
-    if (!await _consentEnabled()) return;
     // TODO(story-2): swap char count for real elapsed/total ms once
     // TtsService exposes playback duration in milliseconds.
     final event = NarrationProgress(
@@ -161,7 +159,7 @@ class NarrationAnalyticsObserver extends Notifier<void> {
       elapsedMs: elapsedChars,
       totalDurationMs: totalChars,
     );
-    await ref.read(analyticsServiceProvider).logEvent(event);
+    await ref.read(analyticsEmitterProvider).emitAndWait(event);
   }
 
   void _maybeEmitCompletion(NarrationState next) {
@@ -187,7 +185,6 @@ class NarrationAnalyticsObserver extends Notifier<void> {
     int totalChars,
     double progressPct,
   ) async {
-    if (!await _consentEnabled()) return;
     // TODO(story-2): swap char counts for real durations in ms.
     final event = NarrationCompleted(
       narrationId: _currentNarrationId!,
@@ -195,7 +192,7 @@ class NarrationAnalyticsObserver extends Notifier<void> {
       listenDurationMs: elapsedChars,
       completionRate: progressPct,
     );
-    await ref.read(analyticsServiceProvider).logEvent(event);
+    await ref.read(analyticsEmitterProvider).emitAndWait(event);
   }
 
   void _maybeEmitAbandonedOnStop(NarrationState? prev, NarrationState next) {
@@ -240,7 +237,6 @@ class NarrationAnalyticsObserver extends Notifier<void> {
     int elapsedChars,
     double progressPct,
   ) async {
-    if (!await _consentEnabled()) return;
     final event = NarrationAbandoned(
       narrationId: _currentNarrationId!,
       abandonReason: reason,
@@ -248,7 +244,7 @@ class NarrationAnalyticsObserver extends Notifier<void> {
       elapsedMs: elapsedChars,
       progressPct: progressPct,
     );
-    await ref.read(analyticsServiceProvider).logEvent(event);
+    await ref.read(analyticsEmitterProvider).emitAndWait(event);
   }
 
   /// Emitting is fire-and-forget by design (state transitions must not block
@@ -259,17 +255,6 @@ class NarrationAnalyticsObserver extends Notifier<void> {
     emit.catchError((Object error, StackTrace stackTrace) {
       _log.warning('Failed to emit $what', error, stackTrace);
     });
-  }
-
-  Future<bool> _consentEnabled() async {
-    // Await the prefs future before touching consentRepositoryProvider: that
-    // provider resolves SharedPreferences with `requireValue`, which throws on
-    // AsyncLoading. Riverpod caches such a build failure for the container's
-    // lifetime, so a single early read would permanently kill every narration
-    // event — silently, because callers never await this future.
-    await ref.read(sharedPreferencesProvider.future);
-    final state = await ref.read(consentRepositoryProvider).read();
-    return state.enabled;
   }
 
   Future<SharedPreferences> _resolvePrefs() async {

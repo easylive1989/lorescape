@@ -44,49 +44,28 @@ class FirebaseAnalyticsService implements AnalyticsService {
 /// Converts [event] into a `Map<String, Object>` suitable for
 /// [FirebaseAnalytics.logEvent].
 ///
-/// Common envelope fields ([AnalyticsEvent.eventId],
-/// [AnalyticsEvent.narrationId], [AnalyticsEvent.occurredAt]) are
-/// always included alongside the subtype-specific payload. `bool`
-/// values are coerced to `int` so they satisfy the Firebase Analytics
-/// parameter contract.
+/// [AnalyticsEvent.eventId] and [AnalyticsEvent.occurredAt] are always
+/// included, followed by the event family's [AnalyticsEvent.envelope] (e.g.
+/// `narration_id`) and the subtype's [AnalyticsEvent.payload]. `bool` values
+/// are coerced to `int` and null values dropped, so the result satisfies the
+/// Firebase Analytics parameter contract.
+///
+/// 刻意由 `envelope()` / `payload()` 推導而不是逐型別列欄位：新增事件只要定義
+/// 好 payload 就會自動送出，不必記得回來改這裡。
 ///
 /// Exposed as a top-level function so it can be unit-tested without
 /// instantiating the Firebase SDK.
 Map<String, Object> firebaseParametersFor(AnalyticsEvent event) {
-  final Map<String, Object> base = {
+  final Map<String, Object> parameters = {
     'event_id': event.eventId,
-    'narration_id': event.narrationId,
     'occurred_at': event.occurredAt.toIso8601String(),
   };
 
-  final Map<String, Object?> subtype = switch (event) {
-    NarrationStarted() => {
-      'place_id': event.placeId,
-      'source': event.source.wireName,
-      'is_first_lifetime_narration': event.isFirstLifetimeNarration ? 1 : 0,
-    },
-    NarrationProgress() => {
-      'milestone': event.milestone,
-      'elapsed_ms': event.elapsedMs,
-      'total_duration_ms': event.totalDurationMs,
-    },
-    NarrationCompleted() => {
-      'total_duration_ms': event.totalDurationMs,
-      'listen_duration_ms': event.listenDurationMs,
-      'completion_rate': event.completionRate,
-    },
-    NarrationAbandoned() => {
-      'abandon_reason': event.abandonReason.wireName,
-      'elapsed_ms': event.elapsedMs,
-      'progress_pct': event.progressPct,
-    },
-  };
-
-  for (final entry in subtype.entries) {
+  final wireFields = <String, dynamic>{...event.envelope(), ...event.payload()};
+  for (final entry in wireFields.entries) {
     final value = entry.value;
-    if (value != null) {
-      base[entry.key] = value;
-    }
+    if (value == null) continue;
+    parameters[entry.key] = value is bool ? (value ? 1 : 0) : value as Object;
   }
-  return base;
+  return parameters;
 }

@@ -2,54 +2,75 @@ import 'package:equatable/equatable.dart';
 import 'package:uuid/uuid.dart';
 
 import 'package:context_app/features/analytics/domain/models/abandon_reason.dart';
+import 'package:context_app/features/analytics/domain/models/hooks_outcome.dart';
 import 'package:context_app/features/analytics/domain/models/narration_event_source.dart';
 
 const Uuid _uuid = Uuid();
 
 /// An analytics event captured by the Lorescape client.
 ///
-/// All concrete subtypes carry an [eventId] (UUID v4), the
-/// [narrationId] the event belongs to, and the [occurredAt] timestamp
-/// of when the event was created. Use [toJson] to flatten the event
+/// All concrete subtypes carry an [eventId] (UUID v4) and the [occurredAt]
+/// timestamp of when the event was created. Use [toJson] to flatten the event
 /// into the envelope payload.
+///
+/// Events come in families ([NarrationAnalyticsEvent],
+/// [StoryHookAnalyticsEvent]); each family adds its own shared identifiers via
+/// [envelope]. `narration_id` lives on the narration family only——鉤子事件發生
+/// 在 narration 產生之前，帶一個空的 narration_id 只會讓報表誤導。
 sealed class AnalyticsEvent extends Equatable {
   final String eventId;
-  final String narrationId;
   final DateTime occurredAt;
 
-  AnalyticsEvent({
-    String? eventId,
-    required this.narrationId,
-    DateTime? occurredAt,
-  }) : eventId = eventId ?? _uuid.v4(),
-       occurredAt = occurredAt ?? DateTime.now();
+  AnalyticsEvent({String? eventId, DateTime? occurredAt})
+    : eventId = eventId ?? _uuid.v4(),
+      occurredAt = occurredAt ?? DateTime.now();
 
   /// Wire-format event name (matches the analytics schema).
   String get type;
 
-  /// Serialise the event-specific payload (excluding envelope fields).
+  /// Serialise the event into the flat wire payload.
   ///
-  /// Includes `event_id`, `event_type`, `narration_id`, `occurred_at`
-  /// plus the subtype-specific fields. Keys are snake_case.
+  /// Includes `event_id`, `event_type`, `occurred_at`, the family's
+  /// [envelope] and the subtype-specific [payload]. Keys are snake_case.
   Map<String, dynamic> toJson() {
     return {
       'event_id': eventId,
       'event_type': type,
-      'narration_id': narrationId,
       'occurred_at': occurredAt.toIso8601String(),
+      ...envelope(),
       ...payload(),
     };
   }
+
+  /// Identifiers shared by every event in the same family.
+  Map<String, dynamic> envelope() => const {};
 
   /// Subtype-specific payload merged into [toJson].
   Map<String, dynamic> payload();
 
   @override
-  List<Object?> get props => [eventId, narrationId, occurredAt];
+  List<Object?> get props => [eventId, occurredAt];
+}
+
+/// Events describing one narration playback; all carry its [narrationId].
+sealed class NarrationAnalyticsEvent extends AnalyticsEvent {
+  final String narrationId;
+
+  NarrationAnalyticsEvent({
+    super.eventId,
+    required this.narrationId,
+    super.occurredAt,
+  });
+
+  @override
+  Map<String, dynamic> envelope() => {'narration_id': narrationId};
+
+  @override
+  List<Object?> get props => [...super.props, narrationId];
 }
 
 /// Fired when a narration begins playing.
-class NarrationStarted extends AnalyticsEvent {
+class NarrationStarted extends NarrationAnalyticsEvent {
   final String placeId;
   final NarrationEventSource source;
   final bool isFirstLifetimeNarration;
@@ -86,7 +107,7 @@ class NarrationStarted extends AnalyticsEvent {
 ///
 /// Seek does NOT backfill skipped milestones — each milestone fires at
 /// most once per narration.
-class NarrationProgress extends AnalyticsEvent {
+class NarrationProgress extends NarrationAnalyticsEvent {
   final int milestone;
   final int elapsedMs;
   final int totalDurationMs;
@@ -121,7 +142,7 @@ class NarrationProgress extends AnalyticsEvent {
 
 /// Fired when a narration reaches the completion threshold
 /// (Story 1 AC3, default >= 95% of total duration).
-class NarrationCompleted extends AnalyticsEvent {
+class NarrationCompleted extends NarrationAnalyticsEvent {
   final int totalDurationMs;
   final int listenDurationMs;
   final double completionRate;
@@ -158,7 +179,7 @@ class NarrationCompleted extends AnalyticsEvent {
 ///
 /// [abandonReason] captures the cause; [progressPct] is the percentage
 /// listened (0~100) at the time of abandonment.
-class NarrationAbandoned extends AnalyticsEvent {
+class NarrationAbandoned extends NarrationAnalyticsEvent {
   final AbandonReason abandonReason;
   final int elapsedMs;
   final double progressPct;
@@ -189,4 +210,110 @@ class NarrationAbandoned extends AnalyticsEvent {
     elapsedMs,
     progressPct,
   ];
+}
+
+/// Events describing the story-hook step, which runs *before* any narration
+/// exists — hence no `narration_id`.
+///
+/// 這一段過去完全沒有埋點：GA4 上從 `screen_view` 到 `narration_started`
+/// 之間是斷的，「產生了角度但沒人想聽」看不出來。
+sealed class StoryHookAnalyticsEvent extends AnalyticsEvent {
+  final String placeId;
+
+  /// 語言標籤（如 `zh-TW`）——鉤子是按語言分別生成與快取的。
+  final String language;
+
+  StoryHookAnalyticsEvent({
+    super.eventId,
+    required this.placeId,
+    required this.language,
+    super.occurredAt,
+  });
+
+  @override
+  Map<String, dynamic> envelope() => {
+    'place_id': placeId,
+    'language': language,
+  };
+
+  @override
+  List<Object?> get props => [...super.props, placeId, language];
+}
+
+/// Fired when the app asks the backend for a place's story hooks.
+///
+/// 這是漏斗的分母；與 [HooksReturned] 分開是因為請求可能永遠不回來。
+class HooksRequested extends StoryHookAnalyticsEvent {
+  HooksRequested({
+    super.eventId,
+    required super.placeId,
+    required super.language,
+    super.occurredAt,
+  });
+
+  @override
+  String get type => 'hooks_requested';
+
+  @override
+  Map<String, dynamic> payload() => const {};
+}
+
+/// Fired when a hook request settles, successfully or not.
+class HooksReturned extends StoryHookAnalyticsEvent {
+  final HooksOutcome outcome;
+
+  /// 回傳的角度數量；非 [HooksOutcome.success] 時為 0。
+  final int hookCount;
+
+  HooksReturned({
+    super.eventId,
+    required super.placeId,
+    required super.language,
+    required this.outcome,
+    required this.hookCount,
+    super.occurredAt,
+  });
+
+  @override
+  String get type => 'hooks_returned';
+
+  @override
+  Map<String, dynamic> payload() => {
+    'outcome': outcome.wireName,
+    'hook_count': hookCount,
+  };
+
+  @override
+  List<Object?> get props => [...super.props, outcome, hookCount];
+}
+
+/// Fired when the user commits to listening from this screen.
+///
+/// [hookIndex] 為 null 代表走「直接聽故事」（沒挑角度，或後端沒給角度）——
+/// 用 `selected_default` 在 GA4 上直接分流，不必自己判斷 null。
+class HookSelected extends StoryHookAnalyticsEvent {
+  final int? hookIndex;
+  final int hookCount;
+
+  HookSelected({
+    super.eventId,
+    required super.placeId,
+    required super.language,
+    required this.hookIndex,
+    required this.hookCount,
+    super.occurredAt,
+  });
+
+  @override
+  String get type => 'hook_selected';
+
+  @override
+  Map<String, dynamic> payload() => {
+    'hook_index': hookIndex,
+    'hook_count': hookCount,
+    'selected_default': hookIndex == null,
+  };
+
+  @override
+  List<Object?> get props => [...super.props, hookIndex, hookCount];
 }

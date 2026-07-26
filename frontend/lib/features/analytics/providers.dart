@@ -1,12 +1,16 @@
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:logging/logging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:context_app/features/analytics/domain/models/analytics_event.dart';
 
 import 'package:context_app/core/services/firebase_install_id_provider.dart';
 import 'package:context_app/core/services/install_id_provider.dart';
 import 'package:context_app/features/analytics/data/firebase_analytics_service.dart';
 import 'package:context_app/features/analytics/data/shared_prefs_consent_repository.dart';
+import 'package:context_app/features/analytics/domain/services/analytics_emitter.dart';
 import 'package:context_app/features/analytics/domain/services/analytics_service.dart';
 import 'package:context_app/features/analytics/domain/services/consent_repository.dart';
 import 'package:context_app/features/analytics/presentation/narration_analytics_observer.dart';
@@ -34,6 +38,51 @@ final firebaseAnalyticsProvider = Provider<FirebaseAnalytics>(
 final analyticsServiceProvider = Provider<AnalyticsService>(
   (ref) => FirebaseAnalyticsService(ref.read(firebaseAnalyticsProvider)),
 );
+
+/// Reads the persisted consent flag, resolving [sharedPreferencesProvider]
+/// first.
+///
+/// **必須先 await prefs 的 future**：[consentRepositoryProvider] 以
+/// `requireValue` 取 SharedPreferences，在 `AsyncLoading` 期間會丟
+/// `StateError`，而 Riverpod 會快取 build 失敗並在後續讀取重拋——一次過早的
+/// 讀取就會讓整個 container 生命週期內的埋點全部失效（BACKLOG F13 T1a）。
+/// 這段只留這一份，任何要送事件的地方都走 [analyticsEmitterProvider]。
+Future<bool> _consentEnabled(Ref ref) async {
+  await ref.read(sharedPreferencesProvider.future);
+  final state = await ref.read(consentRepositoryProvider).read();
+  return state.enabled;
+}
+
+/// Consent-gated emitter every feature should use to record events.
+///
+/// 取不到底層服務時退化成 no-op 而不是往外丟：`FirebaseAnalytics.instance` 在
+/// Firebase 還沒 `initializeApp` 時會丟 `FirebaseException`，而埋點的呼叫點在
+/// controller/畫面的主流程上——讓它外溢等於「因為統計壞了所以功能不能用」。
+final analyticsEmitterProvider = Provider<AnalyticsEmitter>((ref) {
+  AnalyticsService service;
+  try {
+    service = ref.read(analyticsServiceProvider);
+  } catch (error, stackTrace) {
+    Logger('analyticsEmitterProvider').warning(
+      'Analytics unavailable; events will be dropped',
+      error,
+      stackTrace,
+    );
+    service = const _NoopAnalyticsService();
+  }
+  return AnalyticsEmitter(
+    consentEnabled: () => _consentEnabled(ref),
+    service: service,
+  );
+});
+
+/// Swallows events when no analytics backend is reachable.
+class _NoopAnalyticsService implements AnalyticsService {
+  const _NoopAnalyticsService();
+
+  @override
+  Future<void> logEvent(AnalyticsEvent event) async {}
+}
 
 /// Navigator observers wired into GoRouter.
 ///

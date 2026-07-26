@@ -1,5 +1,6 @@
 import 'package:context_app/features/analytics/domain/models/abandon_reason.dart';
 import 'package:context_app/features/analytics/domain/models/analytics_event.dart';
+import 'package:context_app/features/analytics/domain/models/hooks_outcome.dart';
 import 'package:context_app/features/analytics/domain/models/narration_event_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -170,7 +171,7 @@ void main() {
 
     group('sealed exhaustiveness', () {
       test('should let callers pattern-match every subtype', () {
-        final events = <AnalyticsEvent>[
+        final events = <NarrationAnalyticsEvent>[
           NarrationStarted(
             narrationId: 'n',
             placeId: 'p',
@@ -210,6 +211,105 @@ void main() {
 
         expect(types, ['started', 'progress', 'completed', 'abandoned']);
       });
+
+      test('should let callers pattern-match every story-hook subtype', () {
+        final events = <StoryHookAnalyticsEvent>[
+          HooksRequested(placeId: 'p', language: 'zh-TW'),
+          HooksReturned(
+            placeId: 'p',
+            language: 'zh-TW',
+            outcome: HooksOutcome.success,
+            hookCount: 3,
+          ),
+          HookSelected(
+            placeId: 'p',
+            language: 'zh-TW',
+            hookIndex: 1,
+            hookCount: 3,
+          ),
+        ];
+
+        final types = events
+            .map(
+              (e) => switch (e) {
+                HooksRequested() => 'requested',
+                HooksReturned() => 'returned',
+                HookSelected() => 'selected',
+              },
+            )
+            .toList();
+
+        expect(types, ['requested', 'returned', 'selected']);
+      });
+    });
+
+    group('story hook events', () {
+      test(
+        'given three hooks were returned, when serialising, then the place, '
+        'language, outcome and count are on the wire without a narration id',
+        () {
+          final event = HooksReturned(
+            eventId: 'e1',
+            placeId: 'place-1',
+            language: 'zh-TW',
+            outcome: HooksOutcome.success,
+            hookCount: 3,
+            occurredAt: DateTime.utc(2026, 7, 26, 12),
+          );
+
+          expect(event.type, 'hooks_returned');
+          expect(event.toJson(), {
+            'event_id': 'e1',
+            'event_type': 'hooks_returned',
+            'occurred_at': '2026-07-26T12:00:00.000Z',
+            'place_id': 'place-1',
+            'language': 'zh-TW',
+            'outcome': 'success',
+            'hook_count': 3,
+          });
+          // 鉤子發生在 narration 產生之前，帶 narration_id 只會誤導報表。
+          expect(event.toJson().containsKey('narration_id'), isFalse);
+        },
+      );
+
+      test(
+        'given the user picked the second hook, when serialising, then the '
+        'index is kept and selected_default is false',
+        () {
+          final event = HookSelected(
+            placeId: 'place-1',
+            language: 'en-US',
+            hookIndex: 1,
+            hookCount: 3,
+          );
+
+          expect(event.type, 'hook_selected');
+          expect(event.payload(), {
+            'hook_index': 1,
+            'hook_count': 3,
+            'selected_default': false,
+          });
+        },
+      );
+
+      test(
+        'given the user listened without picking a hook, when serialising, '
+        'then the index is null and selected_default is true',
+        () {
+          final event = HookSelected(
+            placeId: 'place-1',
+            language: 'en-US',
+            hookIndex: null,
+            hookCount: 0,
+          );
+
+          expect(event.payload(), {
+            'hook_index': null,
+            'hook_count': 0,
+            'selected_default': true,
+          });
+        },
+      );
     });
   });
 }

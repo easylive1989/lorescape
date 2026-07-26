@@ -2,6 +2,9 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:context_app/core/errors/app_error.dart';
+import 'package:context_app/features/analytics/domain/models/analytics_event.dart';
+import 'package:context_app/features/analytics/domain/models/hooks_outcome.dart';
+import 'package:context_app/features/analytics/providers.dart';
 import 'package:context_app/features/narration/domain/errors/narration_error.dart';
 import 'package:context_app/features/explore/domain/models/place.dart';
 import 'package:context_app/features/journey/providers.dart';
@@ -19,6 +22,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../fakes/fake_narration_service.dart';
 import '../../../../fakes/in_memory_journey_repository.dart';
 import '../../../../fakes/in_memory_usage_repository.dart';
+import '../../../../fakes/recording_analytics_service.dart';
 import '../../../../helpers/pump_app.dart';
 import '../../../../helpers/test_data.dart';
 
@@ -203,6 +207,83 @@ void main() {
     );
 
     testWidgets(
+      'given two hooks are returned, when the user taps the second one, '
+      'then requested / returned / selected are recorded with its index',
+      (tester) async {
+        final analytics = RecordingAnalyticsService();
+
+        await _pumpScreenWithRouter(
+          tester,
+          hookService: _FakeStoryHookService(hooks: const [_hook1, _hook2]),
+          analytics: analytics,
+        );
+
+        await tester.tap(find.text(_hook2.title));
+        await tester.pumpAndSettle();
+
+        expect(analytics.types, [
+          'hooks_requested',
+          'hooks_returned',
+          'hook_selected',
+        ]);
+
+        final returned = analytics.firstOfType<HooksReturned>()!;
+        expect(returned.outcome, HooksOutcome.success);
+        expect(returned.hookCount, 2);
+
+        final selected = analytics.firstOfType<HookSelected>()!;
+        expect(selected.hookIndex, 1);
+        expect(selected.hookCount, 2);
+        expect(selected.placeId, isNotEmpty);
+        expect(selected.language, 'zh-TW');
+      },
+    );
+
+    testWidgets(
+      'given no hooks were returned, when the user listens anyway, '
+      'then the outcome is empty and the selection is flagged as default',
+      (tester) async {
+        final analytics = RecordingAnalyticsService();
+
+        await _pumpScreenWithRouter(
+          tester,
+          hookService: _FakeStoryHookService(hooks: const []),
+          analytics: analytics,
+        );
+
+        await tester.tap(find.text('story_hook.listen_default_button'));
+        await tester.pumpAndSettle();
+
+        expect(analytics.firstOfType<HooksReturned>()!.outcome, HooksOutcome.empty);
+        // 沒挑角度時不送假的位置，靠 hook_index == null 分流。
+        expect(analytics.firstOfType<HookSelected>()!.hookIndex, isNull);
+      },
+    );
+
+    testWidgets(
+      'given the source is insufficient, when the screen loads, '
+      'then the outcome is recorded as insufficient_source',
+      (tester) async {
+        final analytics = RecordingAnalyticsService();
+
+        await _pumpScreen(
+          tester,
+          hookService: _FakeStoryHookService(
+            error: const AppError(type: NarrationError.insufficientSource),
+          ),
+          analytics: analytics,
+        );
+
+        // 「沒給角度」與「給了角度沒人挑」必須分得出來，否則漏斗無法解讀。
+        expect(analytics.types, ['hooks_requested', 'hooks_returned']);
+        expect(
+          analytics.firstOfType<HooksReturned>()!.outcome,
+          HooksOutcome.insufficientSource,
+        );
+      },
+    );
+
+    testWidgets(
       'given the backend reports quota exhausted (402), when a hook is '
       'tapped, then the subscription screen is shown',
       (tester) async {
@@ -321,6 +402,7 @@ Future<void> _pumpScreen(
   InMemoryUsageRepository? usageRepo,
   Uint8List? capturedImageBytes,
   bool settle = true,
+  RecordingAnalyticsService? analytics,
 }) async {
   await pumpScreen(
     tester,
@@ -332,6 +414,7 @@ Future<void> _pumpScreen(
       hookService: hookService,
       narrationService: narrationService,
       usageRepo: usageRepo,
+      analytics: analytics,
     ),
   );
   if (settle) {
@@ -347,6 +430,7 @@ Future<void> _pumpScreenWithRouter(
   _FakeStoryHookService? hookService,
   FakeNarrationService? narrationService,
   InMemoryUsageRepository? usageRepo,
+  RecordingAnalyticsService? analytics,
 }) async {
   await pumpRouterApp(
     tester,
@@ -369,6 +453,7 @@ Future<void> _pumpScreenWithRouter(
       hookService: hookService,
       narrationService: narrationService,
       usageRepo: usageRepo,
+      analytics: analytics,
     ),
   );
   await tester.pumpAndSettle();
@@ -378,8 +463,14 @@ List<Override> _overrides({
   _FakeStoryHookService? hookService,
   FakeNarrationService? narrationService,
   InMemoryUsageRepository? usageRepo,
+  RecordingAnalyticsService? analytics,
 }) {
   return [
+    // 一律 override：畫面載入就會送 hooks_requested，不攔的話會摸到真的
+    // FirebaseAnalytics.instance（測試環境沒有 Firebase，直接炸）。
+    analyticsServiceProvider.overrideWithValue(
+      analytics ?? RecordingAnalyticsService(),
+    ),
     narrationServiceProvider.overrideWithValue(
       narrationService ?? FakeNarrationService(),
     ),

@@ -1,4 +1,7 @@
 import 'package:context_app/core/errors/app_error.dart';
+import 'package:context_app/features/analytics/domain/models/analytics_event.dart';
+import 'package:context_app/features/analytics/domain/models/hooks_outcome.dart';
+import 'package:context_app/features/analytics/providers.dart';
 import 'package:context_app/features/explore/domain/models/place.dart';
 import 'package:context_app/features/narration/domain/errors/narration_error.dart';
 import 'package:context_app/features/narration/domain/models/story_hook.dart';
@@ -48,27 +51,52 @@ class StoryHookController
 
   Future<void> _load(Place place, Language language) async {
     state = StoryHookState.loading();
+    _emit(HooksRequested(placeId: place.id, language: language.code));
     try {
       final hooks = await ref
           .read(storyHookServiceProvider)
           .generateHooks(place: place, language: language);
       if (hooks.isEmpty) {
+        _emitReturned(place, language, HooksOutcome.empty, 0);
         state = const StoryHookState(status: StoryHookStatus.empty);
         return;
       }
+      _emitReturned(place, language, HooksOutcome.success, hooks.length);
       state = StoryHookState(status: StoryHookStatus.success, hooks: hooks);
     } on AppError catch (e) {
       if (e.type == NarrationError.insufficientSource) {
+        _emitReturned(place, language, HooksOutcome.insufficientSource, 0);
         state = StoryHookState(
           status: StoryHookStatus.insufficientSource,
           errorMessage: e.message,
         );
         return;
       }
+      _emitReturned(place, language, HooksOutcome.error, 0);
       state = StoryHookState(
         status: StoryHookStatus.error,
         errorMessage: e.message,
       );
     }
   }
+
+  void _emitReturned(
+    Place place,
+    Language language,
+    HooksOutcome outcome,
+    int hookCount,
+  ) {
+    _emit(
+      HooksReturned(
+        placeId: place.id,
+        language: language.code,
+        outcome: outcome,
+        hookCount: hookCount,
+      ),
+    );
+  }
+
+  /// 埋點不該影響使用者流程：emitter 內部已吞下並記錄失敗。
+  void _emit(AnalyticsEvent event) =>
+      ref.read(analyticsEmitterProvider).emit(event);
 }

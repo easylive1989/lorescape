@@ -1,6 +1,8 @@
 import 'dart:typed_data';
 
 import 'package:context_app/app/config/lorescape_tokens.dart';
+import 'package:context_app/features/analytics/domain/models/analytics_event.dart';
+import 'package:context_app/features/analytics/providers.dart';
 import 'package:context_app/features/explore/domain/models/place.dart';
 import 'package:context_app/features/explore/providers.dart';
 import 'package:context_app/features/narration/domain/models/story_hook.dart';
@@ -50,6 +52,7 @@ class _SelectStoryHookScreenState extends ConsumerState<SelectStoryHookScreen> {
 
   void _onHookSelected(StoryHook? hook) {
     _selectedStoryTitle = hook?.title;
+    _emitHookSelected(hook);
     // The backend is the source of truth for quota: just generate, and route
     // to the paywall if it responds with a quota-exhausted error (handled in
     // the generation-state listener below).
@@ -59,6 +62,34 @@ class _SelectStoryHookScreenState extends ConsumerState<SelectStoryHookScreen> {
           place: widget.place,
           language: _currentLanguage(),
           hook: hook,
+        );
+  }
+
+  /// 記下使用者最後是「挑了第幾個角度」還是「直接聽故事」。
+  ///
+  /// hook 為 null 有兩種來路：後端沒給角度時的 fallback，以及使用者看完角度
+  /// 仍選擇直接聽——兩者都送 `selected_default`，靠 [HooksReturned] 的 outcome
+  /// 在報表上分開。
+  void _emitHookSelected(StoryHook? hook) {
+    final language = _currentLanguage();
+    final hooks = ref
+        .read(
+          storyHookControllerProvider(
+            StoryHookArgs(place: widget.place, language: language),
+          ),
+        )
+        .hooks;
+    final index = hook == null ? null : hooks.indexOf(hook);
+    ref
+        .read(analyticsEmitterProvider)
+        .emit(
+          HookSelected(
+            placeId: widget.place.id,
+            language: language.code,
+            // indexOf 找不到時回 -1，寧可送 null 也不要送一個假的位置。
+            hookIndex: index == null || index < 0 ? null : index,
+            hookCount: hooks.length,
+          ),
         );
   }
 
