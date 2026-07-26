@@ -250,11 +250,23 @@ class _NotebookPageView extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 12),
+                  // 照片與筆記黏在頁首下方、動作列留在頁底：把這兩塊包成一個
+                  // Expanded 的內層 Column，多出來的高度就會全落在筆記與動作
+                  // 列之間，而不是像先前那樣被照片上下均分成兩片空白。
                   Expanded(
-                    child: _Polaroid(page: page, index: index),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // loose：頁面夠高時照片只佔自然高度，太矮時才讓
+                        // FittedBox 整體縮小。
+                        Flexible(
+                          child: _Polaroid(page: page, index: index),
+                        ),
+                        const SizedBox(height: 16),
+                        _Note(page: page),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 16),
-                  _Note(page: page),
                   _PageFooter(page: page, index: index, total: total),
                 ],
               ),
@@ -321,7 +333,11 @@ class _Polaroid extends StatelessWidget {
         // 算「可用高度扣掉圖說」穩，圖說字級一改那個估算就會失準。
         final side = math.min(constraints.maxWidth * 0.74, 250.0);
 
-        return Center(
+        // heightFactor 1：只包住照片本身的高度，讓外層的 Flexible 能把剩餘
+        // 空間留給下方，而不是把照片撐到正中央。
+        return Align(
+          alignment: Alignment.topCenter,
+          heightFactor: 1,
           child: FittedBox(
             fit: BoxFit.scaleDown,
             // `margin:10px 0 0 -16px`——照片略偏左，壓在天地線那一側。

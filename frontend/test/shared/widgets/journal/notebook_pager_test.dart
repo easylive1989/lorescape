@@ -54,6 +54,32 @@ void main() {
     );
 
     testWidgets(
+      'given a page taller than its content, when the pager renders, '
+      'then the photo hugs the header and the slack falls below the note',
+      (tester) async {
+        tester.view.physicalSize = const Size(390, 900);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+
+        await _givenPager(tester, pages: [_buildPage()]);
+
+        final headerBottom = tester
+            .getRect(find.text('journey.notebook.entry_no'))
+            .bottom;
+        final photo = tester.getRect(_emptyPhotoFinder);
+        final noteBottom = tester
+            .getRect(find.text('A golden pavilion by the pond.'))
+            .bottom;
+        final footerTop = tester.getRect(find.text('01 / 01')).top;
+
+        // 照片緊接在頁首下方，只留設計稿的間距（含旋轉溢出的餘裕）。
+        expect(photo.top - headerBottom, lessThan(60));
+        // 多出來的高度全落在筆記與動作列之間。
+        expect(footerTop - noteBottom, greaterThan(100));
+      },
+    );
+
+    testWidgets(
       'given a page with every callback, when the user taps each action, '
       'then replay, add-to-trip, share and delete each fire once',
       (tester) async {
@@ -87,6 +113,11 @@ void main() {
     );
   });
 }
+
+/// 無照片時的斜紋底，用它的顏色定位拍立得裡那張正方形照片。
+final _emptyPhotoFinder = find.byWidgetPredicate(
+  (w) => w is ColoredBox && w.color == const Color(0xFFEFE7D6),
+);
 
 NotebookPage _buildPage({
   VoidCallback? onReplay,
