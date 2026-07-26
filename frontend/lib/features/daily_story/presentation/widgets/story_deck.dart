@@ -134,7 +134,10 @@ class _StoryDeckState extends State<StoryDeck>
   Widget build(BuildContext context) {
     if (widget.stories.isEmpty) return const SizedBox.shrink();
 
-    final visible = _order.take(StoryDeck.visibleBehind + 1).toList();
+    // 動畫進行中多帶一張：隊伍前後挪一格時，最尾端才有卡可以補位／退場。
+    final visible = _order
+        .take(StoryDeck.visibleBehind + (_animating ? 2 : 1))
+        .toList();
 
     return Column(
       children: [
@@ -173,19 +176,20 @@ class _StoryDeckState extends State<StoryDeck>
   Widget _positioned({required DailyStory story, required int pos}) {
     final isTop = pos == 0;
     if (!isTop) {
-      // 往下扇開並左右交錯微傾，露出幾道卡緣＝一疊厚厚的卡。
-      final tilt = (pos.isOdd ? -1 : 1) * (1.6 + pos * 0.9);
-      return Transform(
-        alignment: Alignment.center,
-        transform: Matrix4.identity()
-          ..translateByDouble(0, pos * StoryDeck.fanOffset, 0, 1)
-          ..scaleByDouble(1 - pos * 0.028, 1 - pos * 0.028, 1, 1)
-          ..rotateZ(tilt * math.pi / 180),
-        child: Opacity(
-          opacity: 1 - pos * 0.05,
-          child: _StoryDeckCard(story: story, isBehind: true),
-        ),
-      );
+      if (_animating) {
+        // 隊伍正在前後挪一格：每張後排卡從原本那格連續補到目標格，
+        // 角度、位置、縮放都是插值過去的，不會在收尾瞬間跳一下。
+        final from = _entering ? pos - 1 : pos;
+        final to = _entering ? pos : pos - 1;
+        return AnimatedBuilder(
+          animation: _leaveController,
+          builder: (context, _) {
+            final t = Curves.easeOutCubic.transform(_leaveController.value);
+            return _fanned(story: story, from: from, to: to, t: t);
+          },
+        );
+      }
+      return _fanned(story: story, from: pos, to: pos, t: 0);
     }
 
     if (_animating) {
@@ -227,6 +231,39 @@ class _StoryDeckState extends State<StoryDeck>
             child: card,
           );
   }
+
+  /// 整數格位的傾斜角：交錯微傾，第 0 格（幕前）轉正。
+  static double _tiltOf(int pos) =>
+      pos <= 0 ? 0 : (pos.isOdd ? -1 : 1) * (1.6 + pos * 0.9);
+
+  /// 一張後排卡，從第 [from] 格往第 [to] 格補位到進度 [t]（0–1）。
+  /// 靜止時 from == to，就是原本的扇開排法。
+  Widget _fanned({
+    required DailyStory story,
+    required int from,
+    required int to,
+    required double t,
+  }) {
+    final p = from + (to - from) * t;
+    final tilt = _tiltOf(from) + (_tiltOf(to) - _tiltOf(from)) * t;
+    final scale = 1 - p * 0.028;
+    // 補到幕前（第 0 格）時暗色罩同步淡掉，亮度才不會在收尾跳一階。
+    final fromDim = from <= 0 ? 0.0 : 1.0;
+    final toDim = to <= 0 ? 0.0 : 1.0;
+    final behindT = fromDim + (toDim - fromDim) * t;
+
+    return Transform(
+      alignment: Alignment.center,
+      transform: Matrix4.identity()
+        ..translateByDouble(0, p * StoryDeck.fanOffset, 0, 1)
+        ..scaleByDouble(scale, scale, 1, 1)
+        ..rotateZ(tilt * math.pi / 180),
+      child: Opacity(
+        opacity: (1 - p * 0.05).clamp(0.0, 1.0),
+        child: _StoryDeckCard(story: story, isBehind: true, behindT: behindT),
+      ),
+    );
+  }
 }
 
 /// 單張故事卡：滿版照片＋暗角，左上是序號，右上是 Anno 徽章，底下壓標題。
@@ -234,13 +271,18 @@ class _StoryDeckCard extends StatelessWidget {
   const _StoryDeckCard({
     required this.story,
     required this.isBehind,
+    this.behindT,
     this.dragHint = 0,
   });
 
   final DailyStory story;
   final bool isBehind;
 
-  /// -1 ~ 1：負值往「稍後」、正值往「閱讀」，決定兩枚印章的濃度。
+  /// 0 ~ 1 的「後排程度」：1 是全暗的後排、0 是幕前亮度；補位動畫用它
+  /// 讓暗色罩連續變淡。省略時跟著 [isBehind] 走。
+  final double? behindT;
+
+  /// -1 ~ 1：負值往「下一則」、正值往「上一則」，決定兩枚印章的濃度。
   final double dragHint;
 
   static const _scrim = LinearGradient(
@@ -272,6 +314,7 @@ class _StoryDeckCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final imageUrl = story.imageUrl;
+    final dim = behindT ?? (isBehind ? 1.0 : 0.0);
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -302,12 +345,14 @@ class _StoryDeckCard extends StatelessWidget {
               ColoredBox(color: tokens.inkBg2),
             DecoratedBox(
               decoration: BoxDecoration(
-                gradient: isBehind ? _scrimBehind : _scrim,
+                gradient: LinearGradient.lerp(_scrim, _scrimBehind, dim),
               ),
             ),
-            if (isBehind)
-              const ColoredBox(color: Color(0x1A1B1611))
-            else ...[
+            if (dim > 0)
+              ColoredBox(
+                color: const Color(0xFF1B1611).withValues(alpha: 0.102 * dim),
+              ),
+            if (!isBehind) ...[
               _CardIndex(story: story),
               if (story.cardAnnoRoman != null)
                 Positioned(
