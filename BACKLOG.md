@@ -357,26 +357,53 @@ epic 承接自原公司層 backlog；目前只有 E1（見下方「Epic」）。
   的不同觀測點），實質獨立樣本約 11 支。IG 演算法把略過率當排序訊號是合理
   推測，但無法從本資料證實。
 
-## F22: 每週長篇電子報（官網 SEO 內容） (epic: E1)
+## F25: 故事鉤子步驟埋點 (epic: E1)
 
-- 狀態: 待辦
-- 來源: 使用者要求（2026-07-23）——每週產出一篇長篇電子報，放在官網
-  lorescape.app 上並做好 SEO
-- 範圍備註: 服務漏斗上層流量（SEO 內容資產），屬 E1 主線，不受暫緩政策限制
-- 方向: 電子報同時是 SEO 資產——每篇以景點故事／深度旅行知識為題的長文，
-  發布在 landing 的獨立路由（如 `/newsletter/[slug]`），複用 F9 景點頁的
-  資料層與 metadata 模式；sitemap 自動帶入。與 F9 景點頁互補：F9 吃
-  「[景點] 導覽app」高意圖長尾，電子報吃資訊型長尾與品牌信任
-- [ ] T1: 規劃內容策略與版型——題材方向（景點深度故事／旅行知識）、
-  關鍵字策略（與 F9 分工）、zh/en 雙語與否、每篇結構模板；過 marketing-gate
-  品質關卡與 SEO lint
-- [ ] T2: landing 新增電子報路由與資料層（列表頁 + 文章頁、keyword-rich
-  metadata、結構化標記 Article schema、sitemap 自動帶入），比照 F9
-  「新增一篇只需加一筆資料」的模式
-- [ ] T3: 每週產製流程——寫進 SCHEDULE.md 每週例行，定義從選題、撰寫、
-  品質關卡到發布部署（Deploy Landing）的步驟；評估是否做成 lorescape-* skill
-- [ ] T4（可選）: Email 訂閱入口——官網加訂閱表單、寄送管道選型，
-  讓電子報除了 SEO 也累積自有名單；待 T1–T3 上線且有流量訊號後再決定
+- 狀態: 進行中（2026-07-26 埋點完成，待隨下次 App build 上生產驗證）
+- 來源: 使用者詢問「呼叫後端產生三個故事 hook 會有 GA 紀錄嗎」（2026-07-26）
+  查證後發現：**完全沒有**
+- 範圍備註: E1 政策明列「留存/完成率埋點與量測」為暫緩例外
+- 查證結論（2026-07-26）:
+  - 後端零 GA：`grep -rni "analytics|ga4" backend/src/` 0 筆。GA4 純 client-side，
+    `/narration/hooks` 只寫容器 log（`narration.hooks_cache.hit` 等）
+  - App 原本只有四個自訂事件（narration_started / progress / completed /
+    abandoned），全綁 `narrationId`、全由播放器 observer 發出 ⇒ 只有真的播了才有
+  - hook 流程四個檔案（screen / controller / service / api_service）零埋點
+  - 唯一痕跡是 `FirebaseAnalyticsObserver` 的自動 `screen_view`，而該畫面 route
+    是 `path: '/config', name: 'config'`（go_router 17.2.3 `builder.dart:397` 用
+    `state.name ?? state.path`）⇒ **GA4 上這個畫面叫 `config`**，看起來像設定頁，
+    極易誤讀
+  - ⇒ 漏斗在 `screen_view(config)` 到 `narration_started` 之間是斷的：
+    「產生了角度但沒人想聽」答不出來
+- [x] T1: 新增三個事件（2026-07-26）——`hooks_requested`（分母）、
+  `hooks_returned`（帶 outcome success/empty/insufficient_source/error ＋
+  hook_count）、`hook_selected`（帶 hook_index、hook_count、selected_default）。
+  三者共同帶 `place_id` 與 `language`
+  - **不做原本提的 `hooks_abandoned`**：放棄率＝有 `hooks_returned(success)`
+    但無 `hook_selected`，在 GA4 端可直接推導；為它做 dispose-time 追蹤要在
+    autoDispose family 上加「是否已選取」旗標，複雜度不值那點停留時間資訊
+  - 事件階層改成家族制：`AnalyticsEvent`（eventId / occurredAt）→
+    `NarrationAnalyticsEvent`（narrationId）／`StoryHookAnalyticsEvent`
+    （placeId / language）。鉤子事件**不帶 narration_id**——那時 narration
+    還不存在，硬塞會讓報表誤導
+  - `firebaseParametersFor` 改由 `envelope()` + `payload()` 推導（原本逐型別
+    列欄位的 switch 刪除），新事件不必再回頭改 data 層
+- [x] T2: 抽出 `AnalyticsEmitter`（`analytics/domain/services/`）＋
+  `analyticsEmitterProvider`，consent 檢查與 fire-and-forget 失敗記錄收在一處。
+  observer 的四個發送點改走它，**F13 T1a 那段 `requireValue` 的坑只留一份實作**
+  （原本若複製到新發送點，等於把兩個月無聲的 bug 再種一次）
+  - provider 取不到底層服務時退化為 no-op：`FirebaseAnalytics.instance` 在
+    Firebase 未 `initializeApp` 時會丟 `FirebaseException`，而發送點在畫面主
+    流程上——實作過程確實踩到（11 個測試因此紅），不能讓埋點把功能帶掉
+- [ ] T3: 下次 App 送審上架後，確認 GA4 出現 `hooks_requested` /
+  `hooks_returned` / `hook_selected`，並用它們算出「產生角度 → 開始聆聽」的
+  轉換率。與 F13 T1c 同一版驗證
+- [ ] T4（可選）: 把 hook 畫面的 route `name` 從 `config` 改成語意化名稱
+  （如 `select-story-hook`），否則 GA4 的 `screen_view` 永遠叫 `config`。
+  ⚠️ 這是 `pushNamed('config')` 的呼叫點都要跟著改，且會讓歷史 screen_view
+  資料斷點，改前先確認值得
+- 驗證: `fvm flutter analyze --fatal-infos` 乾淨、`dart format` 對 lib 無變更、
+  full suite 585 passed（新增 emitter 4 個、事件模型 4 個、hook 畫面行為 3 個）
 
 ## F16: 後端可觀測性（server 狀態檢測）
 
@@ -582,8 +609,8 @@ epic 承接自原公司層 backlog；目前只有 E1（見下方「Epic」）。
   →內容的提前量**（哪個事件要在幾週前開始準備什麼），兩者互補——事件行事曆
   決定主題檔期，Reels calendar 在檔期內落實選點
 - 每個事件至少要回答: 事件與日期、對 Lorescape ICP（深度知性旅人）的切角、
-  要準備的內容形式（Reel 選點檔期 / 電子報題目（F22）/ 景點 SEO 頁（F9）/
-  IG 貼文）、**lead time**（何時開始準備）、負責流程（哪個 skill / 例行）
+  要準備的內容形式（Reel 選點檔期 / 景點 SEO 頁（F9）/ IG 貼文）、
+  **lead time**（何時開始準備）、負責流程（哪個 skill / 例行）
 - [ ] T1: 定義行事曆格式與存放位置——`marketing/content-calendar/` 內新增
   事件行事曆檔（markdown 表格即可，欄位：日期、事件、類型、ICP 切角、
   內容形式、lead time、狀態），並在 CLAUDE.md 的 content-calendar 說明
