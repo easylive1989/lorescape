@@ -19,7 +19,8 @@ ANDROID_PACKAGE = "com.paulchwu.instantexplore"
 
 _DAILY_HEADERS = [
     "date", "installs", "active_devices", "avg_rating_daily",
-    "avg_rating_total",
+    "avg_rating_total", "store_listing_visitors",
+    "store_listing_acquisitions",
 ]
 
 
@@ -72,11 +73,47 @@ def parse_ratings(text: str) -> dict[str, tuple]:
     )
 
 
-def _month_csv(cfg: MetricsConfig, kind: str, month: str) -> str | None:
+def parse_store_performance(text: str) -> dict[str, tuple[str, str]]:
+    """Date → (store listing visitors, acquisitions), summed over the split.
+
+    Unlike installs/ratings, Play never exports an ``overview`` for store
+    performance — only dimension splits (country / traffic source). One
+    date therefore spans several rows and the daily total is their sum.
+    A CSV without these columns yields nothing rather than raising.
+    """
+    rows = list(csv.reader(io.StringIO(text)))
+    if len(rows) < 2:
+        return {}
+    header = rows[0]
+    visitors_i = _column(header, "Store listing visitors")
+    acquisitions_i = _column(header, "Store listing acquisitions")
+    if visitors_i is None or acquisitions_i is None:
+        return {}
+    totals: dict[str, list[int]] = {}
+    for row in rows[1:]:
+        if not row or not row[0]:
+            continue
+        day = totals.setdefault(row[0], [0, 0])
+        for slot, index in ((0, visitors_i), (1, acquisitions_i)):
+            if len(row) > index:
+                try:
+                    day[slot] += int(row[index])
+                except ValueError:
+                    continue
+    return {
+        day: (str(visitors), str(acquisitions))
+        for day, (visitors, acquisitions) in totals.items()
+    }
+
+
+def _month_csv(cfg: MetricsConfig, kind: str, month: str,
+               split: str = "overview") -> str | None:
     """Download one month's stats CSV, or None when not exported yet.
 
     Play writes the objects as UTF-16; the GCS JSON API needs the object
-    name URL-encoded as a single path segment.
+    name URL-encoded as a single path segment. ``split`` selects the
+    dimension file — ``overview`` for installs/ratings, ``country`` for
+    store performance, which Play only exports split.
     """
     from urllib.parse import quote
 
@@ -86,7 +123,7 @@ def _month_csv(cfg: MetricsConfig, kind: str, month: str) -> str | None:
     creds, _ = google.auth.default(
         scopes=["https://www.googleapis.com/auth/devstorage.read_only"]
     )
-    name = f"stats/{kind}/{kind}_{ANDROID_PACKAGE}_{month}_overview.csv"
+    name = f"stats/{kind}/{kind}_{ANDROID_PACKAGE}_{month}_{split}.csv"
     resp = AuthorizedSession(creds).get(
         f"https://storage.googleapis.com/storage/v1/b/"
         f"{cfg.play_reports_bucket}/o/{quote(name, safe='')}",
@@ -102,12 +139,15 @@ def _month_csv(cfg: MetricsConfig, kind: str, month: str) -> str | None:
 def fetch_daily(cfg: MetricsConfig, start: str, end: str) -> list[list[str]]:
     """Return per-day install/rating rows over [start, end], keyed by date.
 
-    Only days present in the installs export produce rows — days Play
-    hasn't exported yet (the ~2-day lag) stay missing and are picked up
-    by a later run's gap-fill.
+    A day produces a row as soon as *any* export mentions it — Play ships
+    store performance long before it starts exporting installs/ratings for
+    a new app, so those days would otherwise be lost. Days no export
+    mentions yet (the ~2-day lag) stay missing and are picked up by a
+    later run's gap-fill.
     """
     installs: dict[str, tuple] = {}
     ratings: dict[str, tuple] = {}
+    performance: dict[str, tuple] = {}
     for month in months_between(start, end):
         installs_csv = _month_csv(cfg, "installs", month)
         if installs_csv is not None:
@@ -115,13 +155,22 @@ def fetch_daily(cfg: MetricsConfig, start: str, end: str) -> list[list[str]]:
         ratings_csv = _month_csv(cfg, "ratings", month)
         if ratings_csv is not None:
             ratings.update(parse_ratings(ratings_csv))
+        performance_csv = _month_csv(
+            cfg, "store_performance", month, split="country"
+        )
+        if performance_csv is not None:
+            performance.update(parse_store_performance(performance_csv))
     rows: list[list[str]] = []
-    for day in sorted(installs):
+    for day in sorted(set(installs) | set(performance)):
         if not start <= day <= end:
             continue
-        daily_installs, active = installs[day]
+        daily_installs, active = installs.get(day, ("", ""))
         rating_day, rating_total = ratings.get(day, ("", ""))
-        rows.append([day, daily_installs, active, rating_day, rating_total])
+        visitors, acquisitions = performance.get(day, ("", ""))
+        rows.append([
+            day, daily_installs, active, rating_day, rating_total,
+            visitors, acquisitions,
+        ])
     return rows
 
 

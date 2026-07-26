@@ -27,7 +27,7 @@ Connect / Play 報表 bucket），不再用瀏覽器抓。
 | `revenuecat` | `revenuecat.csv` | date | 訂閱/營收每日快照：mrr、active_subscriptions、active_trials、active_users_28d、new_customers_28d、revenue_28d |
 | `store_ios` | `store_ios.csv` | date | App Store 每日 downloads（ASC 銷售日報，可回補約一年）＋ 最新一天 avg_rating / ratings_count（iTunes lookup，TW storefront）與 reviews_count 快照 |
 | `store_ios_pages` | `store_ios_pages.csv` | date | App Store 商品頁漏斗：每日 impressions（曝光）／product_page_views（商品頁瀏覽），來自 ASC Analytics「Discovery and Engagement」日報（非同步、落後 1–2 天；首跑只建報表請求） |
-| `store_android` | `store_android.csv` | date | Play 每日 installs / active_devices ＋ avg_rating_daily / avg_rating_total（Play Console 報表 bucket，可回補，但匯出約落後 2 天） |
+| `store_android` | `store_android.csv` | date | Play 每日 installs / active_devices ＋ avg_rating_daily / avg_rating_total ＋ 商店頁 store_listing_visitors / store_listing_acquisitions（Play Console 報表 bucket，可回補，但匯出約落後 2 天） |
 
 `ig_posts` 是**每則貼文的逐日時間序列**：每次跑會為「發布在近 7 天內的每則
 貼文」各記一列當天觀察（key = `media_id` + `obs_date`），所以每篇貼文最多
@@ -60,13 +60,19 @@ image / carousel 貼文不做快照，維持 `ig_posts` 的 API 逐日追蹤即�
 評分（TW storefront）與評論數跟 `ig` 的 followers 一樣只在最新一天填快照。
 `store_android` 兩個評分欄與 installs 都有逐日歷史、可回補；Play 匯出約落後
 2 天，最近兩天會自然留缺待補（Play 官方沒有「總評分數」可撈，故無此欄）。
+同檔的 `store_listing_visitors` / `store_listing_acquisitions` 來自
+`stats/store_performance/`，是 Android 版的商店頁漏斗。**Play 對新 App 會
+先匯出 store_performance、隔一陣子才開始匯出 installs / ratings**，所以初期
+只有商店頁兩欄有值、其餘留空是正常的（2026-07-26 實測：installs/ratings 尚
+未匯出任何檔）。store_performance 只有維度切分檔（country / traffic_source）、
+沒有 `_overview`，程式讀 country 檔並把同一天各國加總。
 
 `store_ios_pages` 用同一組 ASC 金鑰走 **Analytics Reports API**（非同步）：
 首次執行只會建立 ONGOING 報表請求（記 0 列），Apple 約 1–2 天後才開始
 產出每日報表；之後每次跑自動補到最新已產生的那天，還沒產生的日子留待
-下次。ONGOING 只涵蓋建立請求之後的日子，更早的歷史**補不回來**；Play
-商店頁訪客則沒有公開 API，故無 Android 對應來源。細節與 403 排解見
-`docs/init/metrics-setup.md` §E3。
+下次。ONGOING 只涵蓋建立請求之後的日子，更早的歷史**補不回來**。Android
+的對應資料在 `store_android.csv` 的 store_listing_* 兩欄（見上）。細節與
+403 排解見 `docs/init/metrics-setup.md` §E3。
 
 2026-07-11 前用瀏覽器手抓的 `stores.csv` 保留當歷史檔，不再更新。
 
