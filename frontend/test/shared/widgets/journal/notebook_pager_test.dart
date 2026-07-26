@@ -80,6 +80,45 @@ void main() {
     );
 
     testWidgets(
+      'given a tall page and a long note, when the pager renders, '
+      'then the note grows past three lines into the spare height and still '
+      'stops above the footer',
+      (tester) async {
+        tester.view.physicalSize = const Size(390, 900);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+
+        await _givenPager(tester, pages: [_buildPage(text: _longNote)]);
+
+        final note = tester.getRect(find.text(_longNote));
+        final footerTop = tester.getRect(find.text('01 / 01')).top;
+
+        // 改版前不論頁面多高都只有 3 行；空間夠時要遠超過這個高度。
+        expect(note.height, greaterThan(5 * _bodyLineExtent));
+        expect(note.bottom, lessThanOrEqualTo(footerTop));
+      },
+    );
+
+    testWidgets(
+      'given a page with no spare height and a long note, when the pager '
+      'renders, then the note holds its floor instead of growing and the '
+      'photo is what yields',
+      (tester) async {
+        tester.view.physicalSize = const Size(390, 440);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+
+        await _givenPager(tester, pages: [_buildPage(text: _longNote)]);
+
+        final note = tester.getRect(find.text(_longNote));
+        // 矮頁維持改版前的取捨：正文守住下限（≥3 行）、不因為沒空間就消失，
+        // 也不會像高頁那樣長到十幾行——讓出空間的是照片（FittedBox 縮小）。
+        expect(note.height, greaterThanOrEqualTo(3 * _bodyLineExtent));
+        expect(note.height, lessThanOrEqualTo(5 * _bodyLineExtent));
+      },
+    );
+
+    testWidgets(
       'given a page with every callback, when the user taps each action, '
       'then replay, add-to-trip, share and delete each fire once',
       (tester) async {
@@ -119,7 +158,18 @@ final _emptyPhotoFinder = find.byWidgetPredicate(
   (w) => w is ColoredBox && w.color == const Color(0xFFEFE7D6),
 );
 
+/// 正文單行高度（widget 端以 26 換算行數），行數斷言以它為單位。
+const double _bodyLineExtent = 26;
+
+/// 長到足以撐破 3 行的手記正文，用來檢查行數是否隨可用高度成長。
+const _longNote =
+    'A golden pavilion by the pond, rebuilt in 1955 after the fire, its top '
+    'two floors wrapped in gold leaf. The reflection on the Kyoko-chi pond '
+    'doubles the building at dusk, and the garden path loops behind the hill '
+    'to a small teahouse where the shogun once received his guests.';
+
 NotebookPage _buildPage({
+  String text = 'A golden pavilion by the pond.',
   VoidCallback? onReplay,
   VoidCallback? onAddToTrip,
   VoidCallback? onShare,
@@ -127,7 +177,7 @@ NotebookPage _buildPage({
 }) => NotebookPage(
   title: 'Kinkaku-ji',
   dateLabel: '2024/05/01 · 10:00',
-  text: 'A golden pavilion by the pond.',
+  text: text,
   onReplay: onReplay,
   onAddToTrip: onAddToTrip,
   onShare: onShare,

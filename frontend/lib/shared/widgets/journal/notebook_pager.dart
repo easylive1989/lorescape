@@ -182,6 +182,9 @@ class _NotebookPagerState extends State<NotebookPager> {
   }
 }
 
+/// 照片與筆記之間的固定間距，算筆記可用高度時要一起扣掉。
+const double _photoNoteGap = 16;
+
 class _NotebookPageView extends StatelessWidget {
   const _NotebookPageView({
     required this.page,
@@ -251,20 +254,41 @@ class _NotebookPageView extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   // 照片與筆記黏在頁首下方、動作列留在頁底：把這兩塊包成一個
-                  // Expanded 的內層 Column，多出來的高度就會全落在筆記與動作
-                  // 列之間，而不是像先前那樣被照片上下均分成兩片空白。
+                  // Expanded 的內層 Column。多出來的高度優先給筆記正文多顯示
+                  // 幾行，正文用不完才留成筆記與動作列之間的空白。
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // loose：頁面夠高時照片只佔自然高度，太矮時才讓
-                        // FittedBox 整體縮小。
-                        Flexible(
-                          child: _Polaroid(page: page, index: index),
-                        ),
-                        const SizedBox(height: 16),
-                        _Note(page: page),
-                      ],
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        // 筆記是 Column 的非彈性子項，主軸約束是無限高，沒辦法
+                        // 自己知道還剩多少空間——正文因此曾經只能寫死 3 行，把
+                        // 剩下的高度全留成空白。照片的自然高度是寬度的函數，
+                        // 先扣掉它就得到筆記真正可用的高度。
+                        final noteExtent = math.max(
+                          _Note.minHeight,
+                          constraints.maxHeight -
+                              _Polaroid.naturalHeight(constraints.maxWidth) -
+                              _photoNoteGap,
+                        );
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // loose：頁面夠高時照片只佔自然高度，太矮時才讓
+                            // FittedBox 整體縮小（筆記守住 minHeight 下限，
+                            // 讓出空間的是照片）。
+                            Flexible(
+                              child: _Polaroid(page: page, index: index),
+                            ),
+                            const SizedBox(height: _photoNoteGap),
+                            ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxHeight: noteExtent,
+                              ),
+                              child: _Note(page: page),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ),
                   _PageFooter(page: page, index: index, total: total),
@@ -322,16 +346,27 @@ class _Polaroid extends StatelessWidget {
   final NotebookPage page;
   final int index;
 
+  /// 相紙的內距：底邊留厚一點，保住拍立得的相紙感。
+  static const EdgeInsets _paperInsets = EdgeInsets.fromLTRB(12, 12, 12, 28);
+
+  /// 設計稿的 `width:74%; max-width:250px`——照片是正方形，寬度定了高度也
+  /// 就定了。頁面太矮時交給 [FittedBox] 整體等比縮小。
+  static double _side(double maxWidth) => math.min(maxWidth * 0.74, 250.0);
+
+  /// 不被壓縮時整張相紙佔的高度。頁面排版要先扣掉這塊才知道筆記剩多少空間，
+  /// 所以算式收在這裡讓 [build] 與外層共用同一個來源。
+  ///
+  /// 旋轉與位移都只影響繪製、不改變版面尺寸，故不計入。
+  static double naturalHeight(double maxWidth) =>
+      _side(maxWidth) + _paperInsets.vertical;
+
   @override
   Widget build(BuildContext context) {
     final isOdd = index.isOdd;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // 設計稿的 `width:74%; max-width:250px`——照片是正方形，寬度定了
-        // 高度就定了。頁面太矮時交給外層的 FittedBox 整體等比縮小，比自己
-        // 算「可用高度扣掉圖說」穩，圖說字級一改那個估算就會失準。
-        final side = math.min(constraints.maxWidth * 0.74, 250.0);
+        final side = _side(constraints.maxWidth);
 
         // heightFactor 1：只包住照片本身的高度，讓外層的 Flexible 能把剩餘
         // 空間留給下方，而不是把照片撐到正中央。
@@ -349,9 +384,8 @@ class _Polaroid extends StatelessWidget {
                   clipBehavior: Clip.none,
                   children: [
                     Container(
-                      // 底邊留厚一點，保住拍立得的相紙感；圖說改由下方的
-                      // 筆記標題承擔，不再重複景點名。
-                      padding: const EdgeInsets.fromLTRB(12, 12, 12, 28),
+                      // 圖說改由下方的筆記標題承擔，不再重複景點名。
+                      padding: _paperInsets,
                       decoration: BoxDecoration(
                         color: const Color(0xFFFFFDF8),
                         boxShadow: const [
@@ -450,6 +484,27 @@ class _Note extends StatelessWidget {
 
   final NotebookPage page;
 
+  /// 正文字級與行高（設計稿 `.nb-text`）；行數要靠這兩個值換算。
+  static const double _bodyFontSize = 15;
+  static const double _bodyHeightFactor = 1.72;
+
+  /// 換算行數用的單行高度。刻意取 15 × 1.72 = 25.8 的**上界** 26——引擎會把
+  /// 行高進位到整數像素，用 25.8 去除會偶爾多算一行，筆記就會超出配給的高度
+  /// 反過來把照片擠小。寧可少算一行也不要擠到照片。
+  static const double _bodyLineExtent = 26;
+
+  /// 改版前寫死的行數，現在退化成下限：空間不足時至少仍看得到這麼多。
+  static const int _minBodyLines = 3;
+
+  /// 標題列＋地址列＋間距的高度概估（19pt 標題約 26、12pt 地址 18、間距 15），
+  /// 只用來推導 [minHeight]，不參與實際排版——真正的高度由框架量。
+  static const double _headerExtent = 60;
+
+  /// 筆記至少要拿到的高度：放得下 [_minBodyLines] 行正文。頁面矮到給不出這麼
+  /// 多時，讓出空間的是照片（外層 [FittedBox] 縮小），不是正文。
+  static const double minHeight =
+      _bodyLineExtent * _minBodyLines + _headerExtent;
+
   @override
   Widget build(BuildContext context) {
     final tokens = Theme.of(context).extension<LorescapeTokens>();
@@ -508,14 +563,26 @@ class _Note extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 9),
-        Text(
-          page.text,
-          maxLines: 3,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            fontSize: 15,
-            height: 1.72,
-            color: tokens?.ink2 ?? colorScheme.onSurfaceVariant,
+        // 行數隨剩餘高度成長：頁面高就多顯示幾行，只有真的放不下才截斷。
+        // 外層以 ConstrainedBox 給定高度上限，這裡才量得到可用空間。
+        Flexible(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final fitted = constraints.maxHeight.isFinite
+                  ? (constraints.maxHeight / _bodyLineExtent).floor()
+                  : _minBodyLines;
+
+              return Text(
+                page.text,
+                maxLines: math.max(_minBodyLines, fitted),
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontSize: _bodyFontSize,
+                  height: _bodyHeightFactor,
+                  color: tokens?.ink2 ?? colorScheme.onSurfaceVariant,
+                ),
+              );
+            },
           ),
         ),
       ],
