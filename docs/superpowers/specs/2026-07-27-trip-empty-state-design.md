@@ -55,12 +55,54 @@
 
 ### 3. 素材
 
-- 路徑：`frontend/assets/images/empty_trip.png`
-- **pubspec 不需修改**——已宣告整個 `assets/images/` 目錄。
-- 透明背景 PNG，1024×1024 產出，由 Flutter 縮放。
-- App 只有淺色「Field Journal」主題（`theme_config.dart:19`），單一版本即可。
+#### 檔案落點
 
-生成提示詞（手繪旅行手帳風）：
+| 項目 | 值 |
+|---|---|
+| 檔名 | `empty_trip.png` |
+| repo 內完整路徑 | `frontend/assets/images/empty_trip.png` |
+| 程式碼中的 asset key | `'assets/images/empty_trip.png'`（相對 `frontend/`，Flutter 慣例） |
+| pubspec 宣告 | **不需修改**——`assets/images/` 整個目錄已列在 `frontend/pubspec.yaml` 的 `flutter.assets` 下 |
+
+放在 `assets/images/` 根層而非新開子資料夾：這是單張通用插圖，與
+`location_gate.png`、`splash_mark.png` 同性質；`categories/`、`onboarding/`
+那種子資料夾是給成組素材用的。
+
+#### 產圖流程
+
+1. 用下方提示詞在 Antigravity 生成，取 1024×1024、**透明背景** PNG。
+2. 存成 `empty_trip.png`，放進 `frontend/assets/images/`。
+3. 確認透明度沒被壓掉：`file frontend/assets/images/empty_trip.png`
+   應顯示 `RGBA`；若輸出是白底不透明，在淺色卡片上會出現一塊白方框。
+4. 檔案大小控制在 300 KB 以內；超過就先過一次 `pngquant` 或 `oxipng`。
+5. `fvm flutter run` 熱重啟（新增 asset 需 restart，hot reload 不夠）後
+   進任一空旅程頁確認。
+
+#### 缺圖時的行為
+
+實作不必等插圖就緒。沿用 `explore_screen.dart:855` 的既有慣例，`Image.asset`
+一律帶 `errorBuilder`，缺圖時退回等高留白：
+
+```dart
+Image.asset(
+  'assets/images/empty_trip.png',
+  width: 200,
+  height: 200,
+  fit: BoxFit.contain,
+  errorBuilder: (_, _, _) => const SizedBox(height: 200),
+)
+```
+
+如此程式碼與文案可以先進版控、測試也不依賴二進位檔存在；插圖之後補上即可，
+不必改任何程式碼。
+
+#### 其他
+
+- App 只有淺色「Field Journal」主題（`theme_config.dart:19`），單一版本即可，
+  不做 light / dark 兩份。
+- 不做 `@2x` / `@3x` 變體：來源已是 1024×1024，顯示上限 200，縮放綽綽有餘。
+
+#### 生成提示詞（手繪旅行手帳風）
 
 ```
 A hand-drawn travel journal illustration: an open blank notebook lying flat,
