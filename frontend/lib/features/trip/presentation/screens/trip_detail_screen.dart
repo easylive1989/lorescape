@@ -8,6 +8,7 @@ import 'package:context_app/features/journey/domain/models/journey_item.dart';
 import 'package:context_app/shared/widgets/journal/notebook_pager.dart';
 import 'package:context_app/features/journey/providers.dart';
 import 'package:context_app/features/trip/domain/models/trip.dart';
+import 'package:context_app/features/trip/presentation/widgets/trip_empty_state.dart';
 import 'package:context_app/features/trip/providers.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -503,20 +504,7 @@ class _ItemsList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return itemsAsync.when(
       data: (items) {
-        if (items.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Text(
-                'trip.no_items'.tr(),
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          );
-        }
+        if (items.isEmpty) return const TripEmptyState();
         // 一般閱讀模式用手記翻頁器；進入多選後改回列表——翻頁器一次只看得到
         // 一張，沒辦法批次勾選、移動或匯出，硬套會把既有功能弄殘。
         if (!selectionMode) {

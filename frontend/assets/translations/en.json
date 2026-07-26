@@ -110,6 +110,8 @@
     "uncategorized": "Uncategorized",
     "empty": "No trips yet",
     "no_items": "No entries in this trip",
+    "empty_hint": "Find a place in front of you on Explore, listen to its story, and it lands in this journal",
+    "empty_cta": "Explore places",
     "load_error": "Failed to load",
     "not_found": "Trip not found",
     "item_count": "{} entries",

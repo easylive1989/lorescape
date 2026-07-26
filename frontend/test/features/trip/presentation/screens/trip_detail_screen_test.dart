@@ -4,6 +4,7 @@ import 'package:context_app/features/journey/providers.dart';
 import 'package:context_app/features/trip/domain/models/trip.dart';
 import 'package:context_app/features/trip/presentation/controllers/current_trip_notifier.dart';
 import 'package:context_app/features/trip/presentation/screens/trip_detail_screen.dart';
+import 'package:context_app/features/trip/presentation/widgets/trip_empty_state.dart';
 import 'package:context_app/features/trip/providers.dart';
 import 'package:context_app/shared/widgets/journal/notebook_pager.dart';
 import 'package:flutter/material.dart';
@@ -146,6 +147,25 @@ void main() {
         );
 
         _thenEmptyStateIsVisible();
+      },
+    );
+
+    testWidgets(
+      'given a trip with no entries, when the user taps the explore CTA, '
+      'then the app leaves the trip and lands on the explore tab',
+      (tester) async {
+        final visitedLocations = <String>[];
+
+        await _givenEmptyTripScreenWithRouter(
+          tester,
+          visitedLocations: visitedLocations,
+        );
+
+        await tester.tap(find.text('trip.empty_cta'));
+        await tester.pumpAndSettle();
+
+        // 用 go 而非 push：空旅程不該留在返回堆疊裡。
+        expect(visitedLocations, contains('/?tab=explore'));
       },
     );
 
@@ -551,6 +571,36 @@ Future<void> _givenTripDetailScreenWithRouter(
   await tester.pumpAndSettle();
 }
 
+/// 直接開在一本沒有任何記錄的旅程上，並記下每次落在首頁的完整 URI。
+Future<void> _givenEmptyTripScreenWithRouter(
+  WidgetTester tester, {
+  required List<String> visitedLocations,
+}) async {
+  await pumpRouterApp(
+    tester,
+    initialLocation: '/trip/empty',
+    routes: [
+      GoRoute(
+        path: '/',
+        builder: (_, state) {
+          visitedLocations.add(state.uri.toString());
+          return const Scaffold(key: ValueKey('home-screen'));
+        },
+      ),
+      GoRoute(
+        path: '/trip/:id',
+        builder: (_, _) => const TripDetailScreen(tripId: 'empty'),
+      ),
+    ],
+    overrides: [
+      tripRepositoryProvider.overrideWithValue(InMemoryTripRepository()),
+      journeyRepositoryProvider.overrideWithValue(InMemoryJourneyRepository()),
+    ],
+  );
+  await tester.pump(const Duration(milliseconds: 20));
+  await tester.pump(const Duration(milliseconds: 20));
+}
+
 Future<void> _whenUserEntersSelectionMode(WidgetTester tester) async {
   await tester.tap(find.byIcon(Icons.checklist));
   await tester.pump(const Duration(milliseconds: 10));
@@ -566,7 +616,10 @@ void _thenNotebookPagerIsShown() {
 }
 
 void _thenEmptyStateIsVisible() {
+  expect(find.byType(TripEmptyState), findsOneWidget);
   expect(find.text('trip.no_items'), findsOneWidget);
+  expect(find.text('trip.empty_hint'), findsOneWidget);
+  expect(find.text('trip.empty_cta'), findsOneWidget);
 }
 
 void _thenUncategorizedTitleIsVisible() {
