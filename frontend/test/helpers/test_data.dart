@@ -4,6 +4,7 @@ import 'package:context_app/features/explore/domain/models/place_location.dart';
 import 'package:context_app/features/explore/domain/models/place_photo.dart';
 import 'package:context_app/features/journey/domain/models/journey_entry.dart';
 import 'package:context_app/features/journey/domain/models/saved_place.dart';
+import 'package:context_app/features/narration/domain/models/grounding_info.dart';
 import 'package:context_app/features/narration/domain/models/narration_content.dart';
 import 'package:context_app/features/narration/domain/models/story_hook.dart';
 import 'package:context_app/features/settings/domain/models/language.dart';
@@ -57,8 +58,9 @@ NarrationContent buildNarrationContent({
       'This is a sample narration body. It has multiple sentences! '
       'The third line rounds it off.',
   Language language = Language.english,
+  GroundingInfo? grounding,
 }) {
-  return NarrationContent.create(text, language: language);
+  return NarrationContent.create(text, language: language, grounding: grounding);
 }
 
 /// Builds a [StoryHook] with sensible defaults.

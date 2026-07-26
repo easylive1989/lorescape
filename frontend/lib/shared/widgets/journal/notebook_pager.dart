@@ -6,6 +6,86 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+/// 手記的紙張：橫線稿、左側紅褐天地線與裝訂孔帶。
+///
+/// 對應設計稿 `.nb-paper` 疊起來的三層背景——`repeating-linear-gradient`
+/// 的橫線、`::before` 的 margin rule、`::after` 用 `radial-gradient` 打的
+/// 裝訂孔。用 painter 畫是因為這三層都跟頁高有關，靠 `DecorationImage`
+/// 拼不出隨高度重複的孔距。
+class JournalPaperPainter extends CustomPainter {
+  const JournalPaperPainter({
+    required this.ruleColor,
+    required this.marginRuleColor,
+    required this.holeColor,
+  });
+
+  final Color ruleColor;
+  final Color marginRuleColor;
+  final Color holeColor;
+
+  /// 第一條橫線的位置與行距（CSS 的 `transparent 0 33px, 色 33px 34px`）。
+  static const double firstRule = 33;
+  static const double ruleSpacing = 34;
+
+  /// 天地線距左緣（`::before` 的 `left:34px`）。
+  static const double marginRuleX = 34;
+
+  /// 孔帶：`left:12px` 起、圓心在每格 tile 的 4px 處、半徑 2.5px、
+  /// 每 40px 一顆，上下各留 20px。
+  static const double holeCenterX = 16;
+  static const double holeRadius = 2.5;
+  static const double holeSpacing = 40;
+  static const double holeInset = 20;
+
+  /// 橫線的 y 座標。取 `+0.5` 讓 1px 的線壓在像素中心而不是跨兩格。
+  static List<double> ruleOffsets(double height) {
+    final offsets = <double>[];
+    for (var y = firstRule; y <= height; y += ruleSpacing) {
+      offsets.add(y + 0.5);
+    }
+    return offsets;
+  }
+
+  /// 裝訂孔的圓心 y 座標。
+  static List<double> holeOffsets(double height) {
+    final offsets = <double>[];
+    final limit = height - holeInset;
+    for (var y = holeInset + 4; y <= limit; y += holeSpacing) {
+      offsets.add(y);
+    }
+    return offsets;
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rule = Paint()
+      ..color = ruleColor
+      ..strokeWidth = 1;
+    for (final y in ruleOffsets(size.height)) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), rule);
+    }
+
+    canvas.drawLine(
+      const Offset(marginRuleX + 0.5, 0),
+      Offset(marginRuleX + 0.5, size.height),
+      Paint()
+        ..color = marginRuleColor
+        ..strokeWidth = 1,
+    );
+
+    final hole = Paint()..color = holeColor;
+    for (final y in holeOffsets(size.height)) {
+      canvas.drawCircle(Offset(holeCenterX, y), holeRadius, hole);
+    }
+  }
+
+  @override
+  bool shouldRepaint(JournalPaperPainter oldDelegate) =>
+      oldDelegate.ruleColor != ruleColor ||
+      oldDelegate.marginRuleColor != marginRuleColor ||
+      oldDelegate.holeColor != holeColor;
+}
+
 /// 手記翻頁器的單頁資料。
 @immutable
 class NotebookPage {
@@ -15,7 +95,7 @@ class NotebookPage {
     required this.text,
     this.address,
     this.imageUrl,
-    this.onPlay,
+    this.onAddToTrip,
     this.onShare,
     this.onDelete,
   });
@@ -26,8 +106,8 @@ class NotebookPage {
   final String? address;
   final String? imageUrl;
 
-  /// 重新進入播放頁重聽這則記錄；null 時不顯示重聽鍵。
-  final VoidCallback? onPlay;
+  /// 把這則手記收進另一本旅程；null 時不顯示該動作。
+  final VoidCallback? onAddToTrip;
   final VoidCallback? onShare;
   final VoidCallback? onDelete;
 }
@@ -39,9 +119,12 @@ class NotebookPage {
 /// 只遮得住畫面、遮不住框架的斷言，測試會直接掛掉。`PageView` 的物理效果
 /// 是同一類手感（含兩端阻尼），而且順帶拿到無障礙與捲動語意。
 class NotebookPager extends StatefulWidget {
-  const NotebookPager({super.key, required this.pages});
+  const NotebookPager({super.key, required this.pages, this.onPageChanged});
 
   final List<NotebookPage> pages;
+
+  /// 翻到第幾頁；外面的 lead 列要靠它知道現在停在哪一則。
+  final ValueChanged<int>? onPageChanged;
 
   @override
   State<NotebookPager> createState() => _NotebookPagerState();
@@ -70,7 +153,10 @@ class _NotebookPagerState extends State<NotebookPager> {
           child: PageView.builder(
             controller: _controller,
             itemCount: widget.pages.length,
-            onPageChanged: (i) => setState(() => _index = i),
+            onPageChanged: (i) {
+              setState(() => _index = i);
+              widget.onPageChanged?.call(i);
+            },
             itemBuilder: (context, i) => _NotebookPageView(
               page: widget.pages[i],
               index: i,
@@ -110,50 +196,103 @@ class _NotebookPageView extends StatelessWidget {
     final paper = tokens?.paperRaised ?? colorScheme.surfaceContainerLow;
     final ink3 = tokens?.ink3 ?? colorScheme.onSurfaceVariant;
 
+    final radius = BorderRadius.circular(context.tokens.rLg);
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
+      child: DecoratedBox(
         decoration: BoxDecoration(
           color: paper,
-          borderRadius: BorderRadius.circular(context.tokens.rLg),
+          borderRadius: radius,
           border: Border.all(color: tokens?.line ?? colorScheme.outlineVariant),
           boxShadow: tokens?.e2,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'journey.notebook.entry_no'.tr(
-                    args: ['${index + 1}'.padLeft(2, '0')],
-                  ),
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: ink3,
-                  ),
-                ),
-                Flexible(
-                  child: Text(
-                    page.dateLabel,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 11, color: ink3),
-                  ),
-                ),
-              ],
+        child: ClipRRect(
+          borderRadius: radius,
+          child: CustomPaint(
+            painter: const JournalPaperPainter(
+              // 設計稿的三層紙紋固定值，不隨主題色走：換色就不是這張紙了。
+              ruleColor: Color.fromRGBO(90, 66, 42, 0.055),
+              marginRuleColor: Color.fromRGBO(151, 68, 42, 0.28),
+              holeColor: Color.fromRGBO(60, 44, 32, 0.16),
             ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: _Polaroid(page: page, index: index),
+            // 左邊留給裝訂孔與天地線，對應 `padding:20px 22px 22px 54px`。
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(54, 20, 22, 22),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          'journey.notebook.entry_no'.tr(
+                            args: ['${index + 1}'.padLeft(2, '0')],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.notoSerifTc(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.92,
+                            color: ink3,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      _DateStamp(label: page.dateLabel),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: _Polaroid(page: page, index: index),
+                  ),
+                  const SizedBox(height: 16),
+                  _Note(page: page),
+                  _PageFooter(page: page, index: index, total: total),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
-            _Note(page: page),
-            _PageFooter(page: page, index: index, total: total),
-          ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 日期戳章（`.nb-stamp`）：clay 色細框、微微歪斜蓋上去的手帳戳記。
+class _DateStamp extends StatelessWidget {
+  const _DateStamp({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final clay = context.tokens.clay;
+
+    return Transform.rotate(
+      angle: 2.5 * math.pi / 180,
+      child: Opacity(
+        opacity: 0.72,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+          decoration: BoxDecoration(
+            border: Border.all(color: clay, width: 1.5),
+            borderRadius: BorderRadius.circular(5),
+          ),
+          child: Text(
+            label,
+            maxLines: 1,
+            style: GoogleFonts.notoSerifTc(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.72,
+              color: clay,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
         ),
       ),
     );
@@ -169,74 +308,87 @@ class _Polaroid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tokens = Theme.of(context).extension<LorescapeTokens>();
     final isOdd = index.isOdd;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // 照片是正方形，尺寸取「可用寬度」與「可用高度扣掉圖說」的較小者。
-        // 直接用 AspectRatio 會以寬度為準，頁面矮的時候直接爆版。
-        const chromeHeight = 78; // 內距 20 + 圖說約 58
-        final side = math
-            .min(
-              constraints.maxWidth - 20,
-              constraints.maxHeight - chromeHeight,
-            )
-            .clamp(72.0, 420.0);
+        // 設計稿的 `width:74%; max-width:250px`——照片是正方形，寬度定了
+        // 高度就定了。頁面太矮時交給外層的 FittedBox 整體等比縮小，比自己
+        // 算「可用高度扣掉圖說」穩，圖說字級一改那個估算就會失準。
+        final side = math.min(constraints.maxWidth * 0.74, 250.0);
 
         return Center(
-          child: Transform.rotate(
-            angle: (isOdd ? 1.8 : -2.4) * math.pi / 180,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFDFBF6),
-                    boxShadow: tokens?.e2,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(
-                        width: side,
-                        height: side,
-                        child: _PolaroidPhoto(imageUrl: page.imageUrl),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(6, 12, 6, 6),
-                        child: Text(
-                          page.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          // Long Cang：設計稿指定的手寫體，撐起「手記」的味道。
-                          style: GoogleFonts.longCang(
-                            fontSize: 24,
-                            height: 1.1,
-                            color: context.tokens.ink,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            // `margin:10px 0 0 -16px`——照片略偏左，壓在天地線那一側。
+            child: Transform.translate(
+              offset: const Offset(-16, 10),
+              child: Transform.rotate(
+                angle: (isOdd ? 1.8 : -2.4) * math.pi / 180,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFFDF8),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x381C140A),
+                            blurRadius: 24,
+                            offset: Offset(0, 10),
                           ),
+                        ],
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: side,
+                            height: side,
+                            child: _PolaroidPhoto(imageUrl: page.imageUrl),
+                          ),
+                          SizedBox(
+                            width: side,
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(6, 14, 6, 16),
+                              child: Text(
+                                page.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                                // Long Cang：設計稿指定的手寫體，撐起「手記」
+                                // 的味道。
+                                style: GoogleFonts.longCang(
+                                  fontSize: 26,
+                                  height: 1.1,
+                                  color: context.tokens.ink,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // 膠帶：奇偶頁貼在不同側。
+                    Positioned(
+                      top: -11,
+                      left: isOdd ? null : -14,
+                      right: isOdd ? -14 : null,
+                      child: Transform.rotate(
+                        angle: (isOdd ? 30 : -32) * math.pi / 180,
+                        child: Container(
+                          width: 78,
+                          height: 26,
+                          color: const Color(0x6BCBA86E),
+                          child: const SizedBox.expand(),
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                // 膠帶：奇偶頁貼在不同側。
-                Positioned(
-                  top: -11,
-                  left: isOdd ? null : -14,
-                  right: isOdd ? -14 : null,
-                  child: Transform.rotate(
-                    angle: (isOdd ? 30 : -32) * math.pi / 180,
-                    child: Container(
-                      width: 78,
-                      height: 26,
-                      color: const Color(0x6BCBA86E),
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         );
@@ -388,7 +540,16 @@ class _PageFooter extends StatelessWidget {
             '${'${index + 1}'.padLeft(2, '0')} / ${'$total'.padLeft(2, '0')}',
             style: TextStyle(fontSize: 13, letterSpacing: 0.5, color: ink3),
           ),
-          Row(children: _actions()),
+          const SizedBox(width: 12),
+          // 三顆動作在窄機型或長翻譯下會擠爆同一列，讓整組等比縮小而不是
+          // 溢出——比讓標籤各自 ellipsis 成「加入旅…」好讀。
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: Row(children: _actions()),
+            ),
+          ),
         ],
       ),
     );
@@ -398,11 +559,11 @@ class _PageFooter extends StatelessWidget {
   /// 三段 `if`，才不會在中間那顆缺席時留下多餘的空白。
   List<Widget> _actions() {
     final actions = <Widget>[
-      if (page.onPlay != null)
+      if (page.onAddToTrip != null)
         _FooterAction(
-          icon: Icons.play_circle_outline,
-          label: 'common.replay'.tr(),
-          onTap: page.onPlay!,
+          icon: Icons.menu_book_outlined,
+          label: 'trip.add_to_trip'.tr(),
+          onTap: page.onAddToTrip!,
         ),
       if (page.onShare != null)
         _FooterAction(

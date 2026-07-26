@@ -1,5 +1,6 @@
 import 'package:context_app/app/config/lorescape_tokens.dart';
 import 'package:context_app/features/explore/domain/models/place.dart';
+import 'package:context_app/features/narration/domain/models/grounding_info.dart';
 import 'package:context_app/features/narration/domain/models/narration_content.dart';
 import 'package:context_app/features/narration/presentation/screens/narration_screen.dart';
 import 'package:context_app/features/narration/presentation/widgets/editorial_hero.dart';
@@ -31,6 +32,49 @@ void main() {
         _thenPlaceNameIsVisible(place.name);
         _thenTranscriptAreaIsVisible();
         _thenControlPanelIsVisible();
+      },
+    );
+
+    testWidgets(
+      'given narration grounded on web sources, when the reader renders, '
+      'then the source footer closes the article instead of a floating button',
+      (tester) async {
+        await _givenNarrationScreen(
+          tester,
+          place: buildPlace(),
+          content: buildNarrationContent(
+            grounding: const GroundingInfo(
+              renderedContent: null,
+              webSearchQueries: ['kinkakuji history'],
+              sources: [
+                GroundingSource(uri: 'https://a.example', title: 'A'),
+                GroundingSource(uri: 'https://b.example', title: 'B'),
+              ],
+            ),
+          ),
+        );
+        await tester.scrollUntilVisible(
+          find.text('narration.grounding_footer'),
+          200,
+          scrollable: find.byType(Scrollable).first,
+        );
+
+        expect(find.text('narration.grounding_footer'), findsOneWidget);
+        expect(find.byIcon(Icons.info_outline), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'given narration without grounding, when the reader renders, '
+      'then no source footer is shown',
+      (tester) async {
+        await _givenNarrationScreen(
+          tester,
+          place: buildPlace(),
+          content: buildNarrationContent(),
+        );
+
+        expect(find.text('narration.grounding_footer'), findsNothing);
       },
     );
 

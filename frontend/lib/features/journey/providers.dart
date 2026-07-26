@@ -4,7 +4,8 @@ import 'package:context_app/features/journey/domain/repositories/journey_reposit
 import 'package:context_app/features/sync/providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-// Feature 公開介面：trip 詳情頁重用的時間軸元件。
+// Feature 公開介面：trip 詳情頁重用的時間軸元件與手記分享。
+export 'presentation/services/journey_sharing_service.dart';
 export 'presentation/widgets/timeline_entry.dart';
 
 final journeyRepositoryProvider = Provider<JourneyRepository>((ref) {

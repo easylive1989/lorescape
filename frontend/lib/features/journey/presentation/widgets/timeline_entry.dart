@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:context_app/app/config/lorescape_tokens.dart';
-import 'package:context_app/features/journey/presentation/services/journey_sharing_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';

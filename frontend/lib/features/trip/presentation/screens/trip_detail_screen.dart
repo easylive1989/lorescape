@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:context_app/app/config/lorescape_tokens.dart';
 import 'package:context_app/features/export/domain/models/pdf_export_result.dart';
 import 'package:context_app/features/export/domain/services/trip_pdf_export_service.dart';
 import 'package:context_app/features/export/providers.dart';
@@ -30,7 +33,30 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
   bool _selectionMode = false;
   bool _moving = false;
 
+  /// 手記翻頁器目前停在第幾則——lead 列的重聽鍵要播的就是這一則。純粹
+  /// 記錄用，不觸發 rebuild（重繪 lead 反而會打斷翻頁動畫）。
+  int _notebookIndex = 0;
+
   bool get _isUncategorized => widget.tripId == null;
+
+  /// 重聽目前這一則：記錄裡就存著完整敘事文字，播放頁只要拿到地點與
+  /// [NarrationContent] 就能重新合成語音，不必再打一次生成 API。
+  void _replayCurrentNote(List<JourneyItem> items) {
+    if (items.isEmpty) return;
+    final item = items[_notebookIndex.clamp(0, items.length - 1)];
+    switch (item) {
+      case NarrationJourneyItem(:final entry):
+        context.pushNamed(
+          'player',
+          extra: {
+            'place': entry.place.toPlace(),
+            'narrationContent': entry.narrationContent,
+            // 按下「重聽」的意圖就是要聽，不必再多按一次播放鍵。
+            'autoPlay': true,
+          },
+        );
+    }
+  }
 
   void _enterSelectionMode() {
     setState(() {
@@ -116,13 +142,10 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
       appBar: _buildAppBar(tripAsync, items),
       body: Column(
         children: [
-          if (!_isUncategorized && !_selectionMode)
-            tripAsync.when(
-              data: (trip) => trip == null
-                  ? const SizedBox.shrink()
-                  : _TripMetaHeader(trip: trip),
-              loading: () => const SizedBox.shrink(),
-              error: (_, _) => const SizedBox.shrink(),
+          if (!_selectionMode)
+            _NotebookLead(
+              trip: tripAsync.asData?.value,
+              onReplay: items.isEmpty ? null : () => _replayCurrentNote(items),
             ),
           Expanded(
             child: _ItemsList(
@@ -130,6 +153,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
               selectionMode: _selectionMode,
               selectedIds: _selectedIds,
               onToggleSelection: _toggleSelection,
+              onPageChanged: (i) => _notebookIndex = i,
             ),
           ),
         ],
@@ -205,25 +229,58 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
   }
 }
 
-class _TripMetaHeader extends StatelessWidget {
-  final Trip trip;
-  const _TripMetaHeader({required this.trip});
+/// 手記上方的 lead 列（設計稿 `.trip-lead`）：左側是旅程日期，右側是 clay
+/// 色的重聽鍵。重聽鍵放在筆記外面而不是塞進 `.nb-foot`——那三格是留給
+/// 加入旅程 / 分享 / 刪除的。
+class _NotebookLead extends StatelessWidget {
+  const _NotebookLead({required this.trip, required this.onReplay});
+
+  final Trip? trip;
+
+  /// null 代表這本旅程還沒有記錄，沒東西可重聽。
+  final VoidCallback? onReplay;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final range = _formatDateRange(trip.startDate, trip.endDate);
-    if (range == null) return const SizedBox.shrink();
+    final range = trip == null
+        ? null
+        : _formatDateRange(trip!.startDate, trip!.endDate);
+    if (range == null && onReplay == null) return const SizedBox.shrink();
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+      padding: const EdgeInsets.fromLTRB(22, 4, 22, 8),
       child: Row(
         children: [
-          Icon(Icons.event, size: 16, color: colorScheme.onSurfaceVariant),
-          const SizedBox(width: 6),
-          Text(
-            range,
-            style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
+          Expanded(
+            child: range == null
+                ? const SizedBox.shrink()
+                : Row(
+                    children: [
+                      Icon(
+                        Icons.event,
+                        size: 17,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          range,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: colorScheme.onSurfaceVariant,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
           ),
+          if (onReplay != null) ...[
+            const SizedBox(width: 12),
+            _ReplayButton(onTap: onReplay!),
+          ],
         ],
       ),
     );
@@ -236,6 +293,54 @@ class _TripMetaHeader extends StatelessWidget {
       return '${fmt.format(start)} – ${fmt.format(end)}';
     }
     return fmt.format(start ?? end!);
+  }
+}
+
+/// 設計稿的 `.replay-btn`：clay 實心藥丸，按下時壓深一階並微縮。
+class _ReplayButton extends StatelessWidget {
+  const _ReplayButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+
+    return Material(
+      color: tokens.clay,
+      borderRadius: BorderRadius.circular(999),
+      elevation: 0,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        highlightColor: tokens.clayDeep,
+        child: Container(
+          height: 38,
+          padding: const EdgeInsets.symmetric(horizontal: 15),
+          alignment: Alignment.center,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.play_arrow_rounded,
+                size: 18,
+                color: Color(0xFFFBF1E9),
+              ),
+              const SizedBox(width: 7),
+              Text(
+                'journey.replay_note'.tr(),
+                style: const TextStyle(
+                  color: Color(0xFFFBF1E9),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.28,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -411,35 +516,76 @@ TripPdfExportStrings _buildExportStrings() {
   );
 }
 
-class _ItemsList extends StatelessWidget {
+class _ItemsList extends ConsumerWidget {
   final AsyncValue<List<JourneyItem>> itemsAsync;
   final bool selectionMode;
   final Set<String> selectedIds;
   final void Function(String id) onToggleSelection;
+  final ValueChanged<int> onPageChanged;
 
   const _ItemsList({
     required this.itemsAsync,
     required this.selectionMode,
     required this.selectedIds,
     required this.onToggleSelection,
+    required this.onPageChanged,
   });
 
-  /// 重聽已體驗過的記錄：記錄本身就存著完整敘事文字，播放頁只要拿到地點與
-  /// [NarrationContent] 就能重新合成語音，不必再打一次生成 API。
-  void _openPlayer(BuildContext context, JourneyEntry entry) {
-    context.pushNamed(
-      'player',
-      extra: {
-        'place': entry.place.toPlace(),
-        'narrationContent': entry.narrationContent,
-        // 按下「重聽」的意圖就是要聽，不必再多按一次播放鍵。
-        'autoPlay': true,
-      },
+  /// 把這則手記收進另一本旅程，對應設計稿的「加入旅程」。
+  Future<void> _addToTrip(
+    BuildContext context,
+    WidgetRef ref,
+    JourneyEntry entry,
+  ) async {
+    final selection = await showMoveToTripSheet(
+      context: context,
+      currentTripId: entry.tripId,
+    );
+    if (selection == null || selection.tripId == entry.tripId) return;
+    await ref
+        .read(journeyRepositoryProvider)
+        .save(entry.copyWithTripId(selection.tripId));
+    ref.invalidate(allJourneyItemsProvider);
+  }
+
+  void _share(BuildContext context, JourneyEntry entry) {
+    unawaited(
+      JourneySharingService.shareJourneyCard(
+        context: context,
+        placeName: entry.place.name,
+        placeAddress: entry.place.address,
+        narrationExcerpt: entry.narrationContent.text,
+        visitedAt: entry.createdAt,
+        imageUrl: entry.place.imageUrl,
+      ),
     );
   }
 
+  Future<void> _delete(
+    BuildContext context,
+    WidgetRef ref,
+    JourneyEntry entry,
+  ) async {
+    final confirmed = await showAdaptiveAlertDialog<bool>(
+      context: context,
+      title: 'journey.delete_title'.tr(),
+      content: 'journey.delete_message'.tr(),
+      actions: [
+        AdaptiveDialogAction<bool>(label: 'journey.cancel'.tr(), result: false),
+        AdaptiveDialogAction<bool>(
+          label: 'journey.delete_confirm'.tr(),
+          isDestructive: true,
+          result: true,
+        ),
+      ],
+    );
+    if (confirmed != true) return;
+    await ref.read(journeyRepositoryProvider).delete(entry.id);
+    ref.invalidate(allJourneyItemsProvider);
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return itemsAsync.when(
       data: (items) {
         if (items.isEmpty) {
@@ -460,6 +606,7 @@ class _ItemsList extends StatelessWidget {
         // 一張，沒辦法批次勾選、移動或匯出，硬套會把既有功能弄殘。
         if (!selectionMode) {
           return NotebookPager(
+            onPageChanged: onPageChanged,
             pages: [
               for (var i = 0; i < items.length; i++)
                 switch (items[i]) {
@@ -471,7 +618,9 @@ class _ItemsList extends StatelessWidget {
                     text: entry.narrationContent.text,
                     address: entry.place.address,
                     imageUrl: entry.place.imageUrl,
-                    onPlay: () => _openPlayer(context, entry),
+                    onAddToTrip: () => _addToTrip(context, ref, entry),
+                    onShare: () => _share(context, entry),
+                    onDelete: () => _delete(context, ref, entry),
                   ),
                 },
             ],

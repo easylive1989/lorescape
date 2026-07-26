@@ -29,13 +29,13 @@ class TranscriptSegmentItem extends StatelessWidget {
     final baseStyle = isActive
         ? GoogleFonts.notoSerifTc(
             fontSize: 20,
-            height: 1.9,
+            height: 1.92,
             fontWeight: FontWeight.w600,
             color: palette.readInk,
           )
         : GoogleFonts.notoSerifTc(
             fontSize: 18.5,
-            height: 1.9,
+            height: 1.92,
             color: palette.readDim,
           );
 
@@ -84,9 +84,11 @@ class TranscriptSegmentItem extends StatelessWidget {
     }
     final first = chars.take(1).toString();
     final rest = chars.skip(1).toString();
+    // 設計稿 `.reader__lede .dropcap`：固定 64px、line-height .84，字級不跟
+    // 著段落走——drop cap 的份量是版面的支點，會隨 active 段落放大就散了。
     final dropStyle = GoogleFonts.notoSerifTc(
-      fontSize: (baseStyle.fontSize ?? 18.5) * 2.4,
-      height: 1.0,
+      fontSize: 64,
+      height: 0.84,
       fontWeight: FontWeight.w700,
       color: palette.readCap,
     );
@@ -97,7 +99,8 @@ class TranscriptSegmentItem extends StatelessWidget {
             alignment: PlaceholderAlignment.baseline,
             baseline: TextBaseline.alphabetic,
             child: Padding(
-              padding: const EdgeInsets.only(right: 4),
+              // `padding:6px 12px 0 0`
+              padding: const EdgeInsets.only(top: 6, right: 12),
               child: Text(
                 first,
                 key: const Key('reader-lede-dropcap'),

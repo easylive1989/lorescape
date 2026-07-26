@@ -37,6 +37,63 @@ void main() {
 
         _thenTripNameIsVisible('Kyoto Temples');
         _thenNotebookPagerIsShown();
+        // 手記本身帶三顆動作；重播鍵在筆記外的 lead 列。
+        expect(find.text('trip.add_to_trip'), findsOneWidget);
+        expect(find.text('common.share'), findsOneWidget);
+        expect(find.text('common.delete'), findsOneWidget);
+        expect(find.text('journey.replay_note'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'given a trip entry in reading mode, when the user taps add-to-trip, '
+      'then the move-to-trip sheet opens',
+      (tester) async {
+        final trip = buildTrip(id: 'kyoto', name: 'Kyoto Temples');
+        final entry = buildJourneyEntry(id: 'e1', tripId: 'kyoto');
+        final tripRepo = InMemoryTripRepository();
+        final journeyRepo = InMemoryJourneyRepository();
+        await tripRepo.save(trip);
+        await journeyRepo.save(entry);
+
+        await _givenTripDetailScreenWithRouter(
+          tester,
+          tripId: 'kyoto',
+          tripRepo: tripRepo,
+          journeyRepo: journeyRepo,
+        );
+
+        await tester.tap(find.text('trip.add_to_trip'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('trip.uncategorized'), findsAtLeastNWidgets(1));
+      },
+    );
+
+    testWidgets(
+      'given a trip entry in reading mode, when the user confirms delete, '
+      'then the entry is removed from the repository',
+      (tester) async {
+        final trip = buildTrip(id: 'kyoto', name: 'Kyoto Temples');
+        final entry = buildJourneyEntry(id: 'e1', tripId: 'kyoto');
+        final tripRepo = InMemoryTripRepository();
+        final journeyRepo = InMemoryJourneyRepository();
+        await tripRepo.save(trip);
+        await journeyRepo.save(entry);
+
+        await _givenTripDetailScreenWithRouter(
+          tester,
+          tripId: 'kyoto',
+          tripRepo: tripRepo,
+          journeyRepo: journeyRepo,
+        );
+
+        await tester.tap(find.text('common.delete'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('journey.delete_confirm'));
+        await tester.pumpAndSettle();
+
+        expect(await journeyRepo.getAll(), isEmpty);
       },
     );
 
@@ -64,7 +121,7 @@ void main() {
           playerExtras: playerExtras,
         );
 
-        await tester.tap(find.text('common.replay'));
+        await tester.tap(find.text('journey.replay_note'));
         await tester.pumpAndSettle();
 
         final extra = playerExtras.single as Map<String, dynamic>;

@@ -115,29 +115,23 @@ class _NarrationScreenState extends ConsumerState<NarrationScreen> {
           children: [
             _NarrationHeader(placeName: widget.place.name, palette: palette),
             Expanded(
-              child: Stack(
-                children: [
-                  NarrationTranscriptArea(
-                    scrollController: _scrollController,
-                    header: _ReaderHero(
-                      place: widget.place,
-                      storyTitle: widget.storyTitle,
-                    ),
-                  ),
-                  if (widget.narrationContent.grounding != null)
-                    Positioned(
-                      right: 12,
-                      bottom: 12,
-                      child: _InfoButton(
+              child: NarrationTranscriptArea(
+                scrollController: _scrollController,
+                header: _ReaderHero(
+                  place: widget.place,
+                  storyTitle: widget.storyTitle,
+                ),
+                footer: widget.narrationContent.grounding == null
+                    ? null
+                    : _ReaderFooter(
                         palette: palette,
-                        tooltip: 'narration.grounding_info_tooltip'.tr(),
-                        onPressed: () => showGroundingInfoSheet(
+                        sourceCount:
+                            widget.narrationContent.grounding!.sources.length,
+                        onTap: () => showGroundingInfoSheet(
                           context,
                           grounding: widget.narrationContent.grounding!,
                         ),
                       ),
-                    ),
-                ],
               ),
             ),
             NarrationControlPanel(place: widget.place),
@@ -219,8 +213,8 @@ class _ReaderHero extends StatelessWidget {
             decoration: BoxDecoration(gradient: kEditorialHeroScrim),
           ),
           Positioned(
-            left: 24,
-            right: 24,
+            left: 22,
+            right: 22,
             bottom: 22,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -238,14 +232,15 @@ class _ReaderHero extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                 ],
                 Text(
                   title,
+                  // 設計稿 `.hero__cap h2`：32px / line-height 1.12
                   style: GoogleFonts.notoSerifTc(
-                    fontSize: 28,
+                    fontSize: 32,
                     fontWeight: FontWeight.w700,
-                    height: 1.16,
+                    height: 1.12,
                     color: Colors.white,
                     shadows: const [
                       Shadow(
@@ -265,32 +260,48 @@ class _ReaderHero extends StatelessWidget {
   }
 }
 
-/// Circular ghost info button sitting on the reading surface.
-class _InfoButton extends StatelessWidget {
-  const _InfoButton({
+/// 文末的來源列（設計稿 `.reader__footer`）：一條細線把正文收掉，底下是
+/// 淡色的來源標記，點下去開來源清單。
+///
+/// 取代原本浮在閱讀區右下角的圓形 info 鈕——那顆鈕會一路蓋著正文，而設計
+/// 把出處當成文章的結尾，讀完才出現。
+class _ReaderFooter extends StatelessWidget {
+  const _ReaderFooter({
     required this.palette,
-    required this.tooltip,
-    required this.onPressed,
+    required this.sourceCount,
+    required this.onTap,
   });
 
   final ReadingPalette palette;
-  final String tooltip;
-  final VoidCallback onPressed;
+  final int sourceCount;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: palette.readBg,
-        shape: CircleBorder(side: BorderSide(color: palette.readLine)),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onPressed,
-          child: SizedBox(
-            width: 40,
-            height: 40,
-            child: Icon(Icons.info_outline, size: 20, color: palette.readDim),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(26, 34, 26, 0),
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.only(top: 18),
+          decoration: BoxDecoration(
+            border: Border(top: BorderSide(color: palette.readLine)),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'narration.grounding_footer'.tr(args: ['$sourceCount']),
+                  style: TextStyle(
+                    fontSize: 13,
+                    letterSpacing: 0.78,
+                    color: palette.readDim,
+                  ),
+                ),
+              ),
+              Icon(Icons.chevron_right, size: 18, color: palette.readDim),
+            ],
           ),
         ),
       ),

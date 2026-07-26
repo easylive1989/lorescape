@@ -60,6 +60,9 @@
     "settings": "設定"
   },
   "story": {
+    "deck_read": "閱讀",
+    "deck_later": "稍後",
+    "list_eyebrow": "Anno · {} 則",
     "list_title": "故事",
     "list_empty": "還沒有故事"
   },
@@ -79,6 +82,7 @@
     "yesterday": "昨天",
     "replay": "重播",
     "login_required": "登入後即可查看您的旅程記錄",
+    "replay_note": "重聽這則手記",
     "notebook": {
       "entry_no": "手記 · No.{}",
       "no_photo": "無照片"
@@ -113,6 +117,7 @@
     "current_badge": "進行中",
     "set_as_current": "設為當前旅程",
     "end_current": "結束旅程",
+    "add_to_trip": "加入旅程",
     "move_title": "移至旅程",
     "move_title_batch": "將 {} 筆記錄移至旅程",
     "move_selected": "移至旅程",
@@ -180,8 +185,7 @@
     "language_chinese_traditional": "繁體中文",
     "error_prefix": "錯誤",
     "place_label": "地點",
-    "replay": "重聽",
-    "share": "分享",
+        "share": "分享",
     "delete": "刪除"
   },
   "auth": {
@@ -398,6 +402,7 @@
     "confirm_replay_action": "確定"
   },
   "narration": {
+    "grounding_footer": "資料來源 · {} 則",
     "grounding_info_tooltip": "顯示資料來源"
   }
 }

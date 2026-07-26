@@ -21,11 +21,11 @@ class NarrationControlPanel extends ConsumerWidget {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+        padding: const EdgeInsets.fromLTRB(14, 0, 14, 6),
         child: Container(
           decoration: BoxDecoration(
             color: palette.inkBg2,
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(31),
             boxShadow: const [
               BoxShadow(
                 color: Color(0x59140C08),
@@ -34,7 +34,7 @@ class NarrationControlPanel extends ConsumerWidget {
               ),
             ],
           ),
-          padding: const EdgeInsets.fromLTRB(12, 10, 18, 10),
+          padding: const EdgeInsets.fromLTRB(8, 8, 18, 8),
           child: _ControlsRow(
             playerState: playerState,
             palette: palette,
@@ -76,7 +76,7 @@ class _ControlsRow extends StatelessWidget {
           opacity: playerState.canSkipPrevious ? 1.0 : 0.3,
           child: _CircleControl(
             icon: Icons.skip_previous,
-            size: 40,
+            size: 38,
             filled: false,
             palette: palette,
             onPressed: onSkipPrev,
@@ -85,7 +85,7 @@ class _ControlsRow extends StatelessWidget {
         const SizedBox(width: 4),
         _CircleControl(
           icon: playerState.isPlaying ? Icons.pause : Icons.play_arrow,
-          size: 54,
+          size: 46,
           filled: true,
           palette: palette,
           onPressed: playerState.isLoading || playerState.hasError
@@ -97,13 +97,13 @@ class _ControlsRow extends StatelessWidget {
           opacity: playerState.canSkipNext ? 1.0 : 0.3,
           child: _CircleControl(
             icon: Icons.skip_next,
-            size: 40,
+            size: 38,
             filled: false,
             palette: palette,
             onPressed: onSkipNext,
           ),
         ),
-        const SizedBox(width: 14),
+        const SizedBox(width: 18),
         Expanded(
           child: _ProgressBar(progress: playerState.progress, palette: palette),
         ),

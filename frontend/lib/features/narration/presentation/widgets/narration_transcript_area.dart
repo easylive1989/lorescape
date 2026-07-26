@@ -17,10 +17,15 @@ class NarrationTranscriptArea extends ConsumerWidget {
   /// Falls back to a `SizedBox(height: 60)` spacer when null.
   final Widget? header;
 
+  /// Rendered after the last segment, above the tail spacer that clears the
+  /// audio bar. Used for the article's closing source line.
+  final Widget? footer;
+
   const NarrationTranscriptArea({
     super.key,
     required this.scrollController,
     this.header,
+    this.footer,
   });
 
   @override
@@ -88,16 +93,22 @@ class NarrationTranscriptArea extends ConsumerWidget {
               return header ?? const SizedBox(height: 60);
             }
             if (index == content.segments.length + 1) {
-              return const SizedBox(height: 200);
+              return Column(
+                children: [
+                  if (footer != null) footer!,
+                  const SizedBox(height: 200),
+                ],
+              );
             }
             final segmentIndex = index - 1;
             final segment = content.segments[segmentIndex];
             final isActive = currentSegmentIndex == segmentIndex;
             return Padding(
+              // 設計稿 `.reader__body{ padding:30px 26px 40px }`
               padding: EdgeInsets.only(
-                left: 24,
-                right: 24,
-                top: segmentIndex == 0 ? 28 : 0,
+                left: 26,
+                right: 26,
+                top: segmentIndex == 0 ? 30 : 0,
               ),
               child: TranscriptSegmentItem(
                 segment: segment,

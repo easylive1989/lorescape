@@ -60,6 +60,9 @@
     "settings": "Settings"
   },
   "story": {
+    "deck_read": "Read",
+    "deck_later": "Later",
+    "list_eyebrow": "Anno · {} stories",
     "list_title": "Stories",
     "list_empty": "No stories yet"
   },
@@ -77,8 +80,8 @@
     "cancel": "Cancel",
     "today": "Today",
     "yesterday": "Yesterday",
-    "replay": "Replay",
-    "login_required": "Sign in to view your journey history",
+        "login_required": "Sign in to view your journey history",
+    "replay_note": "Replay this note",
     "notebook": {
       "entry_no": "Note · No.{}",
       "no_photo": "No photo"
@@ -113,6 +116,7 @@
     "current_badge": "Active",
     "set_as_current": "Set as active trip",
     "end_current": "End trip",
+    "add_to_trip": "Add to trip",
     "move_title": "Move to trip",
     "move_title_batch": "Move {} entries to trip",
     "move_selected": "Move to trip",
@@ -180,8 +184,7 @@
     "language_chinese_traditional": "繁體中文",
     "error_prefix": "Error",
     "place_label": "PLACE",
-    "replay": "Replay",
-    "share": "Share",
+        "share": "Share",
     "delete": "Delete"
   },
   "auth": {
@@ -398,6 +401,7 @@
     "confirm_replay_action": "OK"
   },
   "narration": {
+    "grounding_footer": "Sources · {}",
     "grounding_info_tooltip": "Show sources"
   }
 }

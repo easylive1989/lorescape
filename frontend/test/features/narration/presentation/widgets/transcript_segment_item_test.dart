@@ -34,6 +34,12 @@ void main() {
           find.byKey(const Key('reader-lede-dropcap')),
           findsOneWidget,
         );
+        // 設計稿 `.reader__lede .dropcap`：64px、line-height .84。
+        final dropcap = tester.widget<Text>(
+          find.byKey(const Key('reader-lede-dropcap')),
+        );
+        expect(dropcap.style?.fontSize, 64);
+        expect(dropcap.style?.height, 0.84);
       },
     );
 
