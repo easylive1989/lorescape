@@ -40,20 +40,24 @@ void main() {
   group('NotebookPager', () {
     testWidgets(
       'given a page with no callbacks, when the pager renders, '
-      'then the footer shows no actions',
+      'then no actions are shown and the title appears only in the note',
       (tester) async {
         await _givenPager(tester, pages: [_buildPage()]);
 
         expect(find.text('trip.add_to_trip'), findsNothing);
         expect(find.text('common.share'), findsNothing);
         expect(find.text('common.delete'), findsNothing);
+        expect(find.byIcon(Icons.play_arrow_rounded), findsNothing);
+        // 拍立得下方不再放手寫圖說，景點名只出現在筆記標題一處。
+        expect(find.text('Kinkaku-ji'), findsOneWidget);
       },
     );
 
     testWidgets(
       'given a page with every callback, when the user taps each action, '
-      'then add-to-trip, share and delete each fire once',
+      'then replay, add-to-trip, share and delete each fire once',
       (tester) async {
+        var replayCount = 0;
         var addCount = 0;
         var shareCount = 0;
         var deleteCount = 0;
@@ -62,17 +66,20 @@ void main() {
           tester,
           pages: [
             _buildPage(
+              onReplay: () => replayCount += 1,
               onAddToTrip: () => addCount += 1,
               onShare: () => shareCount += 1,
               onDelete: () => deleteCount += 1,
             ),
           ],
         );
+        await tester.tap(find.byIcon(Icons.play_arrow_rounded));
         await tester.tap(find.text('trip.add_to_trip'));
         await tester.tap(find.text('common.share'));
         await tester.tap(find.text('common.delete'));
         await tester.pump();
 
+        expect(replayCount, 1);
         expect(addCount, 1);
         expect(shareCount, 1);
         expect(deleteCount, 1);
@@ -82,6 +89,7 @@ void main() {
 }
 
 NotebookPage _buildPage({
+  VoidCallback? onReplay,
   VoidCallback? onAddToTrip,
   VoidCallback? onShare,
   VoidCallback? onDelete,
@@ -89,6 +97,7 @@ NotebookPage _buildPage({
   title: 'Kinkaku-ji',
   dateLabel: '2024/05/01 · 10:00',
   text: 'A golden pavilion by the pond.',
+  onReplay: onReplay,
   onAddToTrip: onAddToTrip,
   onShare: onShare,
   onDelete: onDelete,

@@ -95,6 +95,7 @@ class NotebookPage {
     required this.text,
     this.address,
     this.imageUrl,
+    this.onReplay,
     this.onAddToTrip,
     this.onShare,
     this.onDelete,
@@ -105,6 +106,9 @@ class NotebookPage {
   final String text;
   final String? address;
   final String? imageUrl;
+
+  /// 重聽這一則手記；null 時標題右側不顯示重聽鍵。
+  final VoidCallback? onReplay;
 
   /// 把這則手記收進另一本旅程；null 時不顯示該動作。
   final VoidCallback? onAddToTrip;
@@ -123,7 +127,7 @@ class NotebookPager extends StatefulWidget {
 
   final List<NotebookPage> pages;
 
-  /// 翻到第幾頁；外面的 lead 列要靠它知道現在停在哪一則。
+  /// 翻到第幾頁；外層需要知道現在停在哪一則時使用。
   final ValueChanged<int>? onPageChanged;
 
   @override
@@ -329,7 +333,9 @@ class _Polaroid extends StatelessWidget {
                   clipBehavior: Clip.none,
                   children: [
                     Container(
-                      padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+                      // 底邊留厚一點，保住拍立得的相紙感；圖說改由下方的
+                      // 筆記標題承擔，不再重複景點名。
+                      padding: const EdgeInsets.fromLTRB(12, 12, 12, 28),
                       decoration: BoxDecoration(
                         color: const Color(0xFFFFFDF8),
                         boxShadow: const [
@@ -341,34 +347,10 @@ class _Polaroid extends StatelessWidget {
                         ],
                         borderRadius: BorderRadius.circular(3),
                       ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SizedBox(
-                            width: side,
-                            height: side,
-                            child: _PolaroidPhoto(imageUrl: page.imageUrl),
-                          ),
-                          SizedBox(
-                            width: side,
-                            child: Padding(
-                              padding: const EdgeInsets.fromLTRB(6, 14, 6, 16),
-                              child: Text(
-                                page.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.center,
-                                // Long Cang：設計稿指定的手寫體，撐起「手記」
-                                // 的味道。
-                                style: GoogleFonts.longCang(
-                                  fontSize: 26,
-                                  height: 1.1,
-                                  color: context.tokens.ink,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                      child: SizedBox(
+                        width: side,
+                        height: side,
+                        child: _PolaroidPhoto(imageUrl: page.imageUrl),
                       ),
                     ),
                     // 膠帶：奇偶頁貼在不同側。
@@ -462,14 +444,24 @@ class _Note extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          page.title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontSize: 19,
-            fontWeight: FontWeight.w700,
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                page.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontSize: 19,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            if (page.onReplay != null) ...[
+              const SizedBox(width: 10),
+              _ReplayIconButton(onTap: page.onReplay!),
+            ],
+          ],
         ),
         if (address != null && address.isNotEmpty) ...[
           const SizedBox(height: 6),
@@ -511,6 +503,42 @@ class _Note extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// 標題右側的重聽鍵：clay 色圓鈕、只放播放 icon——設計稿的文字藥丸版
+/// 放進筆記標題列會擠掉長景點名，縮成 icon 才擺得下。
+class _ReplayIconButton extends StatelessWidget {
+  const _ReplayIconButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+
+    return Semantics(
+      button: true,
+      label: 'journey.replay_note'.tr(),
+      child: Material(
+        color: tokens.clay,
+        shape: const CircleBorder(),
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          highlightColor: tokens.clayDeep,
+          child: const SizedBox(
+            width: 34,
+            height: 34,
+            child: Icon(
+              Icons.play_arrow_rounded,
+              size: 20,
+              color: Color(0xFFFBF1E9),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

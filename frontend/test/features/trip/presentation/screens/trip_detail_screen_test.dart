@@ -37,11 +37,11 @@ void main() {
 
         _thenTripNameIsVisible('Kyoto Temples');
         _thenNotebookPagerIsShown();
-        // 手記本身帶三顆動作；重播鍵在筆記外的 lead 列。
+        // 手記本身帶三顆動作；重聽鍵是筆記標題右側的 icon 圓鈕。
         expect(find.text('trip.add_to_trip'), findsOneWidget);
         expect(find.text('common.share'), findsOneWidget);
         expect(find.text('common.delete'), findsOneWidget);
-        expect(find.text('journey.replay_note'), findsOneWidget);
+        expect(find.byIcon(Icons.play_arrow_rounded), findsOneWidget);
       },
     );
 
@@ -121,7 +121,7 @@ void main() {
           playerExtras: playerExtras,
         );
 
-        await tester.tap(find.text('journey.replay_note'));
+        await tester.tap(find.byIcon(Icons.play_arrow_rounded));
         await tester.pumpAndSettle();
 
         final extra = playerExtras.single as Map<String, dynamic>;
