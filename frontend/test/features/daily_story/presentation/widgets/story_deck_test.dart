@@ -111,7 +111,7 @@ void main() {
         );
 
         // Progress dots are the only AnimatedContainers in the deck.
-        expect(find.byType(AnimatedContainer), findsNWidgets(9));
+        expect(find.byType(AnimatedContainer), findsNWidgets(6));
       },
     );
   });

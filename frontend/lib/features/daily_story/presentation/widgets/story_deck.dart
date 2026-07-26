@@ -23,6 +23,9 @@ class StoryDeck extends StatefulWidget {
   /// 後面最多再露幾張，多了只是疊在同一處看不出來。
   static const int visibleBehind = 4;
 
+  /// 後排每張往下扇開的距離（px），也用來算牌堆該留多少底部空間。
+  static const double fanOffset = 13;
+
   @override
   State<StoryDeck> createState() => _StoryDeckState();
 }
@@ -137,7 +140,13 @@ class _StoryDeckState extends State<StoryDeck>
       children: [
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(22, 6, 22, 12),
+            // 底部留出後排卡片扇開的距離，卡片才不會壓到下面的 indicator。
+            padding: const EdgeInsets.fromLTRB(
+              22,
+              6,
+              22,
+              12 + StoryDeck.fanOffset * StoryDeck.visibleBehind,
+            ),
             child: GestureDetector(
               onHorizontalDragStart: _onDragStart,
               onHorizontalDragUpdate: _onDragUpdate,
@@ -169,7 +178,7 @@ class _StoryDeckState extends State<StoryDeck>
       return Transform(
         alignment: Alignment.center,
         transform: Matrix4.identity()
-          ..translateByDouble(0, pos * 13.0, 0, 1)
+          ..translateByDouble(0, pos * StoryDeck.fanOffset, 0, 1)
           ..scaleByDouble(1 - pos * 0.028, 1 - pos * 0.028, 1, 1)
           ..rotateZ(tilt * math.pi / 180),
         child: Opacity(
@@ -542,7 +551,7 @@ class _DeckProgress extends StatelessWidget {
   final int count;
   final int index;
 
-  static const int maxDots = 9;
+  static const int maxDots = 6;
 
   @override
   Widget build(BuildContext context) {
