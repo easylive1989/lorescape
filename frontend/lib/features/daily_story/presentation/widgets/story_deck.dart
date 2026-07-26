@@ -8,9 +8,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 /// 故事牌堆（設計稿 `.deck-stage` / `.dcard`）：一疊照片卡，最上面那張可以
-/// 左右滑——右滑或點一下開始閱讀，左滑把它排到隊尾稍後再看。
+/// 左右滑——左滑翻到下一張、右滑翻回上一張，點一下才開始閱讀。
 ///
-/// 卡片不是被消耗掉而是輪轉：故事會一直在，左滑只是「現在先不讀」。
+/// 卡片不是被消耗掉而是輪轉：故事會一直在，滑動只是在牌堆裡前後翻。
 class StoryDeck extends StatefulWidget {
   const StoryDeck({super.key, required this.stories, required this.onOpen});
 
@@ -37,6 +37,11 @@ class _StoryDeckState extends State<StoryDeck>
 
   /// 飛出方向：1 右、-1 左、null 代表沒有卡片正在離場。
   int? _leaving;
+
+  /// 上一張正從場外飛回頂端（右滑翻回時）。
+  bool _entering = false;
+
+  bool get _animating => _leaving != null || _entering;
 
   /// 在 initState 就建好而不是用 lazy `late final`：沒滑過任何一張卡就離開
   /// 時，dispose 會是第一次存取它，等於在樹拆解到一半才去建 ticker。
@@ -67,7 +72,7 @@ class _StoryDeckState extends State<StoryDeck>
   }
 
   void _onDragStart(DragStartDetails _) {
-    if (_leaving != null) return;
+    if (_animating) return;
     setState(() {
       _dragging = true;
       _dx = 0;
@@ -75,18 +80,17 @@ class _StoryDeckState extends State<StoryDeck>
   }
 
   void _onDragUpdate(DragUpdateDetails details) {
-    if (_leaving != null) return;
+    if (_animating) return;
     setState(() => _dx += details.delta.dx);
   }
 
   void _onDragEnd(DragEndDetails _) {
-    if (_leaving != null) return;
+    if (_animating) return;
     final dx = _dx;
-    if (dx > StoryDeck.swipeThreshold) {
-      _commit(1);
-      widget.onOpen(widget.stories[_order.first]);
-    } else if (dx < -StoryDeck.swipeThreshold) {
-      _commit(-1);
+    if (widget.stories.length > 1 && dx < -StoryDeck.swipeThreshold) {
+      _showNext();
+    } else if (widget.stories.length > 1 && dx > StoryDeck.swipeThreshold) {
+      _showPrevious();
     } else {
       setState(() {
         _dragging = false;
@@ -95,10 +99,10 @@ class _StoryDeckState extends State<StoryDeck>
     }
   }
 
-  /// 讓最上面那張飛出去，動畫收尾後把它排到隊尾。
-  Future<void> _commit(int direction) async {
+  /// 左滑：讓最上面那張往左飛出去，動畫收尾後把它排到隊尾。
+  Future<void> _showNext() async {
     setState(() {
-      _leaving = direction;
+      _leaving = -1;
       _dragging = false;
       _dx = 0;
     });
@@ -108,6 +112,19 @@ class _StoryDeckState extends State<StoryDeck>
       _order = [..._order.skip(1), _order.first];
       _leaving = null;
     });
+  }
+
+  /// 右滑：把隊尾那張（上一張）調回頂端，從左側飛回來。
+  Future<void> _showPrevious() async {
+    setState(() {
+      _order = [_order.last, ..._order.take(_order.length - 1)];
+      _entering = true;
+      _dragging = false;
+      _dx = 0;
+    });
+    await _leaveController.forward(from: 0);
+    if (!mounted) return;
+    setState(() => _entering = false);
   }
 
   @override
@@ -125,7 +142,7 @@ class _StoryDeckState extends State<StoryDeck>
               onHorizontalDragStart: _onDragStart,
               onHorizontalDragUpdate: _onDragUpdate,
               onHorizontalDragEnd: _onDragEnd,
-              onTap: _leaving != null
+              onTap: _animating
                   ? null
                   : () => widget.onOpen(widget.stories[_order.first]),
               child: Stack(
@@ -162,16 +179,19 @@ class _StoryDeckState extends State<StoryDeck>
       );
     }
 
-    if (_leaving != null) {
+    if (_animating) {
+      // 離場往左飛出；回場則是同一段軌跡倒著播，從左側飛回來。
+      final direction = _leaving ?? -1;
       return AnimatedBuilder(
         animation: _leaveController,
         builder: (context, child) {
           final t = Curves.easeOutCubic.transform(_leaveController.value);
+          final progress = _entering ? 1 - t : t;
           return FractionalTranslation(
-            translation: Offset(_leaving! * 1.35 * t, 0),
+            translation: Offset(direction * 1.35 * progress, 0),
             child: Transform.rotate(
-              angle: _leaving! * 16 * t * math.pi / 180,
-              child: Opacity(opacity: 1 - t, child: child),
+              angle: direction * 16 * progress * math.pi / 180,
+              child: Opacity(opacity: 1 - progress, child: child),
             ),
           );
         },
@@ -287,12 +307,12 @@ class _StoryDeckCard extends StatelessWidget {
                   child: _ChapterBadge(label: story.cardAnnoRoman!),
                 ),
               _DecisionStamp(
-                label: 'story.deck_read'.tr(),
+                label: 'story.deck_prev'.tr(),
                 opacity: dragHint.clamp(0.0, 1.0),
                 alignRight: true,
               ),
               _DecisionStamp(
-                label: 'story.deck_later'.tr(),
+                label: 'story.deck_next'.tr(),
                 opacity: (-dragHint).clamp(0.0, 1.0),
                 alignRight: false,
               ),
@@ -375,7 +395,7 @@ class _ChapterBadge extends StatelessWidget {
   }
 }
 
-/// 拖曳時浮出的決定印章（`.dcard__stamp`）：右「閱讀」、左「稍後」。
+/// 拖曳時浮出的方向印章（`.dcard__stamp`）：右滑「上一則」、左滑「下一則」。
 class _DecisionStamp extends StatelessWidget {
   const _DecisionStamp({
     required this.label,
@@ -513,28 +533,41 @@ class _CardCaption extends StatelessWidget {
 }
 
 /// 牌堆進度（`.deck-progress`）：目前這張是一條 clay 短棒。
+///
+/// 點數有上限：故事多於 [maxDots] 時只畫一段以目前位置為中心的視窗，
+/// 視窗邊緣若還有更多故事，該端的點縮小提示「後面還有」。
 class _DeckProgress extends StatelessWidget {
   const _DeckProgress({required this.count, required this.index});
 
   final int count;
   final int index;
 
+  static const int maxDots = 9;
+
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
+
+    final shown = math.min(count, maxDots);
+    final start = (index - shown ~/ 2).clamp(0, count - shown);
+    final end = start + shown;
 
     return Padding(
       padding: const EdgeInsets.only(top: 2, bottom: 10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          for (var i = 0; i < count; i += 1)
+          for (var i = start; i < end; i += 1)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 3),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                width: i == index ? 20 : 6,
-                height: 6,
+                width: i == index
+                    ? 20
+                    : _isEdgeHint(i, start: start, end: end)
+                    ? 4
+                    : 6,
+                height: _isEdgeHint(i, start: start, end: end) ? 4 : 6,
                 decoration: BoxDecoration(
                   color: i == index ? tokens.clay : tokens.lineStrong,
                   borderRadius: BorderRadius.circular(3),
@@ -544,5 +577,11 @@ class _DeckProgress extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// 視窗邊緣、且該方向還有更多故事的點。
+  bool _isEdgeHint(int i, {required int start, required int end}) {
+    if (i == index) return false;
+    return (i == start && start > 0) || (i == end - 1 && end < count);
   }
 }

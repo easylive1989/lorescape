@@ -60,8 +60,8 @@
     "settings": "設定"
   },
   "story": {
-    "deck_read": "閱讀",
-    "deck_later": "稍後",
+    "deck_prev": "上一則",
+    "deck_next": "下一則",
     "list_eyebrow": "Anno · {} 則",
     "list_title": "故事",
     "list_empty": "還沒有故事"

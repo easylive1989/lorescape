@@ -60,8 +60,8 @@
     "settings": "Settings"
   },
   "story": {
-    "deck_read": "Read",
-    "deck_later": "Later",
+    "deck_prev": "Previous",
+    "deck_next": "Next",
     "list_eyebrow": "Anno · {} stories",
     "list_title": "Stories",
     "list_empty": "No stories yet"
