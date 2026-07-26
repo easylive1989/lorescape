@@ -40,8 +40,9 @@ Connect / Play 報表 bucket），不再用瀏覽器抓。
 `ig_reels` 是**手動快照**來源：每支 Reel 在發布後 **24h、48h、7d** 各記一列
 （key = `media_id` + `checkpoint`，值為 `24h`/`48h`/`7d`）。這些欄位（略過率
 等六比率、瀏覽來源、觀眾輪廓）只存在 IG App 的洞察頁、Graph API 拿不到，
-所以流程是：skill 算出今天到期的 reels → 使用者去 IG App 截圖 → Claude 讀圖
-寫入 CSV。**這是唯一不由 `metrics.report` 管理的檔**，由 Claude 依
+所以流程是：skill 算出今天到期的 reels → 使用者去 IG App 截圖、放進
+**`data/metrics/_inbox/`** → Claude 從那裡讀圖寫入 CSV（見步驟 4）。
+**這是唯一不由 `metrics.report` 管理的檔**，由 Claude 依
 `references/reel-insights.md` 的欄位定義直接讀寫；漏抓的 checkpoint **不回補、
 不留列**（快照過期即失真），重截同一 checkpoint 會覆蓋該列。檔案依
 **posted_date → media_id → checkpoint（24h→48h→7d）** 排序。
@@ -137,12 +138,18 @@ image / carousel 貼文不做快照，維持 `ig_posts` 的 API 逐日追蹤即�
       你瀏覽次數的因素」與「瀏覽/觀看次數主要來源」都入鏡）、
       互動次數、觀眾（「廣告受眾詳情」的年齡／國家地區／性別三個
       子頁籤各一張；IG 沒提供輪廓時一張即可）。
-   3. 使用者貼上截圖後，依 **`references/reel-insights.md`** 的欄位
-      定義讀圖，寫入 `data/metrics/ig_reels_insights.csv`（檔不存在
-      先建 header；同 key 覆蓋；依 posted_date → media_id →
-      checkpoint 排序），最後把每支的關鍵數字（views / 略過率 /
-      按讚率 / 粉絲比）念給使用者核對。
-   4. 使用者當下沒空截圖就跳過，明確告知哪些 checkpoint 會因此留空
+   3. **截圖收在 `data/metrics/_inbox/`**（固定路徑、不分日期）。使用者
+      說「截圖放好了／放進 data 了」就直接去那裡撈，不用再問路徑；平放
+      或分子資料夾都可以。每張截圖都帶著 reel 封面縮圖，據此對應到哪一
+      支；checkpoint 一律由 `ig_posts.csv` 的 `posted_date` 推算，不靠檔
+      名或資料夾名。
+   4. 依 **`references/reel-insights.md`** 的欄位定義讀圖，寫入
+      `data/metrics/ig_reels_insights.csv`（檔不存在先建 header；同 key
+      覆蓋；依 posted_date → media_id → checkpoint 排序），最後把每支的
+      關鍵數字（views / 略過率 / 按讚率 / 粉絲比）念給使用者核對。
+   5. `_inbox` 的截圖是**一次性輸入**，寫進 CSV 後即無保留價值。核對完
+      問使用者要不要清空——**不要自動刪**。
+   6. 使用者當下沒空截圖就跳過，明確告知哪些 checkpoint 會因此留空
       （不回補）。
 
 5. **選點規劃提示**：若本次更新了 `ig` / `ig_posts` 並向使用者做了

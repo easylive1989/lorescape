@@ -530,14 +530,25 @@ def _build_gemini_client():
     return build_client(Config.from_env().genai_settings)
 
 
+def _numbered_fallback_keys() -> list[tuple[str, str]]:
+    """Return ``GEMINI_API_KEY_2``, ``_3``, … in order, skipping gaps."""
+    keys = []
+    for n in range(2, 10):
+        name = f"GEMINI_API_KEY_{n}"
+        value = os.environ.get(name)
+        if value:
+            keys.append((name, value))
+    return keys
+
+
 class _GeminiSynth:
     """Gemini TTS ``synth(text, dest)`` with quota fallback and retries.
 
     The free tier caps TTS at 10 requests/day per key, and flaky empty
     candidates still count against it. When the primary key 429s, the
-    ``GEMINI_API_KEY_2`` key from ``publisher/.env`` takes over for the rest
-    of the run; empty responses are retried a couple of times before
-    failing the render.
+    ``GEMINI_API_KEY_2``, ``GEMINI_API_KEY_3``, … keys from
+    ``publisher/.env`` take over in turn for the rest of the run; empty
+    responses are retried a couple of times before failing the render.
     """
 
     _MAX_ATTEMPTS = 4
@@ -546,7 +557,7 @@ class _GeminiSynth:
         self._voice = voice
         self._style = style
         self._client = _build_gemini_client()
-        self._fallback_key = os.environ.get("GEMINI_API_KEY_2")
+        self._fallback_keys = _numbered_fallback_keys()
 
     def __call__(self, text: str, dest: Path) -> None:
         from google.genai.errors import ClientError
@@ -577,16 +588,15 @@ class _GeminiSynth:
         )
 
     def _switch_to_fallback(self) -> bool:
-        if not self._fallback_key:
+        if not self._fallback_keys:
             return False
         from google import genai
 
+        name, key = self._fallback_keys.pop(0)
         logger.warning(
-            "primary GEMINI_API_KEY quota exhausted; "
-            "switching to GEMINI_API_KEY_2"
+            "GEMINI TTS key quota exhausted; switching to %s", name
         )
-        self._client = genai.Client(api_key=self._fallback_key)
-        self._fallback_key = None
+        self._client = genai.Client(api_key=key)
         return True
 
 
