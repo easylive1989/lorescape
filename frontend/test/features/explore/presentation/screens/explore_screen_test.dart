@@ -6,6 +6,7 @@ import 'package:context_app/features/explore/presentation/screens/explore_screen
 import 'package:context_app/features/explore/presentation/widgets/place_map_pin.dart';
 import 'package:context_app/features/explore/providers.dart';
 import 'package:context_app/features/saved_locations/providers.dart';
+import 'package:context_app/shared/widgets/journal/masthead.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -31,6 +32,29 @@ void main() {
         await _givenExploreScreen(tester);
 
         _thenEmptyStateIsVisible();
+      },
+    );
+
+    testWidgets(
+      'given the overlay header, when the screen loads, then the title and '
+      'the search field both sit at the shared masthead inset',
+      (tester) async {
+        await _givenExploreScreen(tester);
+
+        // 探索頁曾經自己複製一份 masthead，左緣漂移成 16、與故事／歷程兩頁
+        // 差 6px。改用共用 Masthead 後由 horizontalInset 統一，這裡鎖住它。
+        expect(
+          tester.getRect(find.text('explore.title')).left,
+          Masthead.horizontalInset,
+        );
+        // 量搜尋列的藥丸外框，不是內層 TextField——後者還隔著放大鏡與內距。
+        final searchPill = find
+            .ancestor(
+              of: find.byType(TextField),
+              matching: find.byType(Container),
+            )
+            .first;
+        expect(tester.getRect(searchPill).left, Masthead.horizontalInset);
       },
     );
 

@@ -10,6 +10,7 @@ import 'package:context_app/features/settings/providers.dart';
 import 'package:context_app/shared/widgets/adaptive/adaptive_widgets.dart';
 import 'package:context_app/shared/widgets/journal/category_tag.dart';
 import 'package:context_app/shared/widgets/journal/glyph_thumb.dart';
+import 'package:context_app/shared/widgets/journal/masthead.dart';
 import 'package:context_app/shared/widgets/midnight/_press_scale.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -667,95 +668,53 @@ class _MapTopOverlay extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: EdgeInsets.fromLTRB(16, topPadding + 6, 16, 22),
+            // 只墊安全區：標題的左緣與上方間距由 Masthead 自己帶，才會跟
+            // 故事／歷程兩頁（SafeArea + 同一個 Masthead）對到同一個位置。
+            padding: EdgeInsets.only(top: topPadding),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Expanded(child: _Masthead(placeCount: placeCount)),
-                    const _AttributionButton(),
-                    const SizedBox(width: 8),
-                    _FilterButton(
-                      isActive: isFilterActive,
-                      onPressed: onFilter,
-                    ),
-                    const SizedBox(width: 8),
-                    _RefreshButton(onPressed: onRefresh),
-                  ],
+                Masthead(
+                  eyebrow: 'explore.atlas_eyebrow'.tr(args: ['$placeCount']),
+                  title: 'explore.title'.tr(),
+                  // 地圖上不畫分隔線，靠漸層與底圖分隔。
+                  showRule: false,
+                  actions: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const _AttributionButton(),
+                      const SizedBox(width: 8),
+                      _FilterButton(
+                        isActive: isFilterActive,
+                        onPressed: onFilter,
+                      ),
+                      const SizedBox(width: 8),
+                      _RefreshButton(onPressed: onRefresh),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 12),
-                _SearchField(
-                  controller: searchController,
-                  onChanged: onSearchChanged,
-                  onSubmitted: onSearchSubmitted,
-                  onClear: onSearchClear,
+                Padding(
+                  // 跟著標題的內距走，搜尋列才會與大標左緣對齊。
+                  padding: const EdgeInsets.fromLTRB(
+                    Masthead.horizontalInset,
+                    0,
+                    Masthead.horizontalInset,
+                    22,
+                  ),
+                  child: _SearchField(
+                    controller: searchController,
+                    onChanged: onSearchChanged,
+                    onSubmitted: onSearchSubmitted,
+                    onClear: onSearchClear,
+                  ),
                 ),
               ],
             ),
           ),
         ],
       ),
-    );
-  }
-}
-
-/// `.map-hd` 的眼眉線＋標題：一段短橫線、全大寫字距放大的說明，再壓上襯線大標。
-class _Masthead extends StatelessWidget {
-  const _Masthead({required this.placeCount});
-
-  final int placeCount;
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = Theme.of(context).extension<LorescapeTokens>();
-    final clay = tokens?.clay ?? Theme.of(context).colorScheme.primary;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 16,
-              height: 1.5,
-              decoration: BoxDecoration(
-                color: clay,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                'explore.atlas_eyebrow'.tr(args: ['$placeCount']),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 2.3,
-                  color: clay,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 7),
-        Text(
-          'explore.title'.tr(),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.displayLarge?.copyWith(
-            fontSize: 34,
-            height: 0.98,
-            letterSpacing: 1,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ],
     );
   }
 }
