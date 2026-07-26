@@ -8,9 +8,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 /// 故事牌堆（設計稿 `.deck-stage` / `.dcard`）：一疊照片卡，最上面那張可以
-/// 左右滑——右滑或點一下開始閱讀，左滑把它排到隊尾稍後再看。
+/// 左右滑——左滑翻到下一張、右滑翻回上一張，點一下才開始閱讀。
 ///
-/// 卡片不是被消耗掉而是輪轉：故事會一直在，左滑只是「現在先不讀」。
+/// 卡片不是被消耗掉而是輪轉：故事會一直在，滑動只是在牌堆裡前後翻。
 class StoryDeck extends StatefulWidget {
   const StoryDeck({super.key, required this.stories, required this.onOpen});
 
@@ -22,6 +22,9 @@ class StoryDeck extends StatefulWidget {
 
   /// 後面最多再露幾張，多了只是疊在同一處看不出來。
   static const int visibleBehind = 4;
+
+  /// 後排每張往下扇開的距離（px），也用來算牌堆該留多少底部空間。
+  static const double fanOffset = 13;
 
   @override
   State<StoryDeck> createState() => _StoryDeckState();
@@ -37,6 +40,11 @@ class _StoryDeckState extends State<StoryDeck>
 
   /// 飛出方向：1 右、-1 左、null 代表沒有卡片正在離場。
   int? _leaving;
+
+  /// 上一張正從場外飛回頂端（右滑翻回時）。
+  bool _entering = false;
+
+  bool get _animating => _leaving != null || _entering;
 
   /// 在 initState 就建好而不是用 lazy `late final`：沒滑過任何一張卡就離開
   /// 時，dispose 會是第一次存取它，等於在樹拆解到一半才去建 ticker。
@@ -67,7 +75,7 @@ class _StoryDeckState extends State<StoryDeck>
   }
 
   void _onDragStart(DragStartDetails _) {
-    if (_leaving != null) return;
+    if (_animating) return;
     setState(() {
       _dragging = true;
       _dx = 0;
@@ -75,18 +83,17 @@ class _StoryDeckState extends State<StoryDeck>
   }
 
   void _onDragUpdate(DragUpdateDetails details) {
-    if (_leaving != null) return;
+    if (_animating) return;
     setState(() => _dx += details.delta.dx);
   }
 
   void _onDragEnd(DragEndDetails _) {
-    if (_leaving != null) return;
+    if (_animating) return;
     final dx = _dx;
-    if (dx > StoryDeck.swipeThreshold) {
-      _commit(1);
-      widget.onOpen(widget.stories[_order.first]);
-    } else if (dx < -StoryDeck.swipeThreshold) {
-      _commit(-1);
+    if (widget.stories.length > 1 && dx < -StoryDeck.swipeThreshold) {
+      _showNext();
+    } else if (widget.stories.length > 1 && dx > StoryDeck.swipeThreshold) {
+      _showPrevious();
     } else {
       setState(() {
         _dragging = false;
@@ -95,10 +102,10 @@ class _StoryDeckState extends State<StoryDeck>
     }
   }
 
-  /// 讓最上面那張飛出去，動畫收尾後把它排到隊尾。
-  Future<void> _commit(int direction) async {
+  /// 左滑：讓最上面那張往左飛出去，動畫收尾後把它排到隊尾。
+  Future<void> _showNext() async {
     setState(() {
-      _leaving = direction;
+      _leaving = -1;
       _dragging = false;
       _dx = 0;
     });
@@ -110,22 +117,44 @@ class _StoryDeckState extends State<StoryDeck>
     });
   }
 
+  /// 右滑：把隊尾那張（上一張）調回頂端，從左側飛回來。
+  Future<void> _showPrevious() async {
+    setState(() {
+      _order = [_order.last, ..._order.take(_order.length - 1)];
+      _entering = true;
+      _dragging = false;
+      _dx = 0;
+    });
+    await _leaveController.forward(from: 0);
+    if (!mounted) return;
+    setState(() => _entering = false);
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.stories.isEmpty) return const SizedBox.shrink();
 
-    final visible = _order.take(StoryDeck.visibleBehind + 1).toList();
+    // 動畫進行中多帶一張：隊伍前後挪一格時，最尾端才有卡可以補位／退場。
+    final visible = _order
+        .take(StoryDeck.visibleBehind + (_animating ? 2 : 1))
+        .toList();
 
     return Column(
       children: [
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(22, 6, 22, 12),
+            // 底部留出後排卡片扇開的距離，卡片才不會壓到下面的 indicator。
+            padding: const EdgeInsets.fromLTRB(
+              22,
+              6,
+              22,
+              12 + StoryDeck.fanOffset * StoryDeck.visibleBehind,
+            ),
             child: GestureDetector(
               onHorizontalDragStart: _onDragStart,
               onHorizontalDragUpdate: _onDragUpdate,
               onHorizontalDragEnd: _onDragEnd,
-              onTap: _leaving != null
+              onTap: _animating
                   ? null
                   : () => widget.onOpen(widget.stories[_order.first]),
               child: Stack(
@@ -147,31 +176,35 @@ class _StoryDeckState extends State<StoryDeck>
   Widget _positioned({required DailyStory story, required int pos}) {
     final isTop = pos == 0;
     if (!isTop) {
-      // 往下扇開並左右交錯微傾，露出幾道卡緣＝一疊厚厚的卡。
-      final tilt = (pos.isOdd ? -1 : 1) * (1.6 + pos * 0.9);
-      return Transform(
-        alignment: Alignment.center,
-        transform: Matrix4.identity()
-          ..translateByDouble(0, pos * 13.0, 0, 1)
-          ..scaleByDouble(1 - pos * 0.028, 1 - pos * 0.028, 1, 1)
-          ..rotateZ(tilt * math.pi / 180),
-        child: Opacity(
-          opacity: 1 - pos * 0.05,
-          child: _StoryDeckCard(story: story, isBehind: true),
-        ),
-      );
+      if (_animating) {
+        // 隊伍正在前後挪一格：每張後排卡從原本那格連續補到目標格，
+        // 角度、位置、縮放都是插值過去的，不會在收尾瞬間跳一下。
+        final from = _entering ? pos - 1 : pos;
+        final to = _entering ? pos : pos - 1;
+        return AnimatedBuilder(
+          animation: _leaveController,
+          builder: (context, _) {
+            final t = Curves.easeOutCubic.transform(_leaveController.value);
+            return _fanned(story: story, from: from, to: to, t: t);
+          },
+        );
+      }
+      return _fanned(story: story, from: pos, to: pos, t: 0);
     }
 
-    if (_leaving != null) {
+    if (_animating) {
+      // 離場往左飛出；回場則是同一段軌跡倒著播，從左側飛回來。
+      final direction = _leaving ?? -1;
       return AnimatedBuilder(
         animation: _leaveController,
         builder: (context, child) {
           final t = Curves.easeOutCubic.transform(_leaveController.value);
+          final progress = _entering ? 1 - t : t;
           return FractionalTranslation(
-            translation: Offset(_leaving! * 1.35 * t, 0),
+            translation: Offset(direction * 1.35 * progress, 0),
             child: Transform.rotate(
-              angle: _leaving! * 16 * t * math.pi / 180,
-              child: Opacity(opacity: 1 - t, child: child),
+              angle: direction * 16 * progress * math.pi / 180,
+              child: Opacity(opacity: 1 - progress, child: child),
             ),
           );
         },
@@ -198,6 +231,39 @@ class _StoryDeckState extends State<StoryDeck>
             child: card,
           );
   }
+
+  /// 整數格位的傾斜角：交錯微傾，第 0 格（幕前）轉正。
+  static double _tiltOf(int pos) =>
+      pos <= 0 ? 0 : (pos.isOdd ? -1 : 1) * (1.6 + pos * 0.9);
+
+  /// 一張後排卡，從第 [from] 格往第 [to] 格補位到進度 [t]（0–1）。
+  /// 靜止時 from == to，就是原本的扇開排法。
+  Widget _fanned({
+    required DailyStory story,
+    required int from,
+    required int to,
+    required double t,
+  }) {
+    final p = from + (to - from) * t;
+    final tilt = _tiltOf(from) + (_tiltOf(to) - _tiltOf(from)) * t;
+    final scale = 1 - p * 0.028;
+    // 補到幕前（第 0 格）時暗色罩同步淡掉，亮度才不會在收尾跳一階。
+    final fromDim = from <= 0 ? 0.0 : 1.0;
+    final toDim = to <= 0 ? 0.0 : 1.0;
+    final behindT = fromDim + (toDim - fromDim) * t;
+
+    return Transform(
+      alignment: Alignment.center,
+      transform: Matrix4.identity()
+        ..translateByDouble(0, p * StoryDeck.fanOffset, 0, 1)
+        ..scaleByDouble(scale, scale, 1, 1)
+        ..rotateZ(tilt * math.pi / 180),
+      child: Opacity(
+        opacity: (1 - p * 0.05).clamp(0.0, 1.0),
+        child: _StoryDeckCard(story: story, isBehind: true, behindT: behindT),
+      ),
+    );
+  }
 }
 
 /// 單張故事卡：滿版照片＋暗角，左上是序號，右上是 Anno 徽章，底下壓標題。
@@ -205,13 +271,18 @@ class _StoryDeckCard extends StatelessWidget {
   const _StoryDeckCard({
     required this.story,
     required this.isBehind,
+    this.behindT,
     this.dragHint = 0,
   });
 
   final DailyStory story;
   final bool isBehind;
 
-  /// -1 ~ 1：負值往「稍後」、正值往「閱讀」，決定兩枚印章的濃度。
+  /// 0 ~ 1 的「後排程度」：1 是全暗的後排、0 是幕前亮度；補位動畫用它
+  /// 讓暗色罩連續變淡。省略時跟著 [isBehind] 走。
+  final double? behindT;
+
+  /// -1 ~ 1：負值往「下一則」、正值往「上一則」，決定兩枚印章的濃度。
   final double dragHint;
 
   static const _scrim = LinearGradient(
@@ -243,6 +314,7 @@ class _StoryDeckCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final imageUrl = story.imageUrl;
+    final dim = behindT ?? (isBehind ? 1.0 : 0.0);
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -273,12 +345,14 @@ class _StoryDeckCard extends StatelessWidget {
               ColoredBox(color: tokens.inkBg2),
             DecoratedBox(
               decoration: BoxDecoration(
-                gradient: isBehind ? _scrimBehind : _scrim,
+                gradient: LinearGradient.lerp(_scrim, _scrimBehind, dim),
               ),
             ),
-            if (isBehind)
-              const ColoredBox(color: Color(0x1A1B1611))
-            else ...[
+            if (dim > 0)
+              ColoredBox(
+                color: const Color(0xFF1B1611).withValues(alpha: 0.102 * dim),
+              ),
+            if (!isBehind) ...[
               _CardIndex(story: story),
               if (story.cardAnnoRoman != null)
                 Positioned(
@@ -287,12 +361,12 @@ class _StoryDeckCard extends StatelessWidget {
                   child: _ChapterBadge(label: story.cardAnnoRoman!),
                 ),
               _DecisionStamp(
-                label: 'story.deck_read'.tr(),
+                label: 'story.deck_prev'.tr(),
                 opacity: dragHint.clamp(0.0, 1.0),
                 alignRight: true,
               ),
               _DecisionStamp(
-                label: 'story.deck_later'.tr(),
+                label: 'story.deck_next'.tr(),
                 opacity: (-dragHint).clamp(0.0, 1.0),
                 alignRight: false,
               ),
@@ -375,7 +449,7 @@ class _ChapterBadge extends StatelessWidget {
   }
 }
 
-/// 拖曳時浮出的決定印章（`.dcard__stamp`）：右「閱讀」、左「稍後」。
+/// 拖曳時浮出的方向印章（`.dcard__stamp`）：右滑「上一則」、左滑「下一則」。
 class _DecisionStamp extends StatelessWidget {
   const _DecisionStamp({
     required this.label,
@@ -513,28 +587,41 @@ class _CardCaption extends StatelessWidget {
 }
 
 /// 牌堆進度（`.deck-progress`）：目前這張是一條 clay 短棒。
+///
+/// 點數有上限：故事多於 [maxDots] 時只畫一段以目前位置為中心的視窗，
+/// 視窗邊緣若還有更多故事，該端的點縮小提示「後面還有」。
 class _DeckProgress extends StatelessWidget {
   const _DeckProgress({required this.count, required this.index});
 
   final int count;
   final int index;
 
+  static const int maxDots = 6;
+
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
+
+    final shown = math.min(count, maxDots);
+    final start = (index - shown ~/ 2).clamp(0, count - shown);
+    final end = start + shown;
 
     return Padding(
       padding: const EdgeInsets.only(top: 2, bottom: 10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          for (var i = 0; i < count; i += 1)
+          for (var i = start; i < end; i += 1)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 3),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                width: i == index ? 20 : 6,
-                height: 6,
+                width: i == index
+                    ? 20
+                    : _isEdgeHint(i, start: start, end: end)
+                    ? 4
+                    : 6,
+                height: _isEdgeHint(i, start: start, end: end) ? 4 : 6,
                 decoration: BoxDecoration(
                   color: i == index ? tokens.clay : tokens.lineStrong,
                   borderRadius: BorderRadius.circular(3),
@@ -544,5 +631,11 @@ class _DeckProgress extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// 視窗邊緣、且該方向還有更多故事的點。
+  bool _isEdgeHint(int i, {required int start, required int end}) {
+    if (i == index) return false;
+    return (i == start && start > 0) || (i == end - 1 && end < count);
   }
 }

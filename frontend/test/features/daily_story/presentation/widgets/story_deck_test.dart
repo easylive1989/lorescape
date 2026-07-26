@@ -43,18 +43,22 @@ void main() {
 
     testWidgets(
       'given a deck, when the user swipes the top card right past the '
-      'threshold, then that story is opened',
+      'threshold, then the previous story becomes the top card and '
+      'nothing opens',
       (tester) async {
         final opened = <DailyStory>[];
 
         await _givenDeck(
           tester,
-          stories: [_story('a'), _story('b')],
+          stories: [_story('a'), _story('b'), _story('c')],
           onOpen: opened.add,
         );
         await _whenUserSwipes(tester, dx: 140);
 
-        expect(opened.single.cardTitle, 'Title a');
+        expect(opened, isEmpty);
+        // The queue rotates backwards, so the last card 'c' (the previous
+        // one relative to 'a') now owns the deck's top slot.
+        expect(find.text('Sub c'), findsOneWidget);
       },
     );
 
@@ -72,7 +76,7 @@ void main() {
         await _whenUserSwipes(tester, dx: -140);
 
         expect(opened, isEmpty);
-        // The dismissed card rotates to the back of the queue, so 'b' now
+        // The top card rotates to the back of the queue, so 'b' now
         // owns the deck's top slot.
         expect(tester.widget<StoryDeck>(find.byType(StoryDeck)), isNotNull);
         expect(find.text('Sub b'), findsOneWidget);
@@ -94,6 +98,20 @@ void main() {
 
         expect(opened, isEmpty);
         expect(find.text('Sub a'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'given more stories than the indicator cap, when the deck renders, '
+      'then the progress row shows at most the capped number of dots',
+      (tester) async {
+        await _givenDeck(
+          tester,
+          stories: [for (var i = 0; i < 31; i += 1) _story('s$i')],
+        );
+
+        // Progress dots are the only AnimatedContainers in the deck.
+        expect(find.byType(AnimatedContainer), findsNWidgets(6));
       },
     );
   });
