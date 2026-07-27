@@ -713,3 +713,59 @@ epic 承接自原公司層 backlog；目前只有 E1（見下方「Epic」）。
   讓生產 property 只收真實用戶
 - [ ] T2: 在 GA4 建「排除內部流量」的資料篩選器並確認生效
 - [ ] T3: 生效後回頭重跑一次留存數字，重新判定 F13 的 D1/D7 是否真的是 0%
+
+## F27: 結構化內容改用 JSON ＋ 程式驗證格式
+
+- 狀態: 待辦
+- 動機：`BACKLOG.md`、`ISSUES.md`、`marketing/content-calendar/_reels-place-calendar.md`
+  這類「AI 產生、程式解析、人閱讀」三用的檔案目前是自由格式 markdown，
+  沒有任何機制保證欄位齊全或形狀一致，實際已經出事——
+  - 2026-07-27：dashboard 把 calendar 的「開場 hook 指定」表誤收為排程列
+    （兩張表都是「日期＋三欄」，regex 無從區分），選點列表出現重複日期
+    且欄位錯位。修法只能靠「段落標題必須是 `## Week N`」這種脆弱約定。
+  - 同日：BACKLOG 51 個已完成 task 有 14 個沒有完成日期，且格式三種
+    並存（括號內／敘述中／子項），只能人工回填。
+  - `SCHEDULE.md` 已在檔頭寫「格式勿改：三個 `## ` 區段、各一張三欄表」——
+    等於用註解代替驗證，仍然是壞了才知道。
+- 目標：讓 AI 產生完之後**可以用程式驗證格式**，而不是等下游解析爆掉。
+- [ ] T1: 盤點要納管的檔案與各自的欄位（BACKLOG / ISSUES / reels calendar
+  / SCHEDULE），確認哪些欄位是必填、哪些有列舉值（如 feature 狀態、
+  景點類型、checkpoint）
+- [ ] T2: 為每個檔定 JSON Schema（draft 2020-12），列舉值直接寫進 enum，
+  日期用 `format: date` 收斂成 `YYYY-MM-DD`
+- [ ] T3: 把現有內容遷移為 JSON（一次性轉檔，人工核對）
+- [ ] T4: 寫驗證腳本（`uv run python -m tools.validate_content` 之類），
+  接進 pre-commit hook 與 CI，schema 不過就擋
+- [ ] T5: markdown 改由 JSON 渲染產生（人閱讀用），或改為 dashboard 直接
+  讀 JSON、不再維護 markdown 版
+- **待決策**：BACKLOG / ISSUES 目前是人與 AI 都會直接手改的檔案，改成 JSON
+  後手改體驗會變差（沒有 diff 可讀性、容易漏逗號）。可能的折衷是「JSON 為
+  單一事實來源 + 自動產生 markdown 檢視」，但要先確認手改流程能接受。
+  T1 之前先決定這件事，否則會做出沒人願意用的格式。
+
+## F28: 產品數據累積改存 Google Sheet
+
+- 狀態: 待辦
+- 目標 Sheet：https://docs.google.com/spreadsheets/d/1h4Bd8RWoh_UL3EA048GWSimyPExBEcCA3gYftwGQ-Js/edit?gid=134534190
+- 現況：lorescape-metrics 累積到 `data/metrics/*.csv`（一來源一檔，
+  **gitignored**），dashboard 的產品數據分頁直接讀這些 CSV。
+- **這是把 2026-07-11 的決定改回去**（`d42b921d`：累積目的地從 Google Sheet
+  改為 repo 內 CSV，同時刪掉 `scripts/metrics/sheets.py`、移除 dashboard 的
+  google 依賴）。當時搬離 Sheet 的理由是「數據含營收、repo 為 public 不進
+  版控」——但那個理由用 Sheet 同樣成立（Sheet 本來就不在 repo 裡），
+  而 CSV 換來的代價是：**只存在本機、沒有備份、換機器就沒了、無法多處
+  存取或分享**。
+- [ ] T1: 取回 `SheetStore`（`git show d42b921d^:scripts/metrics/sheets.py`），
+  接回 `report.py` / `store.py` / `stores.py`；`METRICS_SHEET_ID` 指向上方 Sheet
+- [ ] T2: 把現有 `data/metrics/*.csv` 的歷史一次性匯入該 Sheet（逐分頁對應
+  一個來源，注意 `ig_posts` 的複合 key `media_id+obs_date`、
+  `ig_reels_insights` 的 `media_id+checkpoint`，重跑要能覆蓋不重複）
+- [ ] T3: dashboard 產品數據改讀 Sheet（`dashboard/collectors/metrics.py`，
+  需重新加回 google 依賴）
+- [ ] T4: 決定 CSV 的去留——完全移除，或保留為本機快取（離線可看、
+  Sheet 掛掉時仍能跑週報）。兩者都可，但要明確，避免兩份資料各自漂移
+- [ ] T5: 同步文件與 skills：`lorescape-metrics`、`marketing-weekly-audit`、
+  `marketing-monthly-audit`、`docs/init/metrics-setup.md`、`CLAUDE.md`
+  的「data/metrics」說法
+- 注意：`ig_reels_insights` 是唯一由 Claude 直接讀寫的來源（讀 IG App 截圖
+  後寫入），改到 Sheet 後這個寫入路徑也要一併改，別留一個還在寫 CSV。
