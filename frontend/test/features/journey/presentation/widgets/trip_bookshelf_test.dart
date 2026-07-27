@@ -51,6 +51,49 @@ void main() {
         expect(find.text('旅程書架 · 3 本'), findsOneWidget);
       },
     );
+
+    testWidgets(
+      'given any shelf, when it is rendered, then an empty placeholder book '
+      'sits after the real books',
+      (tester) async {
+        await _givenBookshelf(tester, bookCount: 3);
+
+        expect(find.byIcon(Icons.add), findsOneWidget);
+        // 佔位書排在最後一本真書的右邊，而不是插在書堆前面。
+        expect(
+          tester.getTopLeft(find.byIcon(Icons.add)).dx,
+          greaterThan(tester.getTopLeft(find.text('#2')).dx),
+        );
+      },
+    );
+
+    testWidgets(
+      'given the placeholder book, when the user taps it, '
+      'then the shelf reports the request to add a trip',
+      (tester) async {
+        var addTaps = 0;
+
+        await _givenBookshelf(tester, bookCount: 3, onAddTrip: () => addTaps++);
+        await tester.tap(find.byIcon(Icons.add));
+
+        expect(addTaps, 1);
+      },
+    );
+
+    testWidgets(
+      'given a shelf whose last row is exactly full, when it is rendered, '
+      'then the placeholder wraps onto the next row instead of overflowing',
+      (tester) async {
+        // 390 寬一層剛好放 4 本；第 4 本填滿該層，佔位書必須換行。
+        await _givenBookshelf(tester, bookCount: 4);
+
+        final lastBook = tester.getTopLeft(find.text('#3'));
+        final placeholder = tester.getTopLeft(find.byIcon(Icons.add));
+
+        expect(placeholder.dy, greaterThan(lastBook.dy));
+        expect(tester.takeException(), isNull);
+      },
+    );
   });
 }
 
@@ -58,6 +101,7 @@ void main() {
 Future<void> _givenBookshelf(
   WidgetTester tester, {
   required int bookCount,
+  VoidCallback? onAddTrip,
 }) async {
   tester.view.physicalSize = const Size(390 * 3, 900 * 3);
   tester.view.devicePixelRatio = 3;
@@ -69,6 +113,7 @@ Future<void> _givenBookshelf(
       body: SingleChildScrollView(
         child: TripBookshelf(
           caption: '旅程書架 · $bookCount 本',
+          onAddTrip: onAddTrip ?? () {},
           books: [
             for (var i = 0; i < bookCount; i++)
               ShelfBook(

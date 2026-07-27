@@ -26,16 +26,10 @@ class JourneyScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // 建立旅程的入口不在頁首——它是書架末端那本虛線佔位書。
               Masthead(
                 eyebrow: 'journey.eyebrow'.tr(),
                 title: 'journey.title'.tr(),
-                actions: AdaptiveIconButton(
-                  onPressed: () => context.push('/trip/edit'),
-                  icon: Icon(
-                    Icons.add,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
               ),
               const _CurrentTripBanner(),
               asyncTrips.when(
@@ -60,6 +54,7 @@ class JourneyScreen extends ConsumerWidget {
                       args: ['${_bookCount(trips, counts)}'],
                     ),
                     books: _buildBooks(context, trips, counts),
+                    onAddTrip: () => context.push('/trip/edit'),
                   );
                 },
               ),

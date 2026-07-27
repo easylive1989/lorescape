@@ -83,10 +83,20 @@ void main() {
     );
 
     testWidgets(
-      'given the by-trip shelf under a router, when the user taps add, '
-      'then the trip-edit route is pushed',
+      'given the by-trip shelf under a router, when the user taps the empty '
+      'placeholder book, then the trip-edit route is pushed',
       (tester) async {
         await _givenJourneyScreenWithRouter(tester);
+
+        // 建立旅程的入口只有書架上那本佔位書，頁首不再有 +。
+        expect(
+          find.descendant(
+            of: find.byType(TripBookshelf),
+            matching: find.byIcon(Icons.add),
+          ),
+          findsOneWidget,
+        );
+        expect(find.byIcon(Icons.add), findsOneWidget);
 
         await tester.tap(find.byIcon(Icons.add));
         await tester.pumpAndSettle();
@@ -205,13 +215,16 @@ class _StaticCurrentTripIdNotifier extends CurrentTripIdNotifier {
 }
 
 
-/// 書架上的一本書。
+/// 書架上的一本「真書」（旅程），不含末端那本虛線佔位書。
 ///
 /// 書名是直排（逐字換行）的，用 `find.text` 找不到，所以改抓語意上的按鈕；
-/// 但要限定在書架子樹內，否則 Masthead 的「新增」按鈕也會被算進來。
+/// 佔位書同樣是語意按鈕，靠它固定的 label 排除。
 Finder _bookFinder() => find.descendant(
   of: find.byType(TripBookshelf),
   matching: find.byWidgetPredicate(
-    (widget) => widget is Semantics && widget.properties.button == true,
+    (widget) =>
+        widget is Semantics &&
+        widget.properties.button == true &&
+        widget.properties.label != 'trip.create_action',
   ),
 );

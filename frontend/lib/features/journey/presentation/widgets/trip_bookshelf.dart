@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 /// 書架上的一本「旅程」。
@@ -28,12 +29,23 @@ class ShelfBook {
 /// 書放不下時不橫向捲動，而是往下長出新的一層書架——書櫃本來就是這樣長的，
 /// 而且整頁本來就能上下捲，使用者不必為了看見第 8 本書去發現一個橫滑手勢。
 class TripBookshelf extends StatelessWidget {
-  const TripBookshelf({super.key, required this.books, required this.caption});
+  const TripBookshelf({
+    super.key,
+    required this.books,
+    required this.caption,
+    required this.onAddTrip,
+  });
 
   final List<ShelfBook> books;
 
   /// 書架上方的小標，例如「旅程書架 · 3 本」。
   final String caption;
+
+  /// 按下書架末端那本虛線佔位書：建立新旅程。
+  ///
+  /// 這顆入口原本是頁首右上的 `+`，移到書架上是因為「新增一本書」的位置就
+  /// 該在書架上——空位長什麼樣，使用者一眼就知道那裡可以放一本新的。
+  final VoidCallback onAddTrip;
 
   static const List<double> _heights = [190, 204, 218];
 
@@ -69,19 +81,24 @@ class TripBookshelf extends StatelessWidget {
           LayoutBuilder(
             builder: (context, constraints) {
               final perShelf = _booksPerShelf(constraints.maxWidth);
+              // 佔位書也佔一個位子，否則末層剛好排滿時它會擠爆該層。
+              final slots = books.length + 1;
               return Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  for (var start = 0; start < books.length; start += perShelf)
+                  for (var start = 0; start < slots; start += perShelf)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 32),
                       child: _Shelf(
                         books: books.sublist(
-                          start,
+                          math.min(start, books.length),
                           math.min(start + perShelf, books.length),
                         ),
                         // 高度與配色沿用全域序號，換層時花色才會繼續變化。
                         firstIndex: start,
+                        // 佔位書永遠掛在最後一層的尾巴。
+                        showAddSlot: start + perShelf >= slots,
+                        onAddTrip: onAddTrip,
                       ),
                     ),
                 ],
@@ -102,12 +119,21 @@ class TripBookshelf extends StatelessWidget {
 
 /// 一層書架：凹槽背板 ＋ 一排書 ＋ 木層板。
 class _Shelf extends StatelessWidget {
-  const _Shelf({required this.books, required this.firstIndex});
+  const _Shelf({
+    required this.books,
+    required this.firstIndex,
+    required this.showAddSlot,
+    required this.onAddTrip,
+  });
 
   final List<ShelfBook> books;
 
   /// 這層第一本書在整個書架裡的序號，用來延續高度與配色的循環。
   final int firstIndex;
+
+  /// 這層尾端要不要放那本虛線佔位書。
+  final bool showAddSlot;
+  final VoidCallback onAddTrip;
 
   static const double _rowMinHeight = 214;
 
@@ -160,6 +186,17 @@ class _Shelf extends StatelessWidget {
                               TripBookshelf._heights[(firstIndex + i) %
                                   TripBookshelf._heights.length],
                           palette: _BookPalette.values[(firstIndex + i) % 4],
+                        ),
+                      ],
+                      if (showAddSlot) ...[
+                        if (books.isNotEmpty)
+                          const SizedBox(width: TripBookshelf._gap),
+                        _AddBook(
+                          height:
+                              TripBookshelf._heights[(firstIndex +
+                                      books.length) %
+                                  TripBookshelf._heights.length],
+                          onTap: onAddTrip,
                         ),
                       ],
                     ],
@@ -313,6 +350,85 @@ class _Book extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 書架末端的佔位書：一個虛線圍出來的空書位，中間一個 `+`。
+///
+/// 尺寸與真書一致（同寬、同一組高度循環），才像書架上「還空著的一格」，而
+/// 不是一顆貼在書旁邊的按鈕。
+class _AddBook extends StatelessWidget {
+  const _AddBook({required this.height, required this.onTap});
+
+  final double height;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'trip.create_action'.tr(),
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: CustomPaint(
+          painter: const _DashedBookPainter(),
+          child: SizedBox(
+            width: _Book._width,
+            height: height,
+            child: Center(
+              child: Icon(
+                Icons.add,
+                size: 22,
+                color: const Color(0xFF6B5334).withValues(alpha: 0.55),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 佔位書的虛線外框，圓角與真書的書脊一致（左 2、右 7）。
+///
+/// Flutter 沒有內建虛線邊框，用 `PathMetric` 沿著圓角路徑切段落畫。
+class _DashedBookPainter extends CustomPainter {
+  const _DashedBookPainter();
+
+  static const double _dash = 5;
+  static const double _gap = 4;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path()
+      ..addRRect(
+        RRect.fromRectAndCorners(
+          Offset.zero & size,
+          topLeft: const Radius.circular(2),
+          bottomLeft: const Radius.circular(2),
+          topRight: const Radius.circular(7),
+          bottomRight: const Radius.circular(7),
+        ),
+      );
+
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4
+      ..strokeCap = StrokeCap.round
+      ..color = const Color(0xFF8A6C43).withValues(alpha: 0.6);
+
+    for (final metric in path.computeMetrics()) {
+      var distance = 0.0;
+      while (distance < metric.length) {
+        final next = math.min(distance + _dash, metric.length);
+        canvas.drawPath(metric.extractPath(distance, next), paint);
+        distance = next + _gap;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedBookPainter oldDelegate) => false;
 }
 
 /// 直排書名。
