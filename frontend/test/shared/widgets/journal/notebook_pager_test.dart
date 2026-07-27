@@ -1,4 +1,5 @@
 import 'package:context_app/shared/widgets/journal/notebook_pager.dart';
+import 'package:context_app/shared/widgets/page_dots.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -148,6 +149,25 @@ void main() {
         expect(addCount, 1);
         expect(shareCount, 1);
         expect(deleteCount, 1);
+      },
+    );
+
+    testWidgets(
+      'given more pages than the indicator cap, when the pager renders, '
+      'then the page dots stay capped like the story deck',
+      (tester) async {
+        await _givenPager(
+          tester,
+          pages: [for (var i = 0; i < 31; i += 1) _buildPage()],
+        );
+
+        expect(
+          find.descendant(
+            of: find.byType(PageDots),
+            matching: find.byType(AnimatedContainer),
+          ),
+          findsNWidgets(PageDots.maxDots),
+        );
       },
     );
   });

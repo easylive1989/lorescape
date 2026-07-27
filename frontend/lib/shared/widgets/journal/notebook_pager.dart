@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:context_app/app/config/lorescape_tokens.dart';
+import 'package:context_app/shared/widgets/page_dots.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -168,9 +169,10 @@ class _NotebookPagerState extends State<NotebookPager> {
             ),
           ),
         ),
-        _PageDots(
+        PageDots(
           count: widget.pages.length,
           index: _index,
+          padding: const EdgeInsets.fromLTRB(0, 16, 0, 18),
           onSelect: (i) => _controller.animateToPage(
             i,
             duration: _settleDuration,
@@ -731,52 +733,6 @@ class _FooterAction extends StatelessWidget {
               color: ink3,
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-/// 頁碼指示器（`.nb-dots`）：目前頁是一條 clay 色短棒，其餘是灰點。
-class _PageDots extends StatelessWidget {
-  const _PageDots({
-    required this.count,
-    required this.index,
-    required this.onSelect,
-  });
-
-  final int count;
-  final int index;
-  final ValueChanged<int> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = Theme.of(context).extension<LorescapeTokens>();
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 16, 0, 18),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          for (var i = 0; i < count; i++)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 3),
-              child: GestureDetector(
-                onTap: () => onSelect(i),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: i == index ? 20 : 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: i == index
-                        ? (tokens?.clay ?? colorScheme.primary)
-                        : (tokens?.lineStrong ?? colorScheme.outlineVariant),
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                ),
-              ),
-            ),
         ],
       ),
     );

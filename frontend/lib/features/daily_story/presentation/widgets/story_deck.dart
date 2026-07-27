@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:context_app/app/config/lorescape_tokens.dart';
 import 'package:context_app/features/daily_story/domain/models/daily_story.dart';
+import 'package:context_app/shared/widgets/page_dots.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -168,7 +169,11 @@ class _StoryDeckState extends State<StoryDeck>
             ),
           ),
         ),
-        _DeckProgress(count: widget.stories.length, index: _order.first),
+        PageDots(
+          count: widget.stories.length,
+          index: _order.first,
+          padding: const EdgeInsets.only(top: 2, bottom: 10),
+        ),
       ],
     );
   }
@@ -583,59 +588,5 @@ class _CardCaption extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-/// 牌堆進度（`.deck-progress`）：目前這張是一條 clay 短棒。
-///
-/// 點數有上限：故事多於 [maxDots] 時只畫一段以目前位置為中心的視窗，
-/// 視窗邊緣若還有更多故事，該端的點縮小提示「後面還有」。
-class _DeckProgress extends StatelessWidget {
-  const _DeckProgress({required this.count, required this.index});
-
-  final int count;
-  final int index;
-
-  static const int maxDots = 6;
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.tokens;
-
-    final shown = math.min(count, maxDots);
-    final start = (index - shown ~/ 2).clamp(0, count - shown);
-    final end = start + shown;
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 2, bottom: 10),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          for (var i = start; i < end; i += 1)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 3),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: i == index
-                    ? 20
-                    : _isEdgeHint(i, start: start, end: end)
-                    ? 4
-                    : 6,
-                height: _isEdgeHint(i, start: start, end: end) ? 4 : 6,
-                decoration: BoxDecoration(
-                  color: i == index ? tokens.clay : tokens.lineStrong,
-                  borderRadius: BorderRadius.circular(3),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  /// 視窗邊緣、且該方向還有更多故事的點。
-  bool _isEdgeHint(int i, {required int start, required int end}) {
-    if (i == index) return false;
-    return (i == start && start > 0) || (i == end - 1 && end < count);
   }
 }
