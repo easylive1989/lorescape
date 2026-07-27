@@ -360,23 +360,10 @@ class _Book extends StatelessWidget {
                       horizontal: 6,
                       vertical: 12,
                     ),
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: const Color(0x57FFE8C4)),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                      // 書名一律畫在框線內：實機 iOS 上曾出現字影跑到框外、
-                      // 落在書脊左緣的鬼影字，這層 clip 是最後一道保險。
-                      child: ClipRect(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 10,
-                          ),
-                          child: _VerticalTitle(text: book.title),
-                        ),
-                      ),
-                    ),
+                    // 設計稿的 `.book__label` 只有 padding，沒有框線。
+                    // 這層 clip 留著：實機 iOS 上曾出現字影跑到版面外、落在
+                    // 書脊左緣的鬼影字，是最後一道保險。
+                    child: ClipRect(child: _VerticalTitle(text: book.title)),
                   ),
                 ),
                 Positioned(
