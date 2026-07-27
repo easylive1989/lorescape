@@ -142,22 +142,9 @@ class _Shelf extends StatelessWidget {
     return Stack(
       children: [
         // 凹槽背板：比書矮一截（底部留 14），讓層板壓在前面。
-        Positioned.fill(
+        const Positioned.fill(
           bottom: 14,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0xFFEFE3CA), Color(0xFFE3D3B4)],
-              ),
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(8),
-                bottom: Radius.circular(3),
-              ),
-              border: Border.all(color: const Color(0x24977850)),
-            ),
-          ),
+          child: CustomPaint(painter: _ShelfAlcovePainter()),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(
@@ -192,10 +179,15 @@ class _Shelf extends StatelessWidget {
                         if (books.isNotEmpty)
                           const SizedBox(width: TripBookshelf._gap),
                         _AddBook(
-                          height:
-                              TripBookshelf._heights[(firstIndex +
-                                      books.length) %
-                                  TripBookshelf._heights.length],
+                          // 跟同排最後一本書等高：空位要看起來是「這排少了
+                          // 一本」，高度自己跳一級反而像另外擺上去的東西。
+                          height: books.isEmpty
+                              ? TripBookshelf._heights[firstIndex %
+                                    TripBookshelf._heights.length]
+                              : TripBookshelf._heights[(firstIndex +
+                                        books.length -
+                                        1) %
+                                    TripBookshelf._heights.length],
                           onTap: onAddTrip,
                         ),
                       ],
@@ -210,6 +202,88 @@ class _Shelf extends StatelessWidget {
       ],
     );
   }
+}
+
+/// 畫凹槽背板（`.shelf::before`）：底色 → 上緣內陰影 → 下緣內陰影 → 內描邊。
+///
+/// 三道都是 `inset box-shadow`，Flutter 的 [BoxDecoration] 只做得到外陰影，
+/// 所以整片自己畫；上緣比下緣重，凹槽才會有「往裡收」的深度。
+class _ShelfAlcovePainter extends CustomPainter {
+  const _ShelfAlcovePainter();
+
+  /// 上緣內陰影（`inset 0 10px 22px`）。
+  static const double _topShadowHeight = 26;
+  static const Color _topShadowColor = Color(0x335A422A);
+
+  /// 下緣內陰影（`inset 0 -6px 14px`），比上緣淺。
+  static const double _bottomShadowHeight = 16;
+  static const Color _bottomShadowColor = Color(0x1F5A422A);
+
+  /// 內描邊（`inset 0 0 0 1px`）。
+  static const Color _ringColor = Color(0x24977850);
+
+  static const BorderRadius _radius = BorderRadius.vertical(
+    top: Radius.circular(8),
+    bottom: Radius.circular(3),
+  );
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final rrect = _radius.toRRect(rect);
+    canvas.save();
+    canvas.clipRRect(rrect);
+
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFEFE3CA), Color(0xFFE3D3B4)],
+        ).createShader(rect),
+    );
+
+    final topRect = Rect.fromLTWH(0, 0, size.width, _topShadowHeight);
+    canvas.drawRect(
+      topRect,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [_topShadowColor, Color(0x005A422A)],
+        ).createShader(topRect),
+    );
+
+    final bottomRect = Rect.fromLTWH(
+      0,
+      size.height - _bottomShadowHeight,
+      size.width,
+      _bottomShadowHeight,
+    );
+    canvas.drawRect(
+      bottomRect,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.bottomCenter,
+          end: Alignment.topCenter,
+          colors: [_bottomShadowColor, Color(0x005A422A)],
+        ).createShader(bottomRect),
+    );
+
+    canvas.restore();
+
+    canvas.drawRRect(
+      rrect.deflate(0.5),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..color = _ringColor,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _ShelfAlcovePainter oldDelegate) => false;
 }
 
 /// 四種書皮配色，對應設計稿的 `.book--a` ～ `.book--d`。
@@ -250,13 +324,12 @@ class _Book extends StatelessWidget {
         child: Container(
           width: _width,
           height: height,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(colors: [palette.left, palette.right]),
-            borderRadius: const BorderRadius.horizontal(
+          decoration: const BoxDecoration(
+            borderRadius: BorderRadius.horizontal(
               left: Radius.circular(2),
               right: Radius.circular(7),
             ),
-            boxShadow: const [
+            boxShadow: [
               BoxShadow(
                 color: Color(0x6B1C140A),
                 offset: Offset(-5, 9),
@@ -264,92 +337,228 @@ class _Book extends StatelessWidget {
               ),
             ],
           ),
-          child: Stack(
-            children: [
-              // 書口：頂端一條奶油色，模擬書頁疊起來的斷面。
-              const Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: SizedBox(
-                  height: 4,
-                  child: ColoredBox(color: Color(0xBFF7EED6)),
-                ),
-              ),
-              // 書脊右側的暗面，做出圓弧感。
-              const Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Color(0x4DFFFFFF),
-                        Color(0x00000000),
-                        Color(0x73000000),
-                      ],
-                      stops: [0, 0.35, 1],
-                    ),
+          // 書皮、書口、脊上的光影與裝訂棱全部畫在這層，文字與 icon 疊上去。
+          child: CustomPaint(
+            painter: _BookSpinePainter(palette),
+            child: Stack(
+              children: [
+                Positioned(
+                  top: 17,
+                  left: 0,
+                  right: 0,
+                  child: Icon(
+                    book.hasEntries
+                        ? Icons.menu_book_outlined
+                        : Icons.image_not_supported_outlined,
+                    size: 13,
+                    color: const Color(0xEBFFEECE),
                   ),
                 ),
-              ),
-              Positioned(
-                top: 17,
-                left: 0,
-                right: 0,
-                child: Icon(
-                  book.hasEntries
-                      ? Icons.menu_book_outlined
-                      : Icons.image_not_supported_outlined,
-                  size: 13,
-                  color: const Color(0xEBFFEECE),
-                ),
-              ),
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 12,
-                  ),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      border: Border.all(color: const Color(0x57FFE8C4)),
-                      borderRadius: BorderRadius.circular(2),
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 12,
                     ),
-                    // 書名一律畫在框線內：實機 iOS 上曾出現字影跑到框外、
-                    // 落在書脊左緣的鬼影字，這層 clip 是最後一道保險。
-                    child: ClipRect(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 10,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: const Color(0x57FFE8C4)),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                      // 書名一律畫在框線內：實機 iOS 上曾出現字影跑到框外、
+                      // 落在書脊左緣的鬼影字，這層 clip 是最後一道保險。
+                      child: ClipRect(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 10,
+                          ),
+                          child: _VerticalTitle(text: book.title),
                         ),
-                        child: _VerticalTitle(text: book.title),
                       ),
                     ),
                   ),
                 ),
-              ),
-              Positioned(
-                bottom: 16,
-                left: 0,
-                right: 0,
-                child: Text(
-                  book.subtitle,
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    letterSpacing: 0.6,
-                    color: Color(0xB8FFEBC8),
+                Positioned(
+                  bottom: 16,
+                  left: 0,
+                  right: 0,
+                  child: Text(
+                    book.subtitle,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      letterSpacing: 0.6,
+                      color: Color(0xB8FFEBC8),
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
+}
+
+/// 畫書脊（`.book` 的三層背景 ＋ 六道 inset ＋ 兩條裝訂棱）。
+///
+/// CSS 那邊靠 `background-image` 疊三層、`box-shadow` 疊六道、再用
+/// `::before/::after` 生兩條棱；Flutter 沒有 inset shadow 也沒有多重
+/// background，全部按同樣的順序自己畫。
+class _BookSpinePainter extends CustomPainter {
+  const _BookSpinePainter(this.palette);
+
+  final _BookPalette palette;
+
+  static const BorderRadius _radius = BorderRadius.horizontal(
+    left: Radius.circular(2),
+    right: Radius.circular(7),
+  );
+
+  /// 書口：頂端書頁斷面（`inset 0 4px 0 rgba(247,238,214,.75)`）。
+  static const double _foreEdgeHeight = 4;
+  static const Color _foreEdgeColor = Color(0xBFF7EED6);
+
+  /// 左脊高光與右脊暗面的寬度（由 `inset` 的 blur/spread 換算的近似值）。
+  static const double _leftHighlightWidth = 5;
+  static const double _rightShadeWidth = 7;
+
+  /// 上下鍍金帶：距書口一點點、貼著書底各一條。
+  static const double _giltHeight = 2;
+  static const Color _giltColor = Color(0x8CFFEBC8);
+
+  /// 裝訂棱（`::before` / `::after`）：距上下緣 30px、7px 高。
+  static const double _ridgeInset = 30;
+  static const double _ridgeHeight = 7;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    canvas.save();
+    canvas.clipRRect(_radius.toRRect(rect));
+
+    // 1. 主色：書皮左深右淺。
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..shader = LinearGradient(
+          colors: [palette.left, palette.right],
+        ).createShader(rect),
+    );
+
+    // 2. 左上方的柔光，讓皮面不是死板的一片色。
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..shader = const RadialGradient(
+          center: Alignment(-0.4, -0.76),
+          radius: 1.2,
+          colors: [Color(0x24FFDCBE), Color(0x00FFDCBE)],
+        ).createShader(rect),
+    );
+
+    // 3. 斜向明暗（overlay）：靠上偏亮、六成之後壓暗。
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..blendMode = BlendMode.overlay
+        ..shader = const LinearGradient(
+          begin: Alignment(-1, -0.2),
+          end: Alignment(1, 0.2),
+          colors: [Color(0x1AFFFFFF), Color(0x24000000)],
+          stops: [0, 0.6],
+        ).createShader(rect),
+    );
+
+    // 4. 左脊高光。
+    final leftRect = Rect.fromLTWH(0, 0, _leftHighlightWidth, size.height);
+    canvas.drawRect(
+      leftRect,
+      Paint()
+        ..shader = const LinearGradient(
+          colors: [Color(0x4DFFFFFF), Color(0x00FFFFFF)],
+        ).createShader(leftRect),
+    );
+
+    // 5. 右脊暗面：書脊往內收的圓弧。
+    final rightRect = Rect.fromLTWH(
+      size.width - _rightShadeWidth,
+      0,
+      _rightShadeWidth,
+      size.height,
+    );
+    canvas.drawRect(
+      rightRect,
+      Paint()
+        ..shader = const LinearGradient(
+          colors: [Color(0x00000000), Color(0x73000000)],
+        ).createShader(rightRect),
+    );
+
+    // 6. 兩條裝訂棱：上白下黑的凸起，各自帶一道往外的暗影。
+    _paintRidge(canvas, size, top: _ridgeInset, shadowAbove: true);
+    _paintRidge(
+      canvas,
+      size,
+      top: size.height - _ridgeInset - _ridgeHeight,
+      shadowAbove: false,
+    );
+
+    // 7. 上下鍍金帶。
+    final giltPaint = Paint()..color = _giltColor;
+    canvas.drawRect(
+      Rect.fromLTWH(0, _foreEdgeHeight, size.width, _giltHeight),
+      giltPaint,
+    );
+    canvas.drawRect(
+      Rect.fromLTWH(0, size.height - _giltHeight, size.width, _giltHeight),
+      giltPaint,
+    );
+
+    // 8. 書口疊在最上層，蓋住鍍金帶的上緣。
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.width, _foreEdgeHeight),
+      Paint()..color = _foreEdgeColor,
+    );
+
+    canvas.restore();
+  }
+
+  void _paintRidge(
+    Canvas canvas,
+    Size size, {
+    required double top,
+    required bool shadowAbove,
+  }) {
+    final ridge = Rect.fromLTWH(0, top, size.width, _ridgeHeight);
+    canvas.drawRect(
+      ridge,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0x29FFFFFF), Color(0x38000000)],
+        ).createShader(ridge),
+    );
+    // 棱外側再壓一條窄暗影，凸起才有厚度。
+    canvas.drawRect(
+      Rect.fromLTWH(
+        0,
+        shadowAbove ? top - 2 : top + _ridgeHeight,
+        size.width,
+        2,
+      ),
+      Paint()..color = const Color(0x2E000000),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _BookSpinePainter oldDelegate) =>
+      oldDelegate.palette != palette;
 }
 
 /// 書架末端的佔位書：一個虛線圍出來的空書位，中間一個 `+`。
@@ -475,25 +684,30 @@ class _VerticalTitle extends StatelessWidget {
   }
 }
 
-/// 木層板（`.shelf__plank`）：橫向細紋＋前緣厚度。
+/// 木層板（`.shelf__plank`）：直向木紋條紋＋上下 inset 明暗＋前緣厚度。
+///
+/// 條紋與 inset 陰影 Flutter 都沒有現成對應（`repeating-linear-gradient`
+/// 與 `inset box-shadow`），所以板面整片交給 [_ShelfPlankPainter] 畫。
 class _ShelfPlank extends StatelessWidget {
   const _ShelfPlank();
+
+  /// 板面厚度，對應設計稿的 `height:20px`。
+  static const double _height = 20;
+
+  /// 前緣（`::after`）高度與左右內縮（設計稿為 1.5%，此處以固定值近似）。
+  static const double _lipHeight = 7;
+  static const double _lipInset = 4;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // 板面下方的落地陰影畫在 Container，條紋與 inset 交給 painter。
         Container(
-          height: 20,
+          height: _height,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(2),
-            gradient: const LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFFCFA670), Color(0xFFBB9058), Color(0xFFA2794A)],
-              stops: [0, 0.55, 1],
-            ),
             boxShadow: const [
               BoxShadow(
                 color: Color(0x571C140A),
@@ -502,23 +716,121 @@ class _ShelfPlank extends StatelessWidget {
               ),
             ],
           ),
+          child: const CustomPaint(
+            painter: _ShelfPlankPainter(),
+            size: Size.fromHeight(_height),
+          ),
         ),
         // 前緣：讓層板看起來有厚度而不是一條色帶。
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
+          padding: const EdgeInsets.symmetric(horizontal: _lipInset),
           child: Container(
-            height: 7,
+            height: _lipHeight,
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Color(0xFF9A7343), Color(0xFF835F38)],
+                colors: [Color(0xFF866438), Color(0xFF725431)],
               ),
               borderRadius: BorderRadius.vertical(bottom: Radius.circular(4)),
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0x521C140A),
+                  offset: Offset(0, 10),
+                  blurRadius: 14,
+                ),
+              ],
             ),
           ),
         ),
       ],
     );
   }
+}
+
+/// 畫層板板面：底色漸層 → 直向木紋 → 頂緣高光 → 底部內陰影。
+///
+/// 四層的疊法與順序都照設計稿的 `.shelf__plank`；條紋走 7px 一個週期
+/// （深 3px、淺 4px），是木紋而不是等寬斑馬線，所以兩段寬度不同。
+class _ShelfPlankPainter extends CustomPainter {
+  const _ShelfPlankPainter();
+
+  /// 木紋週期與深色段寬度。
+  static const double _grainPeriod = 7;
+  static const double _grainDark = 3;
+
+  static const Color _grainDarkColor = Color(0x1A5A3719);
+  static const Color _grainLightColor = Color(0x0AFFFFFF);
+
+  /// 頂緣高光（`inset 0 2px 0`）：實色、不模糊。
+  static const double _highlightHeight = 2;
+  static const Color _highlightColor = Color(0x73FFF7E8);
+
+  /// 底部內陰影（`inset 0 -5px 9px`）：往上暈開，讓板面前緣收得下去。
+  static const double _innerShadowHeight = 11;
+  static const Color _innerShadowColor = Color(0x733C2814);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(2));
+    canvas.save();
+    canvas.clipRRect(rrect);
+
+    // 1. 底色：上亮下暗的木頭本色。
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFB49061), Color(0xFFA37D4D), Color(0xFF8D6940)],
+          stops: [0, 0.55, 1],
+        ).createShader(rect),
+    );
+
+    // 2. 直向木紋：深淺相間，整片鋪滿。
+    final darkPaint = Paint()..color = _grainDarkColor;
+    final lightPaint = Paint()..color = _grainLightColor;
+    for (var x = 0.0; x < size.width; x += _grainPeriod) {
+      canvas.drawRect(Rect.fromLTWH(x, 0, _grainDark, size.height), darkPaint);
+      canvas.drawRect(
+        Rect.fromLTWH(
+          x + _grainDark,
+          0,
+          _grainPeriod - _grainDark,
+          size.height,
+        ),
+        lightPaint,
+      );
+    }
+
+    // 3. 頂緣高光：一條實色細線，木板的上稜。
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.width, _highlightHeight),
+      Paint()..color = _highlightColor,
+    );
+
+    // 4. 底部內陰影：由下往上淡出。
+    final shadowRect = Rect.fromLTWH(
+      0,
+      size.height - _innerShadowHeight,
+      size.width,
+      _innerShadowHeight,
+    );
+    canvas.drawRect(
+      shadowRect,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.bottomCenter,
+          end: Alignment.topCenter,
+          colors: [_innerShadowColor, Color(0x003C2814)],
+        ).createShader(shadowRect),
+    );
+
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _ShelfPlankPainter oldDelegate) => false;
 }
