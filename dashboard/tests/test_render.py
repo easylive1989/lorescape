@@ -283,8 +283,8 @@ class TestBuildReelsHtml:
         assert "觸及帳號" in html and "168" in html
         # 觀眾輪廓
         assert "年齡 25-34" in html and "35.7%" in html
-        # 國家打包欄位展開成可讀文字
-        assert "日本 34.9%" in html and "台灣 20.4%" in html
+        # 國家分布仍收集進 CSV，但明細表暫不顯示
+        assert "國家分布" not in html and "日本 34.9%" not in html
 
     def test_整列皆空的指標不顯示(self):
         html = build_reels_html(DATA)

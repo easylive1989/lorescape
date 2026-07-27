@@ -29,89 +29,89 @@ _CSS = """
 }}
 *{box-sizing:border-box;margin:0}
 body{background:var(--page);color:var(--ink);
-  font:15px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif;padding:0 20px 80px}
-main{max-width:1080px;margin:0 auto}
+  font:30px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif;padding:0 20px 80px}
+main{max-width:none;margin:0 auto}
 a{color:var(--series);text-decoration:none}
 header{display:flex;flex-wrap:wrap;align-items:baseline;gap:12px;
   padding:28px 0 8px;border-bottom:1px solid var(--grid)}
-header h1{font-size:20px;letter-spacing:.04em}
-header .stamp{color:var(--muted);font-size:13px;margin-left:auto}
+header h1{font-size:40px;letter-spacing:.04em}
+header .stamp{color:var(--muted);font-size:26px;margin-left:auto}
 .tabs{display:flex;gap:4px;padding:12px 0 0;position:sticky;top:0;background:var(--page);
   z-index:2;border-bottom:1px solid var(--grid)}
 .tabs button{appearance:none;border:1px solid transparent;border-bottom:none;background:none;
-  color:var(--ink-2);font:14px/1 system-ui,-apple-system,"Segoe UI",sans-serif;
+  color:var(--ink-2);font:28px/1 system-ui,-apple-system,"Segoe UI",sans-serif;
   padding:10px 16px;border-radius:8px 8px 0 0;cursor:pointer}
 .tabs button:hover{color:var(--ink)}
 .tabs button[aria-selected="true"]{background:var(--surface);border-color:var(--border);
   color:var(--ink);font-weight:600;position:relative;top:1px}
 .panel{display:none}
 .panel.active{display:block}
-h2{font-size:16px;margin:36px 0 14px;display:flex;align-items:center;gap:8px}
+h2{font-size:32px;margin:36px 0 14px;display:flex;align-items:center;gap:8px}
 h2 .hash{color:var(--muted);font-weight:400}
 section{scroll-margin-top:48px}
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:20px}
 .tile{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
-.tile .label{font-size:12px;color:var(--ink-2)}
-.tile .value{font-size:22px;font-weight:600;margin-top:2px;display:flex;align-items:center;gap:8px}
+.tile .label{font-size:24px;color:var(--ink-2)}
+.tile .value{font-size:44px;font-weight:600;margin-top:2px;display:flex;align-items:center;gap:8px}
 .dot{width:10px;height:10px;border-radius:50%;flex:none}
 .dot.good{background:var(--good)}.dot.warning{background:var(--warning)}
 .dot.critical{background:var(--critical)}.dot.muted{background:var(--muted)}
 table{border-collapse:collapse;width:100%;background:var(--surface);
-  border:1px solid var(--border);border-radius:10px;overflow:hidden;font-size:14px}
+  border:1px solid var(--border);border-radius:10px;overflow:hidden;font-size:28px}
 th,td{text-align:left;padding:8px 12px;border-top:1px solid var(--grid);
   font-variant-numeric:tabular-nums}
-thead th{border-top:none;color:var(--ink-2);font-weight:500;font-size:12px;background:var(--surface)}
+thead th{border-top:none;color:var(--ink-2);font-weight:500;font-size:24px;background:var(--surface)}
 .num{text-align:right}
 .status-good{color:var(--good-text)}.status-warning{color:#8a6100}
 @media (prefers-color-scheme:dark){.status-warning{color:var(--warning)}}
 .status-critical{color:var(--critical)}
 .callout{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--series);
-  border-radius:8px;padding:10px 14px;margin:10px 0;font-size:14px}
+  border-radius:8px;padding:10px 14px;margin:10px 0;font-size:28px}
 .callout.warn{border-left-color:var(--warning)}
 .callout.error{border-left-color:var(--critical)}
 .progress{height:8px;background:var(--grid);border-radius:4px;overflow:hidden;margin:6px 0 4px}
 .progress i{display:block;height:100%;background:var(--series);border-radius:4px}
 .kanban{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;align-items:start}
 .kanban .col{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px}
-.kanban .col>h3{font-size:12px;color:var(--ink-2);font-weight:500;padding:2px 4px 8px}
+.kanban .col>h3{font-size:24px;color:var(--ink-2);font-weight:500;padding:2px 4px 8px}
 .card{border:1px solid var(--grid);border-radius:8px;margin-bottom:8px;background:var(--page)}
-.card summary{padding:8px 10px;cursor:pointer;font-size:14px;list-style:none}
+.card summary{padding:8px 10px;cursor:pointer;font-size:28px;list-style:none}
 .card summary::-webkit-details-marker{display:none}
-.card .meta{color:var(--muted);font-size:12px}
-.card ul{padding:2px 12px 10px 26px;font-size:13px;color:var(--ink-2)}
+.card .meta{color:var(--muted);font-size:24px}
+.card ul{padding:2px 12px 10px 26px;font-size:26px;color:var(--ink-2)}
 .card li.done{text-decoration:line-through;color:var(--muted)}
 ul.plain{list-style:none;padding:0}
-ul.plain li{padding:3px 0;font-size:14px}
-.fail{color:var(--critical);font-size:13px;padding:2px 0}
+ul.plain li{padding:3px 0;font-size:28px}
+.fail{color:var(--critical);font-size:26px;padding:2px 0}
 .metric-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;
   padding:14px 16px;margin-bottom:14px}
 .metric-head{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
-.metric-head b{font-size:14px}
-.metric-head span{color:var(--muted);font-size:12px}
+.metric-head b{font-size:28px}
+.metric-head span{color:var(--muted);font-size:24px}
 .stats-row{display:flex;flex-wrap:wrap;gap:8px 28px;margin-bottom:6px}
-.stat .label{font-size:12px;color:var(--ink-2)}
-.stat .value{font-size:19px;font-weight:600}
-.delta{font-size:12px;font-weight:500;margin-left:4px}
+.stat .label{font-size:24px;color:var(--ink-2)}
+.stat .value{font-size:38px;font-weight:600}
+.delta{font-size:24px;font-weight:500;margin-left:4px}
 .delta.up{color:var(--good-text)}.delta.down{color:var(--critical)}.delta.flat{color:var(--muted)}
-details.table-fold{margin-top:8px;font-size:13px}
-details.table-fold summary{color:var(--muted);cursor:pointer;font-size:12px}
+details.table-fold{margin-top:8px;font-size:26px}
+details.table-fold summary{color:var(--muted);cursor:pointer;font-size:24px}
 .spark{display:block;margin-top:4px}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chip{background:var(--surface);border:1px solid var(--border);border-radius:8px;
-  padding:8px 12px;font-size:14px;display:flex;gap:8px;align-items:center}
-footer{margin-top:48px;color:var(--muted);font-size:12px}
-.sec-stamp{color:var(--muted);font-size:12px;margin-bottom:8px}
+  padding:8px 12px;font-size:28px;display:flex;gap:8px;align-items:center}
+footer{margin-top:48px;color:var(--muted);font-size:24px}
+.sec-stamp{color:var(--muted);font-size:24px;margin-bottom:8px}
 button.refresh{appearance:none;border:1px solid var(--border);background:var(--surface);
-  color:var(--ink-2);border-radius:6px;font-size:13px;line-height:1;padding:4px 8px;
+  color:var(--ink-2);border-radius:6px;font-size:26px;line-height:1;padding:4px 8px;
   cursor:pointer;margin-left:4px}
 button.refresh:hover{color:var(--series)}
 button.refresh:disabled{opacity:.5;cursor:wait}
 .calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:10px 0}
-.cal-head{text-align:center;font-size:12px;color:var(--ink-2);padding:4px 0}
+.cal-head{text-align:center;font-size:24px;color:var(--ink-2);padding:4px 0}
 .cal-day{background:var(--surface);border:1px solid var(--border);border-radius:8px;
-  min-height:64px;padding:6px 8px;font-size:12px;cursor:pointer;display:flex;
+  min-height:64px;padding:6px 8px;font-size:24px;cursor:pointer;display:flex;
   flex-direction:column;gap:2px}
-.cal-day b{font-size:13px;font-variant-numeric:tabular-nums}
+.cal-day b{font-size:26px;font-variant-numeric:tabular-nums}
 .cal-day.out{background:none;border-color:transparent;cursor:default}
 .cal-day:not(.out):hover{border-color:var(--series)}
 .cal-day.today b{color:var(--series)}
@@ -119,7 +119,11 @@ button.refresh:disabled{opacity:.5;cursor:wait}
   background:var(--wash)}
 .cal-tag{color:var(--ink-2);white-space:nowrap}
 .cal-detail{margin-top:12px}
-.cal-detail h3{font-size:13px;color:var(--ink-2);margin-bottom:6px}
+.cal-detail h3{font-size:26px;color:var(--ink-2);margin-bottom:6px}
+.table-scroll{overflow-x:auto;margin-bottom:14px}
+table.pivot th:first-child,table.pivot td:first-child{position:sticky;left:0;
+  background:var(--surface);z-index:1;white-space:nowrap}
+table.pivot thead th{white-space:nowrap}
 """
 
 
@@ -269,7 +273,7 @@ def _epic_html(backlog: dict) -> str:
             f'<b>{_E(epic["id"])} {_E(epic["title"])}</b>'
             f'<span>{_E(epic["status"] or "?")}</span></div>'
             f'<div class="progress"><i style="width:{percent}%"></i></div>'
-            f'<div class="card .meta" style="font-size:13px;color:var(--ink-2)">'
+            f'<div class="card .meta" style="font-size:26px;color:var(--ink-2)">'
             f'{done}/{total} features'
             + (f'　·　目標：{_E(epic["goal"])}' if epic["goal"] else "")
             + "</div>"
@@ -635,7 +639,7 @@ _REEL_DETAIL_ROWS = [
     ("age_65_plus_pct", "年齡 65+"),
     ("gender_male_pct", "性別・男"), ("gender_female_pct", "性別・女"),
     ("gender_other_pct", "性別・未指定"),
-    ("countries", "國家分布"),
+    # 國家分布仍由 metrics collector 收進 CSV，只是明細表暫不顯示
 ]
 
 
@@ -650,37 +654,109 @@ def _reel_detail_value(snapshot: dict | None, key: str) -> str:
         )
     return f"{value}%" if key.endswith("_pct") else value
 
-def _reel_detail_card(reel: dict) -> str:
-    checkpoints = reel["checkpoints"]
-    caption = reel.get("caption", "") or reel.get("media_id", "")
-    head_cells = "".join(f"<th>{cp}</th>" for cp in _REEL_CHECKPOINTS)
-    rows = []
-    for key, label in _REEL_DETAIL_ROWS:
-        values = [
-            _reel_detail_value(checkpoints.get(cp), key) for cp in _REEL_CHECKPOINTS
-        ]
-        if all(v == "–" for v in values):
-            continue  # 整列皆空（如輪廓未達門檻）不佔版面
-        cells = "".join(
-            f'<td class="num">{_E(v)}</td>' if v == "–" or key != "countries"
-            else f"<td>{_E(v)}</td>"
-            for v in values
-        )
-        rows.append(f"<tr><td>{_E(label)}</td>{cells}</tr>")
+def _reel_col_header(reel: dict) -> str:
+    """一支 reel 一欄的表頭：發布日連到貼文，caption 放 title 提示。"""
     return (
-        f'<div class="metric-card"><div class="metric-head">'
-        f'<b><a href="{_E(reel.get("permalink", ""))}">{_E(caption)}</a></b>'
-        f'<span>發布 {_E(reel.get("posted_date", ""))}</span></div>'
-        f"<table><thead><tr><th>指標</th>{head_cells}</tr></thead>"
+        f'<th><a href="{_E(reel.get("permalink", ""))}" '
+        f'title="{_E(reel.get("caption", "") or reel.get("media_id", ""))}">'
+        f'{_E(reel.get("posted_date", ""))}</a></th>'
+    )
+
+
+def _place_from_caption(caption: str) -> str:
+    """caption 格式為「hook  地點 · 時代  內文」，取第一個 · 之前、
+    hook 之後的地點名當後備。"""
+    head = caption.split(" · ", 1)[0]
+    parts = [p for p in re.split(r"\s{2,}", head.strip()) if p]
+    return parts[-1] if len(parts) >= 2 else ""
+
+
+def _reel_place_map(data: dict) -> dict[str, str]:
+    """由 reels_calendar collector 的 entries 建 發布日→景點 對照。"""
+    entries = (data.get("reels") or {}).get("entries", [])
+    return {e["date"]: e["place"] for e in entries if e.get("date") and e.get("place")}
+
+
+def _reel_checkpoint_table(
+    reels: list[dict], checkpoint: str, place_map: dict[str, str]
+) -> str:
+    """單一 checkpoint 的樞紐表：縱軸每支 reel（依發布日），橫軸各指標。"""
+    entries = sorted(
+        (r for r in reels if r["checkpoints"].get(checkpoint)),
+        key=lambda r: r.get("posted_date", ""),
+    )
+    if not entries:
+        return (
+            '<div class="callout warn">這個時間點還沒有任何 reel 洞察快照。</div>'
+        )
+    # 只保留至少一支 reel 有值的指標欄（整欄皆空的略過）
+    metrics = [
+        (key, label)
+        for key, label in _REEL_DETAIL_ROWS
+        if any(
+            _reel_detail_value(r["checkpoints"].get(checkpoint), key) != "–"
+            for r in entries
+        )
+    ]
+    head = (
+        "<th>發布日</th><th>地點</th>"
+        + "".join(f"<th>{_E(label)}</th>" for _, label in metrics)
+    )
+    rows = []
+    for reel in entries:
+        snapshot = reel["checkpoints"].get(checkpoint)
+        date_cell = _reel_col_header(reel).replace("<th>", "<td>").replace("</th>", "</td>")
+        place = (
+            place_map.get(reel.get("posted_date", ""))
+            or _place_from_caption(reel.get("caption", ""))
+            or "–"
+        )
+        metric_cells = "".join(
+            (
+                f'<td class="num">{_E(v)}</td>'
+                if (v := _reel_detail_value(snapshot, key)) == "–" or key != "countries"
+                else f"<td>{_E(v)}</td>"
+            )
+            for key, _ in metrics
+        )
+        rows.append(f"<tr>{date_cell}<td>{_E(place)}</td>{metric_cells}</tr>")
+    return (
+        f'<div class="table-scroll"><table class="pivot">'
+        f"<thead><tr>{head}</tr></thead>"
         f"<tbody>{''.join(rows)}</tbody></table></div>"
     )
 
 
+_REELS_TAB_JS = """
+document.querySelectorAll('.tabs button[data-cp]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const cp=btn.dataset.cp;
+    document.querySelectorAll('.tabs button[data-cp]').forEach(
+      b=>b.setAttribute('aria-selected', String(b===btn)));
+    document.querySelectorAll('.panel[data-cp]').forEach(
+      p=>p.classList.toggle('active', p.dataset.cp===cp));
+  });
+});
+"""
+
+
 def build_reels_html(data: dict) -> str:
-    """獨立頁 out/reels.html：每支 reel 的 24h/48h/7d 完整洞察明細。"""
+    """獨立頁 out/reels.html：24h / 48h / 7d 三個 tab，各一張樞紐表
+    （縱軸各指標，橫軸每支 reel 依發布日）。"""
     reels = (data.get("metrics") or {}).get("ig_reels", [])
     if reels:
-        body = "".join(_reel_detail_card(r) for r in reels)
+        place_map = _reel_place_map(data)
+        tabs = "".join(
+            f'<button data-cp="{cp}"'
+            f'{" aria-selected=\"true\"" if i == 0 else ""}>{cp}</button>'
+            for i, cp in enumerate(_REEL_CHECKPOINTS)
+        )
+        panels = "".join(
+            f'<div class="panel{" active" if i == 0 else ""}" data-cp="{cp}">'
+            f"{_reel_checkpoint_table(reels, cp, place_map)}</div>"
+            for i, cp in enumerate(_REEL_CHECKPOINTS)
+        )
+        body = f'<div class="tabs" role="tablist">{tabs}</div>{panels}'
     else:
         body = (
             '<div class="callout warn">還沒有 Reels 洞察快照——'
@@ -701,6 +777,7 @@ def build_reels_html(data: dict) -> str:
 {body}
 <footer>由 dashboard/ 工具產生・<code>uv run lorescape-dashboard</code></footer>
 </main>
+<script>{_REELS_TAB_JS}</script>
 </body>
 </html>"""
 
