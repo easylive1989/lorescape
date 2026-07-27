@@ -11,6 +11,10 @@ _ROW_RE = re.compile(
     r"^\|\s*(\d{1,2})/(\d{1,2})\s*[一二三四五六日]\s*\|"
     r"\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|$"
 )
+_HEADING_RE = re.compile(r"^#{1,6}\s+(.+)$")
+# 只有「## Week N（…）」段落底下的表才是排程；「開場 hook 指定」表同為
+# 「日期＋三欄」的形狀，不靠段落區分會被一起收進來（欄位還會錯位）。
+_WEEK_HEADING_RE = re.compile(r"^Week\s")
 
 
 def parse_calendar(text: str) -> dict:
@@ -23,8 +27,16 @@ def parse_calendar(text: str) -> dict:
         range_text = title_match.group(0).strip("（）")
 
     entries = []
+    in_week_section = False
     for line in text.splitlines():
-        m = _ROW_RE.match(line.strip())
+        stripped = line.strip()
+        heading = _HEADING_RE.match(stripped)
+        if heading:
+            in_week_section = bool(_WEEK_HEADING_RE.match(heading.group(1).strip()))
+            continue
+        if not in_week_section:
+            continue
+        m = _ROW_RE.match(stripped)
         if not m:
             continue
         month, day = int(m.group(1)), int(m.group(2))
