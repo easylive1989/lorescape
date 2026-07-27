@@ -769,3 +769,49 @@ epic 承接自原公司層 backlog；目前只有 E1（見下方「Epic」）。
   的「data/metrics」說法
 - 注意：`ig_reels_insights` 是唯一由 Claude 直接讀寫的來源（讀 IG App 截圖
   後寫入），改到 Sheet 後這個寫入路徑也要一併改，別留一個還在寫 CSV。
+
+## F29: 落地頁 sitemap 收錄每日故事頁 (epic: E1)
+
+- 狀態: 待辦
+- 來源: 使用者詢問「landing page 有把每天產生的文章放進 sitemap 嗎」
+  （2026-07-27），查證結論＝**沒有**
+- 現況（2026-07-27 查證）:
+  - `/[locale]/story/[date]` 頁面在 build 時由 `getPublishedStorySlugs()`
+    （`landing/src/lib/dailyStory.ts`）從 Supabase `daily_stories` 撈出
+    所有已發布日期靜態產生，metadata 設 `robots: index, follow`——
+    這些頁本來就是要給搜尋引擎索引的
+  - 但 `landing/src/app/sitemap.ts` 是同步函式，只列首頁（zh/en）、
+    5 個手寫 `/place/[slug]` 景點頁與 legal 頁，完全沒引用 dailyStory
+  - ⇒ 每日文章只能靠內外部連結被 Google 發現，sitemap 沒有幫忙
+- [ ] T1: `sitemap.ts` 改 async，呼叫既有 `getPublishedStorySlugs()` 把
+  每篇故事 URL（`/{locale}/story/{date}`）加進 sitemap；build 時本來就會
+  連 Supabase，無新依賴。lastModified 可用 publish_date
+- [ ] T2: 部署後驗證正式站 `sitemap.xml` 含 story URL，並在 GSC 觀察
+  story 頁的收錄狀況（目前 story 頁是否已被索引，順便一併查）
+- 註: story 頁只在 build 時產生（`dynamicParams = false`），新文章要等下次
+  Deploy Landing 才會出現——sitemap 收錄節奏與頁面產生節奏一致，但代表
+  「每日文章要進索引」隱含「landing 需要每日或定期重建部署」，是否排進
+  例行由 F30 的定位研究一併決定
+
+## F30: 四種內容素材定位研究與內容生成 skill 調整 (epic: E1)
+
+- 狀態: 待辦
+- 來源: 使用者要求（2026-07-27）
+- 背景: 目前每日內容產線同時產出四種素材，但四者的定位（各自服務漏斗
+  哪一段、目標受眾、成功指標）從未明確定義，內容生成邏輯也各自演化：
+  1. **IG Reels**——每日故事影片（lorescape-daily-reel），觸及/獲客
+  2. **IG carousel**——wander 風格圖組（lorescape-wander-carousel）
+  3. **官網文章**——`/story/[date]` 每日故事頁（SEO 資產，配合 F29 進
+     sitemap）＋ `/place/[slug]` 景點 SEO 頁（F9）
+  4. **App 內文章**——每日精選故事（免費用戶可讀，留存/習慣養成迴路，
+     見 F13 T2）
+- [ ] T1: 研究並定義四種素材的定位——各自在漏斗的位置（觸及/導流/轉換/
+  留存）、目標受眾與情境、成功指標（對齊既有 metrics：略過率、
+  profile_views、GSC 曝光、D1 留存…）、彼此的分工與重複。產出定位文件
+  （建議放 MARKETING.md 或 marketing/ 下獨立檔）
+- [ ] T2: 依定位盤點內容生成的落差——同一份 daily story 目前如何派生成
+  四種素材、哪些素材該有不同的寫法/長度/hook 策略（例：Reels 重前三秒
+  hook（F21）、官網文章重搜尋意圖與關鍵字、App 內文章重完讀與隔日回訪）
+- [ ] T3: 依 T2 結論調整內容生成 skills（lorescape-manual-daily-story、
+  lorescape-daily-reel、lorescape-wander-carousel、story_prompt 等），
+  讓各素材的生成指引明確對齊自己的定位，而非共用同一套文案邏輯
