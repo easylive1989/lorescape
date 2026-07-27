@@ -117,12 +117,12 @@ class NotebookPage {
   final VoidCallback? onDelete;
 }
 
-/// 手記翻頁器，對應設計稿的 `.nb-*`：一頁一則記錄，左右拖曳翻頁。
+/// 手記翻頁器，對應設計稿的 `.nb-*`：一頁一則記錄，左右拖曳像翻書一樣翻頁。
 ///
-/// 實作用 `PageView` 而不是照抄設計稿的手寫拖曳邏輯（位移門檻 60px、兩端
-/// 0.32 阻尼）：自己排一列滿寬的頁面會讓 `Row` 永遠 overflow，`ClipRect`
-/// 只遮得住畫面、遮不住框架的斷言，測試會直接掛掉。`PageView` 的物理效果
-/// 是同一類手感（含兩端阻尼），而且順帶拿到無障礙與捲動語意。
+/// 頁面是繞左緣旋轉的 3D 翻頁（`.nb-page` 的 `rotateY` ＋ `perspective`），
+/// 不是橫向捲動——曾經用 `PageView` 近似，但那只是把整頁平移，翻不出紙張
+/// 拱起、反光掃過、翻到一半看見紙背這些手感。頁面用 `Stack` 疊而不是排成
+/// 一列，所以沒有 `Row` overflow 的問題。
 class NotebookPager extends StatefulWidget {
   const NotebookPager({super.key, required this.pages, this.onPageChanged});
 
@@ -135,51 +135,397 @@ class NotebookPager extends StatefulWidget {
   State<NotebookPager> createState() => _NotebookPagerState();
 }
 
-class _NotebookPagerState extends State<NotebookPager> {
-  final PageController _controller = PageController();
+class _NotebookPagerState extends State<NotebookPager>
+    with SingleTickerProviderStateMixin {
   int _index = 0;
 
-  static const Duration _settleDuration = Duration(milliseconds: 400);
-  static const Curve _settleCurve = Cubic(0.22, 0.61, 0.36, 1);
+  /// 正在翻的是哪一頁（翻下一頁時是當前頁，往回翻時是前一頁）。
+  int? _flipPage;
+
+  /// 翻頁進度 0～1；1 代表整頁已翻過去（-180°）。
+  double _flipT = 0;
+
+  /// 這次拖曳是往後翻還是往回翻。
+  bool _flipForward = true;
+
+  double _stageWidth = 1;
+
+  /// 鬆手後把進度補到 0 或 1 的動畫。
+  ///
+  /// 在 `initState` 建而不是 `late final` 的 lazy 初始化：從沒翻過頁的
+  /// pager 會在 `dispose()` 才第一次讀到它，那時 element 已經 deactivate，
+  /// `vsync` 去找 `TickerMode` 會直接拋 assertion。
+  late final AnimationController _settle;
+  double _settleFrom = 0;
+  double _settleTo = 0;
+
+  static const Duration _settleDuration = Duration(milliseconds: 660);
+  static const Curve _settleCurve = Cubic(0.36, 0.72, 0.22, 1);
+
+  /// 鬆手時翻過這個比例才算翻頁，否則彈回。
+  static const double _commitThreshold = 0.28;
+
+  /// 已經到頭時仍讓紙翻起一點點，手感上知道「沒有下一頁了」。
+  static const double _edgeResistance = 0.07;
+
+  @override
+  void initState() {
+    super.initState();
+    _settle = AnimationController(vsync: this, duration: _settleDuration)
+      ..addListener(_onSettleTick);
+  }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _settle.dispose();
     super.dispose();
+  }
+
+  void _onSettleTick() {
+    final t = _settleCurve.transform(_settle.value);
+    setState(() => _flipT = _settleFrom + (_settleTo - _settleFrom) * t);
+    if (!_settle.isCompleted) return;
+
+    // 落地：翻過去就換頁，彈回就清掉翻頁狀態。
+    final page = _flipPage;
+    if (_settleTo == 1 && page != null) {
+      final next = _flipForward ? page + 1 : page;
+      if (next != _index) {
+        _index = next;
+        widget.onPageChanged?.call(_index);
+      }
+    }
+    setState(() {
+      _flipPage = null;
+      _flipT = 0;
+    });
+  }
+
+  void _onDragStart(DragStartDetails details) {
+    _settle.stop();
+  }
+
+  void _onDragUpdate(DragUpdateDetails details, double width) {
+    _stageWidth = width <= 0 ? 1 : width;
+    final dx = details.primaryDelta ?? 0;
+    final last = widget.pages.length - 1;
+
+    setState(() {
+      if (_flipPage == null) {
+        // 第一個有效位移決定方向：往左翻下一頁、往右翻回上一頁。
+        if (dx < 0) {
+          _flipPage = _index;
+          _flipForward = true;
+        } else if (dx > 0) {
+          _flipPage = _index - 1;
+          _flipForward = false;
+        }
+      }
+      if (_flipPage == null) return;
+
+      final limit = _flipForward
+          ? (_index < last ? 1.0 : _edgeResistance)
+          : (_index > 0 ? 1.0 : _edgeResistance);
+      final delta = (_flipForward ? -dx : dx) / _stageWidth;
+      _flipT = (_flipT + delta).clamp(0.0, limit);
+    });
+  }
+
+  void _onDragEnd(DragEndDetails details) {
+    if (_flipPage == null) return;
+    final last = widget.pages.length - 1;
+    final canFlip = _flipForward ? _index < last : _index > 0;
+    _settleFrom = _flipT;
+    _settleTo = (canFlip && _flipT > _commitThreshold) ? 1 : 0;
+    _settle.forward(from: 0);
+  }
+
+  /// 跳頁（頁點）：直接切換，不做整段翻頁動畫。
+  void _jumpTo(int i) {
+    if (i == _index) return;
+    setState(() {
+      _flipPage = null;
+      _flipT = 0;
+      _index = i;
+    });
+    widget.onPageChanged?.call(i);
+  }
+
+  /// 第 [page] 頁現在轉到幾度：0 是攤平、-180 是整頁翻過去。
+  double _degreesFor(int page) {
+    if (page == _flipPage) {
+      return _flipForward ? -180 * _flipT : -180 + 180 * _flipT;
+    }
+    return page < _index ? -180 : 0;
   }
 
   @override
   Widget build(BuildContext context) {
     if (widget.pages.isEmpty) return const SizedBox.shrink();
 
+    // 疊在畫面上的只有正在翻的那頁與它底下那頁——整疊都 build 沒有意義，
+    // 使用者一次也只看得到兩頁。
+    final visible = <int>{_index};
+    final flipPage = _flipPage;
+    if (flipPage != null) {
+      visible.add(flipPage);
+      visible.add(flipPage + 1);
+    }
+    final pages =
+        visible.where((i) => i >= 0 && i < widget.pages.length).toList()
+          // 翻走的頁要壓在底下，還沒翻的頁照順序疊上來。
+          ..sort((a, b) => b.compareTo(a));
+
+    final activeDeg = _degreesFor(flipPage ?? _index).abs();
+
     return Column(
       children: [
         Expanded(
-          child: PageView.builder(
-            controller: _controller,
-            itemCount: widget.pages.length,
-            onPageChanged: (i) {
-              setState(() => _index = i);
-              widget.onPageChanged?.call(i);
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onHorizontalDragStart: _onDragStart,
+                onHorizontalDragUpdate: (d) =>
+                    _onDragUpdate(d, constraints.maxWidth),
+                onHorizontalDragEnd: _onDragEnd,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    for (final i in pages)
+                      _FlipPage(
+                        key: ValueKey(i),
+                        degrees: _degreesFor(i),
+                        child: _NotebookPageView(
+                          page: widget.pages[i],
+                          index: i,
+                          total: widget.pages.length,
+                        ),
+                      ),
+                    // 翻起的紙落在底頁上的影子。
+                    IgnorePointer(
+                      child: Opacity(
+                        opacity:
+                            math.sin(math.pi * math.min(1, activeDeg / 180)) *
+                            0.9,
+                        child: const _PageCastShadow(),
+                      ),
+                    ),
+                  ],
+                ),
+              );
             },
-            itemBuilder: (context, i) => _NotebookPageView(
-              page: widget.pages[i],
-              index: i,
-              total: widget.pages.length,
-            ),
           ),
         ),
         PageDots(
           count: widget.pages.length,
           index: _index,
           padding: const EdgeInsets.fromLTRB(0, 16, 0, 18),
-          onSelect: (i) => _controller.animateToPage(
-            i,
-            duration: _settleDuration,
-            curve: _settleCurve,
-          ),
+          onSelect: _jumpTo,
         ),
       ],
+    );
+  }
+}
+
+/// 一頁紙：繞左緣翻轉，翻的過程中紙面會拱起來（凹折）並掃過一道反光。
+///
+/// 曲率 `curve = sin(π × lift)` 在翻到一半時最大，同時驅動三件事——紙面
+/// 微微歪斜（rotateZ）、往讀者方向拱起（translateZ）、以及 glare 的明暗
+/// 分佈。三者共用同一個曲率，紙才像同一張紙在折，而不是各動各的。
+class _FlipPage extends StatelessWidget {
+  const _FlipPage({super.key, required this.degrees, required this.child});
+
+  final double degrees;
+  final Widget child;
+
+  /// 對應 `perspective:1250px`。
+  static const double _perspective = 1 / 1250;
+
+  /// 對應 `transform-origin:20px 50%`：轉軸壓在左緣內側一點。
+  static const double _hingeX = 20;
+
+  @override
+  Widget build(BuildContext context) {
+    final lift = math.min(1.0, degrees.abs() / 180);
+    final curve = math.sin(math.pi * lift);
+    // 超過 90° 就看到紙背了。
+    final verso = degrees.abs() > 90;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final matrix = Matrix4.identity()
+          ..setEntry(3, 2, -_perspective)
+          ..rotateY(degrees * math.pi / 180)
+          ..rotateZ(-curve * 1.3 * math.pi / 180)
+          ..translateByDouble(0.0, 0.0, curve * 12, 1.0);
+
+        return Transform(
+          transform: matrix,
+          alignment: Alignment(width <= 0 ? -1 : (_hingeX / width) * 2 - 1, 0),
+          child: IgnorePointer(
+            // 翻動中的紙不吃點擊，避免手勢中途誤觸頁面上的按鈕。
+            ignoring: degrees != 0,
+            child: verso
+                ? const _PageVerso()
+                : Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      child,
+                      if (curve > 0)
+                        IgnorePointer(
+                          child: _PageGlare(lift: lift, curve: curve),
+                        ),
+                    ],
+                  ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// 翻頁時掃過紙面的反光：靠轉軸側壓暗、外緣泛白，強度隨曲率走。
+class _PageGlare extends StatelessWidget {
+  const _PageGlare({required this.lift, required this.curve});
+
+  final double lift;
+  final double curve;
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(context.tokens.rLg);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          gradient: LinearGradient(
+            // 設計稿是 92deg + 曲率微調，接近水平、略往下斜。
+            begin: const Alignment(-1, -0.05),
+            end: const Alignment(1, 0.05),
+            colors: [
+              Color.fromRGBO(46, 30, 18, 0.30 * curve + 0.14 * lift),
+              Color.fromRGBO(46, 30, 18, 0.05 * curve),
+              Color.fromRGBO(255, 248, 232, 0.26 * curve),
+              Color.fromRGBO(255, 252, 242, 0.44 * curve),
+            ],
+            stops: [0, (32 + curve * 12) / 100, 0.84, 1],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 紙背（`.nb-verso`）：只有橫線與右側裝訂孔，靠左緣壓一道暗邊。
+class _PageVerso extends StatelessWidget {
+  const _PageVerso();
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = Theme.of(context).extension<LorescapeTokens>();
+    final colorScheme = Theme.of(context).colorScheme;
+    final radius = BorderRadius.circular(context.tokens.rLg);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: tokens?.paperRaised ?? colorScheme.surfaceContainerLow,
+          borderRadius: radius,
+          border: Border.all(color: tokens?.line ?? colorScheme.outlineVariant),
+          boxShadow: tokens?.e2,
+        ),
+        child: ClipRRect(
+          borderRadius: radius,
+          // 背面的內容是鏡像的，轉回來才不會看到反寫的紙紋。
+          child: Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.identity()..rotateY(math.pi),
+            child: const CustomPaint(painter: _VersoPainter()),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 畫紙背：橫線 → 右側裝訂孔 → 左緣暗邊。
+class _VersoPainter extends CustomPainter {
+  const _VersoPainter();
+
+  static const Color _ruleColor = Color.fromRGBO(90, 66, 42, 0.045);
+  static const Color _holeColor = Color.fromRGBO(60, 44, 32, 0.14);
+
+  /// 孔帶距右緣 12px、每 26px 一顆（比正面密）。
+  static const double _holeRightInset = 16;
+  static const double _holeSpacing = 26;
+  static const double _holeInset = 20;
+  static const double _holeRadius = 2.5;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rule = Paint()
+      ..color = _ruleColor
+      ..strokeWidth = 1;
+    for (
+      var y = JournalPaperPainter.firstRule;
+      y <= size.height;
+      y += JournalPaperPainter.ruleSpacing
+    ) {
+      canvas.drawLine(Offset(0, y + 0.5), Offset(size.width, y + 0.5), rule);
+    }
+
+    final hole = Paint()..color = _holeColor;
+    final x = size.width - _holeRightInset;
+    for (
+      var y = _holeInset + 4;
+      y <= size.height - _holeInset;
+      y += _holeSpacing
+    ) {
+      canvas.drawCircle(Offset(x, y), _holeRadius, hole);
+    }
+
+    // 左緣暗邊：紙背靠近裝訂側本來就照不到光。
+    final edge = Rect.fromLTWH(0, 0, size.width * 0.34, size.height);
+    canvas.drawRect(
+      edge,
+      Paint()
+        ..shader = const LinearGradient(
+          colors: [Color.fromRGBO(60, 40, 26, 0.16), Color(0x00000000)],
+        ).createShader(edge),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _VersoPainter oldDelegate) => false;
+}
+
+/// 翻起的紙落在底下那頁的影子（`.nb-cast`）。
+class _PageCastShadow extends StatelessWidget {
+  const _PageCastShadow();
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(context.tokens.rLg);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          gradient: const LinearGradient(
+            colors: [
+              Color.fromRGBO(38, 24, 14, 0.55),
+              Color.fromRGBO(38, 24, 14, 0.20),
+              Color.fromRGBO(38, 24, 14, 0.05),
+              Color(0x00000000),
+            ],
+            stops: [0, 0.26, 0.52, 0.72],
+          ),
+        ),
+      ),
     );
   }
 }
