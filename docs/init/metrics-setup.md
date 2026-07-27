@@ -210,7 +210,10 @@ CSV 即唯一資料來源——補抓缺口時直接讀回 CSV 判斷。**無需
 
 1. App Store Connect →「用戶與存取」→「整合」→「App Store Connect API」→
    「團隊金鑰」（第一次要先按 Request Access 同意條款）。
-2. ➕ 產生金鑰：名稱 `lorescape-metrics`，存取權限選**「銷售與報告」**。
+2. ➕ 產生金鑰：名稱 `lorescape-metrics`，存取權限選**「管理員」（Admin）**。
+   （同一把金鑰要同時服務 `store_ios` 的銷售報表與 `store_ios_pages` 的
+   Analytics 報表，只有 Admin 兩者都能讀——「銷售與報告」讀不到 Analytics、
+   「App 管理」兩者都讀不到，詳見 §E3。）
 3. 下載 `.p8`（**只能下載一次**）放到
    `~/.config/lorescape/asc-api-key.p8`，記下 **Key ID** 與頁面上方的
    **Issuer ID**。
@@ -245,8 +248,17 @@ CSV 即唯一資料來源——補抓缺口時直接讀回 CSV 判斷。**無需
 - 報表按維度展開（裝置/來源/地區…），數字是全維度 Counts 加總；
   Unique Counts 只在單一維度列內去重、加總會灌水，所以**不收集**
   unique 數。
-- 若此來源回 **403**：金鑰的「銷售與報告」權限等級可能不夠存取
-  Analytics 報表，到 ASC 把金鑰權限提高（App 管理／Admin）再試。
+- 若此來源回 **403**：金鑰角色不夠。實測（2026-07-25）「銷售與報告」
+  讀得到 salesReports 但讀不到 Analytics；改用「App 管理」則**兩者都 403**
+  （連 `store_ios` 的 salesReports 也一起壞）。因為 `store_ios`
+  （salesReports）與 `store_ios_pages`（analyticsReportRequests）共用同一把
+  `ASC_KEY_ID`，只有 **管理員（Admin）** 角色能同時涵蓋兩者——建金鑰時
+  務必選「管理員」，**不要**選「App 管理」。
+- ASC 金鑰**建立後無法改角色**（金鑰頁明寫「無法透過修改金鑰存取更多
+  服務」）。要換角色只能新建一把：下載新 `.p8` 覆蓋 `ASC_KEY_PATH`、把
+  `ASC_KEY_ID` 換成新 Key ID，跑 `metrics.report --only
+  store_ios,store_ios_pages` 確認不再 403 後，再回 ASC 撤銷舊金鑰
+  （撤銷不可逆；別動 RevenueCat / CI-CD 等其他整合在用的金鑰）。
 
 ## F. Play（`store_android`）— Console 報表 bucket
 
