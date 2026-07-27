@@ -4,6 +4,13 @@
 feature 編號 `F1`、`F2`…；task 編號 `T1`、`T2`… nested 在所屬 feature 底下。
 epic 承接自原公司層 backlog；目前只有 E1（見下方「Epic」）。
 
+**完成時一律標日期 `（YYYY-MM-DD）`**：feature 寫在狀態行
+（`- 狀態: 已完成（2026-07-21）`），task 寫在該行句尾
+（`- [x] T1: …（2026-07-21）`）。日期＝實際完成日，不是寫進 backlog 的日子；
+程式類以 commit 日為準。「完成」與「上生產」不同時，兩個都標
+（例：`已完成（程式，2026-07-20）；上架生效 2026-07-24`）。
+2026-07-27 之前的條目有一批沒標，能從 git 查到的已回填，查不到的維持空白。
+
 ## Epic E1: 補齊漏斗上層流量
 - 狀態: 進行中
 - 目標: 讓落地頁流量從 ~1/天 提升到穩定兩位數/天，並累積到能判斷 PMF 的最小用戶量
@@ -11,7 +18,20 @@ epic 承接自原公司層 backlog；目前只有 E1（見下方「Epic」）。
 - 展開: 下方標 `(epic: E1)` 的 features
 - [ ] 2026-08-04 回顧：檢視補流量主線是否推動流量/下載/留存指標，再決定是否解除暫緩、回補產品側投入（原公司決策設定的檢核點）
 
-## ⚠️ 待部署（程式已在 repo，尚未上生產；更新於 2026-07-24）
+## ⚠️ 待部署（程式已在 repo，尚未上生產；更新於 2026-07-27）
+
+> **2026-07-27 更新：下方整段已過期，iOS 與 Android 都已於 07-24 前後
+> 上生產**（使用者 07-27 確認 iOS 與 Android 上架時間相近）。
+> Android 有明確時戳：Play 正式版 `49162866 (20260724.0021)`，
+> 2026-07-24 21:26 上架、165 個國家/地區。
+> 對照 commit 時間，該 build 含 07-24 21:26 之前的所有 App 改動：
+> **F10 `Info.plist` 相簿權限鍵（07-20）、F13 T1a/T1b 埋點修復（07-21）、
+> F18 T7·T8 ＋ 移除 `NSLocationAlwaysAndWhenInUse…`（PR #95，07-23 23:13）、
+> F17 T8（PR #96，07-24 08:10）、F23 定位引導卡（07-23）**。
+> 佐證：`narration.csv` 於 07-26 首次收到 `narration_*` 事件（started 2 /
+> completed 1），與上架時間一致。
+> 下一批待送審的是 07-24 21:26 之後的改動（含 07-24 深夜的 theme token
+> 收斂、arch 守門測試等），以及使用者 07-27 起正在修的問題。
 
 以下改動已 commit + push 到 master，但**尚未部署到生產**，使用者尚看不到：
 
@@ -33,30 +53,30 @@ epic 承接自原公司層 backlog；目前只有 E1（見下方「Epic」）。
 - 已是生產狀態、不需部署：App Store / Google Play 的試用設定、RevenueCat offering
 
 ## F1: IG 導流 CTA (epic: E1)
-- 狀態: 已完成
+- 狀態: 已完成（2026-07-08）
 - 來源: marketing/audits/cro-2026-07-06.md（P0）
-- [x] T1: Reel caption 預設 CTA 改為導向個人檔案連結/App（config.py `_DEFAULT_CTA_TEXT`）
+- [x] T1: Reel caption 預設 CTA 改為導向個人檔案連結/App（config.py `_DEFAULT_CTA_TEXT`）（2026-07-08）
 - [x] T2: IG bio 導引文案與連結（既有 bio 已含「🎧 免費下載 ↓」＋ lorescape.app 落地頁連結，2026-07-08 查證，維持現狀不新增直連商店按鈕以保留落地頁歸因）
 
 ## F2: 落地頁與商店定價/試用透明度 (epic: E1)
-- 狀態: 已完成
+- 狀態: 已完成（2026-07-08；T2 商店端設定日期不詳）
 - 來源: cro-2026-07-06.md（P1，Offer 層目前最弱）
 - [x] T1: 落地頁新增方案與試用區塊（Free/週/月/年，2026-07-08，見 landing Pricing 元件，與 F6 T5 同一提交）
-- [x] T2: 免費試用已導入（見 F6：月/年 7 天試用已在兩商店啟用），定價區塊明列試用
+- [x] T2: 免費試用已導入（見 F6：月/年 7 天試用已在兩商店啟用），定價區塊明列試用（完成日不詳，商店端設定無 commit 可查）
 
 ## F3: 落地頁「以 Wikipedia 為據」信任區塊 (epic: E1)
-- 狀態: 已完成
+- 狀態: 已完成（2026-07-08）
 - 來源: cro-2026-07-06.md（P1，異議處理 + proof）
 - [x] T1: 新增「AI 說的，是真的嗎？」異議處理區塊，附 Wikipedia 出處 proof（2026-07-08，landing Trust 元件，置於 JourneyJournal 後、Pricing 前；本機視覺驗證通過）
 - 註：原 T2（商店描述改 Wikipedia 為據開場）經使用者決定不做，已移除。
 
 ## F5: 留存/完成率量測 (epic: E1)
-- 狀態: 已完成（含 live GA4 驗證）
+- 狀態: 已完成（2026-07-08，含 live GA4 驗證）
 - 來源: E1 政策（埋點不受暫緩）；marketing/audits/cro-2026-07-06.md（narration 完成率為 missing_data）
 - 註: narration 四種事件（started/progress/completed/abandoned，含 completion_rate）已埋，見 docs/adr/0003；缺的是彙整視圖與留存量測
 - live 驗證（2026-07-08，`lorescape-metrics --only narration,retention`）：retention 寫入 13 rows 真實 cohort 資料；narration 查詢正確、事件名（narration_started/completed/abandoned）與 App logEvent 相符，目前 0 rows（pre-traffic，尚無播放事件，有流量後自動填）。兩來源已在 metrics Sheet。
-- [x] T1: 從既有 Firebase narration 事件彙整「聆聽完成率」視圖（scripts/metrics/narration.py，GA4 completed/started；單元測試通過 + live 驗證）
-- [x] T2: 次日/7日留存量測（scripts/metrics/retention.py，GA4 cohort D1/D7，回溯 14 天重算；單元測試通過 + live 驗證 13 rows）
+- [x] T1: 從既有 Firebase narration 事件彙整「聆聽完成率」視圖（scripts/metrics/narration.py，GA4 completed/started；單元測試通過 + live 驗證）（2026-07-08）
+- [x] T2: 次日/7日留存量測（scripts/metrics/retention.py，GA4 cohort D1/D7，回溯 14 天重算；單元測試通過 + live 驗證 13 rows）（2026-07-08）
 
 ## F6: 7 天免費試用 (epic: E1)
 - 狀態: 已完成（2026-07-08，全部子步驟完成）
@@ -75,7 +95,7 @@ epic 承接自原公司層 backlog；目前只有 E1（見下方「Epic」）。
 - 狀態: 已完成（2026-07-08）
 - 來源: 落地頁定價修正時發現免費文案不一致
 - 查核結論: 真實政策＝完整故事訂閱者專屬（後端 `narration/routes.py` 回 402 enforced）；免費可瀏覽故事角度＋每日精選故事，**無每日 on-demand 次數**。本地 `_dailyFreeLimit = 1` 只是顯示用計數器（非 enforcement），且免費用戶產生完整故事一律 402、`consumeUsage` 到不了，導致 settings 永遠顯示「剩餘 1 次」卻用不到。
-- [x] T1/T2/T3: 移除 settings「每日使用」區塊；清掉沒在用的殘留翻譯（paywall_title/subtitle/remaining_usage、daily_usage/remaining_today）。App full suite 552 passed。
+- [x] T1/T2/T3: 移除 settings「每日使用」區塊；清掉沒在用的殘留翻譯（paywall_title/subtitle/remaining_usage、daily_usage/remaining_today）。App full suite 552 passed。（完成日不詳）
 - 可選後續（未做）：本地 usage 計數器（`_dailyFreeLimit`/`consumeUsage`）移除顯示後成為內部殘留，若要一併移除需動 narration use case 與其測試，留待需要時再清。
 - ⚠️ 此為 Flutter 改動，需隨「待部署 → App」一起重新 build 送審才會生效。
 - 2026-07-20：App 新版本已上架（見「待部署」段），與 F6 T4 同一次 build，程式改動應已隨之生效——未逐項獨立驗證，若使用者發現 settings 仍殘留舊文案請回報。
@@ -86,8 +106,8 @@ epic 承接自原公司層 backlog；目前只有 E1（見下方「Epic」）。
 - 來源: 使用者要求「每日貼文一建立就發布、不需 server 排程」→ 收斂為常駐 Discord 互動 bot
 - 設計/計畫: `docs/superpowers/specs/2026-07-09-discord-publish-bot-design.md`、`docs/superpowers/plans/2026-07-09-discord-publish-bot.md`
 - 架構: 常駐 Discord Gateway bot（`lorescape_publisher.bot`，publisher 容器；上線當時模組路徑為 `lorescape_backend.social.publisher_bot`，2026-07-11 隨 `docs/adr/0004-split-social-publisher-from-backend.md` 拆到頂層 `publisher/`）取代 `publisher_daemon` 的 21:00/21:10/23:10 固定 cron。本地 send 腳本只上傳素材 + 建 `pending` row；bot 每 ~60s 輪詢 `social_posts`、貼四鈕審核（✅核准／🕘排程 modal／🚀立即發布／❌拒絕），排程迴圈在「到點且已核准」時發 IG。carousel + reel 皆接管；`DAILY_STORY_PUBLISH_ENABLED=0` 只暫停排程迴圈。
-- [x] T1: bot 實作（subagent-driven 12 tasks，backend 415 + scripts 107 tests 全綠；雙發防護：process lock + 重讀最新 row，republish 用 `force` 略過）
-- [x] T2: 拆分部署 workflow（`deploy-backend.yml` 手動：migration → VPS compose → 健康檢查含 bot Gateway 連線；`deploy.yml`→`deploy-app.yml` 只上架 App、移除週五排程）
+- [x] T1: bot 實作（subagent-driven 12 tasks，backend 415 + scripts 107 tests 全綠；雙發防護：process lock + 重讀最新 row，republish 用 `force` 略過）（2026-07-09）
+- [x] T2: 拆分部署 workflow（`deploy-backend.yml` 手動：migration → VPS compose → 健康檢查含 bot Gateway 連線；`deploy.yml`→`deploy-app.yml` 只上架 App、移除週五排程）（2026-07-09）
 - [x] T3: 上線 + 實測（2026-07-09，Deploy Backend workflow 三 job 綠；service-role smoke test 確認 bot 45s 內貼審核訊息並回填 `discord_message_id`，事後清理無痕）
 - 已知未做（可選後續）: 計畫 §4 的 `/republish` slash command 未實作——`interactions.republish()` 只是 Python 函式，back-fill 走既有（已於 2026-07-11 拆分時整支刪除的）`publisher.py`／`reel_publisher.py` CLI，目前後者位於 `publisher/src/lorescape_publisher/reel_publisher.py`；approve/reject/schedule 按鈕未先 `defer()`（3s ack，慢查詢理論上顯示 failed 但寫入仍成功）。
 
@@ -97,7 +117,7 @@ epic 承接自原公司層 backlog；目前只有 E1（見下方「Epic」）。
 - 來源: 2026-07-09 SEO 關鍵字研究——GSC 診斷官網近 90 天僅 9 曝光/0 點擊/2 頁索引，流量太低致查詢字詞被匿名化；改用 Google 自動完成挖出「[景點] 導覽app / 語音導覽」高意圖長尾金礦
 - 設計: `landing/src/app/[locale]/place/[slug]` 靜態路由 + `landing/src/lib/places.ts` 資料層，複用每日故事頁版型與 metadata 模式。**新增景點只需在 `places.ts` 加一筆**（zh+en 維基為本故事 + keyword-rich metaTitle/description/keywords），sitemap 自動帶入、無需改程式
 - [x] T1: 建 place 路由 + 首批 5 景點（羅浮宮 louvre、故宮 national-palace-museum、大英博物館 british-museum、聖家堂 sagrada-familia、中正紀念堂 chiang-kai-shek-memorial-hall）× zh/en = 10 頁；首頁 zh/en metadata 織入「語音導覽 app / audio tour guide app」等搜尋詞（commit c5358c51，push + Deploy Landing 部署完成，2026-07-09，正式站 10 頁皆 200、sitemap 6→16 URL）
-- [x] T2: GSC 對 10 個新網址催索引（加速收錄）
+- [x] T2: GSC 對 10 個新網址催索引（加速收錄）（完成日不詳，GSC 端操作無 commit 可查）
   - 2026-07-10 已催 9/10：5 個 zh 全部 + en louvre/national-palace-museum/british-museum/sagrada-familia；踩到 GSC 每日配額上限
   - 2026-07-11 查證：**10/10 景點頁全部「網頁已編入索引」**（含剩下未手動催的 en/chiang，Google 自然收錄）。部署後 1 天全數進索引，方向驗證通過；下一步等曝光/查詢資料，依 F9 T3 決定擴充
 - [ ] T3: 1–4 週後回看 GSC 曝光/查詢，依有反應的景點決定下一批擴充；候選——叢集 B 國外（凡爾賽宮、羅馬競技場、梵谷博物館、米蘭大教堂、國王湖），叢集 C 台灣（九份、淡水紅毛城、台北 101、日月潭）
@@ -125,13 +145,13 @@ epic 承接自原公司層 backlog；目前只有 E1（見下方「Epic」）。
   `docs/init/2026-07-13-reel-videos-bucket-setup.md`），發布流程結束後刪除
   暫存影片
 - [x] T2: rupload 泛型 400 → `ReelUploadGenericError` →
-  `reel_publisher.publish_reel_with_fallback` 上傳 bucket → `video_url`
+  `reel_publisher.publish_reel_with_fallback` 上傳 bucket → `video_url`（2026-07-13）
   container（`instagram.publish_reel_from_url`）→ 輪詢 → publish → 清理；
   分流只認 `debug_info.type=ProcessingFailedError` +
   `message=Request processing failed`（轉碼錯誤同 type 但 message 不同，
   照舊 fail）；測試涵蓋兩種錯誤 body 與 fallback 清理
 - [x] T3: `publish_reel.py` 加 `--via-url` 旗標直走 video_url；預設路徑也
-  自動 fallback
+  自動 fallback（2026-07-13）
 - ⚠️ T2 為 publisher 改動，需 Deploy Publisher workflow 部署後才在 VPS 生效
   （尚未部署）
 
@@ -145,7 +165,7 @@ epic 承接自原公司層 backlog；目前只有 E1（見下方「Epic」）。
   gitignore `src/data/story.json`，另 track `story.sample.json` 樣本，
   `npm run dev`/`build` 前由 `scripts/ensure_story.mjs` 在缺檔時從樣本複製
   （pipeline 的 prepare_story.mjs 本來就會先寫入真檔，不受影響）
-- [x] T1: story.sample.json + ensure_story.mjs + gitignore + package.json
+- [x] T1: story.sample.json + ensure_story.mjs + gitignore + package.json（2026-07-12）
   pre-hooks；CLAUDE.md 專案地圖同步一句
 
 ## F10: iOS 相簿儲存權限鍵補齊
@@ -157,8 +177,14 @@ epic 承接自原公司層 backlog；目前只有 E1（見下方「Epic」）。
 
 ## F13: App 留存診斷 (epic: E1)
 
-- 狀態: 進行中（2026-07-21 埋點修復完成，待隨下次 App build 上生產驗證；
-  T2/T3 仍待辦）
+- 狀態: 進行中（2026-07-27 週報：**留存仍是全案最嚴重的問題**，且流量端
+  已不再是瓶頸——本週新 cohort 44 人是前週 3.7 倍，D1/D7 連兩週 0%；
+  T2 未動，T1c 部分驗證）
+- **2026-07-27 週報數據**（marketing/audits/weekly-2026-07-27.md）：
+  本週 App 新 cohort **44**（前週 12，+267%）、Android 新用戶 33、
+  iOS 活躍 +140%，但 **D1 / D7 留存連兩週 0%**——沒有任何一個新用戶隔天
+  回來。上週判讀的「人進不來」已被推翻，破口在**首次使用之後**。
+  這是目前 P0 中的 P0。
 - 來源: marketing/audits/weekly-2026-07-13.md（P0）——本週 App 活躍腰斬
   （iOS+Android 22 vs 46）、新用戶 −56%、D1 留存幾乎全週 0%（僅 07-11
   cohort 20%）、D7 全 0%；流量端反而成長（IG 觸及 +75%、Landing 新用戶
@@ -191,11 +217,25 @@ epic 承接自原公司層 backlog；目前只有 E1（見下方「Epic」）。
     consent repository 的回歸測試——既有測試全都 fake 掉它，這正是測試全綠
     而線上全死的原因。
   - [x] T1b: 掛上 `FirebaseAnalyticsObserver`（新增 `routeObserversProvider`
-    並接進 GoRouter observers），補回 GA4 畫面名稱
+    並接進 GoRouter observers），補回 GA4 畫面名稱（2026-07-21）
   - [ ] T1c: 下次 App 送審上架後，確認 GA4 開始出現 `narration_*` 與具名的
     `screen_view`（修復要隨版本才會在生產生效）
+    - **2026-07-27 已驗證：`narration_*` 事件開始進來了。** 含修復的版本
+      **iOS 與 Android 都在 07-24 前後上架**（Android 明確為 07-24 21:26），
+      `data/metrics/narration.csv` 隨即於 **07-26 首次出現非空列**
+      （started 2 / completed 1 / abandoned 1，完成率 0.5）；在此之前
+      該檔自 06-27 起回溯 30 天全空。⇒ T1a 的修復在生產有效。
+    - 尚未驗證，T1c 不結案：`screen_view` 是否已具名（GA4 上查
+      `unifiedScreenName` 是否還是 `(not set)`）。
+    - ⚠️ 目前 narration 只有 1 天、3 個事件，且無法區分是真實用戶
+      或開發機（GA4 未濾 debug 流量，見 F26）。不要據此判讀完成率。
 - [ ] T2: 檢查每日故事推播的實際送達與開啟情況（習慣養成迴路是否真的在
   運作）
+  - **2026-07-27 升為本 feature 最優先**：D1 留存 0% 而新用戶暴增，
+    習慣養成迴路是唯一能把人拉回來的機制。先確認推播有沒有真的送出、
+    送達率、開啟率；再看首日 onboarding 卡在哪一步。
+  - 執行方式：跑 marketing-retention（GA4 cohort × narration 完成率），
+    narration.csv 現在有資料了，交叉分析已可進行。
 - [ ] T3: 下週週報驗證 reel 片尾下載 CTA 成效（2026-07-13 上線
   `Cinematic.tsx` ending CTA，對「IG 觸及 1,923 → iOS 下載 1」的轉化缺口）
   - 2026-07-20 部分驗證：對「追蹤」有效（聖家堂 Reel 24h 帶進 +5 粉絲、
@@ -205,9 +245,30 @@ epic 承接自原公司層 backlog；目前只有 E1（見下方「Epic」）。
 
 ## F14: GA4 Android 追蹤斷線診斷 (epic: E1)
 
-- 狀態: 已結案（2026-07-21，原假設否證）——不是追蹤斷線，是 Android 通路
-  零獲客（上線一個多月 0 安裝，使用者確認）。獲客問題屬 E1 主線，若要推
-  Android 應另開 feature，本 feature 不再追蹤
+- 狀態: **重啟（2026-07-27）**——07-21 的結案結論（Android 零獲客）被本週
+  數據推翻：GA4 自 **07-22 起 Android 恢復回報**，本週 Android 活躍 36、
+  新用戶 33，其中 **07-26 單日 15 新用戶**。零獲客的判斷不再成立。
+- **2026-07-27 時間線（用來判讀，但還不足以下結論）**：
+
+  | 日期 | Android 活躍 / 新用戶 | 事件 |
+  |---|---|---|
+  | 07-11～07-21 | 0 / 0 | F14 據此於 07-21 結案「零獲客」 |
+  | 07-22 | 2 / 2 | **早於新版上架**，只能是開發機或既有裝置 |
+  | 07-23 | 6 / 5 | 同上 |
+  | 07-24 | 7 / 7 | **21:26 Play 正式版上架（165 國）** |
+  | 07-25 | 5 / 4 | |
+  | 07-26 | **16 / 15** | 上架後第 2 天 |
+
+  07-22～07-23 那 8 個活躍早於上架，不可能是新版帶來的；07-26 的 15 個
+  新用戶則落在上架後，有可能是真實安裝。**兩種來源目前混在一起，
+  無法分辨**（GA4 未濾 debug 流量，見 F26）。
+- 分辨方式：`store_android.csv` 的 installs 匯出（Play 只在有量的月份產
+  月報，目前該檔仍只有 06-27／07-14 兩列且 installs 全空）。若 8 月初
+  Play 產出 2026-07 月報且有安裝數 ⇒ 確有真實獲客；若仍無月報 ⇒ GA4 那些
+  新用戶多半是自家裝置，07-21 的零獲客結論依然成立。
+  Play Console 該版本的「安裝數」欄目前顯示 0.00%（採用率），也偏向後者。
+- 原結案理由（2026-07-21）保留於下，供對照：不是追蹤斷線，是 Android 通路
+  零獲客（上線一個多月 0 安裝，使用者確認）
 - 來源: marketing/audits/weekly-2026-07-20.md（P0）——`ga4.csv` 的
   `android_active_users`/`android_new_users` 自 2026-07-11 起連續 9 天全空，
   同期 Play 端無跡象顯示帳號停用，疑追蹤斷線而非真的零活躍
@@ -223,6 +284,9 @@ epic 承接自原公司層 backlog；目前只有 E1（見下方「Epic」）。
 - [ ] T1: ~~檢查 App 端 Firebase Analytics 初始化與 GA4 Android 資料流設定~~
   → 改為：查 Play 商店頁能否被搜尋到（曝光/可見度）、上架狀態與國家/裝置
   相容性設定，確認是「沒人找得到」還是「找到了不下載」
+- [ ] T2（2026-07-27 新增）: 確認 Play Console 報表 bucket 的 installs 匯出
+  是否已開通並有 2026-07 月報。這是分辨上述兩種解釋的唯一證據；在此之前
+  不要對 Android 通路下任何結論，也不要據此調整行銷投入。
 
 ## F15: IG → 下載轉換優化 (epic: E1)
 
@@ -232,7 +296,7 @@ epic 承接自原公司層 backlog；目前只有 E1（見下方「Epic」）。
   （1,923→4,879）、粉絲 +147%，但 profile_views 轉換率僅 0.6%（30/4,879，
   < 1% 月底檢核門檻）、iOS 下載持平在 2；問題在帳號定位/CTA 不在觸及量
 - [x] T1: 改 IG bio 文案（現況「🎧 免費下載 ↓」+ 落地頁連結），加強價值主張
-  句，非僅動詞指令
+  句，非僅動詞指令（2026-07-21）
   - **2026-07-21 已套用上線**（瀏覽器手動操作；IG Graph API 無寫入端點），
     以 Graph API 讀回驗證 name / biography / website 皆為新值。
     名稱欄不在 IG 網頁版「編輯個人檔案」，實際位置是帳號管理中心 →
@@ -269,6 +333,10 @@ epic 承接自原公司層 backlog；目前只有 E1（見下方「Epic」）。
   `profile_views` 與 `ga4.csv` 的 `web_active_users`（bio 連結指向落地頁，
   這段就是 bio 的責任區）。**注意樣本量**：目前落地頁每天僅 1–2 人，
   至少累積兩週才有訊號，別在幾天內就下結論。基準＝07-21 之前 30 天。
+  - 2026-07-27 中期讀數：本週 profile_views / reach = **1.0%**
+    （26 / 2,612），前週 0.6%。方向對但仍在門檻邊緣，且同期落地頁
+    web 新用戶反而降到 2（前週 8）——bio 改版目前看不出把人帶到落地頁。
+    樣本仍極小，8/4 再判。
 - [ ] T2: 統一 Reel 結尾 CTA 為固定模板——聖家堂 Reel（7/19）24h 帶進 +5
   粉絲、profile_visits 1，是本週唯一有效轉換的片尾，複製其結構到後續
   daily reel（見 F13 T3 註記）
@@ -389,7 +457,7 @@ epic 承接自原公司層 backlog；目前只有 E1（見下方「Epic」）。
   - `firebaseParametersFor` 改由 `envelope()` + `payload()` 推導（原本逐型別
     列欄位的 switch 刪除），新事件不必再回頭改 data 層
 - [x] T2: 抽出 `AnalyticsEmitter`（`analytics/domain/services/`）＋
-  `analyticsEmitterProvider`，consent 檢查與 fire-and-forget 失敗記錄收在一處。
+  `analyticsEmitterProvider`，consent 檢查與 fire-and-forget 失敗記錄收在一處。（2026-07-26）
   observer 的四個發送點改走它，**F13 T1a 那段 `requireValue` 的坑只留一份實作**
   （原本若複製到新發送點，等於把兩個月無聲的 bug 再種一次）
   - provider 取不到底層服務時退化為 no-op：`FirebaseAnalytics.instance` 在
@@ -625,3 +693,23 @@ epic 承接自原公司層 backlog；目前只有 E1（見下方「Epic」）。
   的第 6 個月事件
 - [ ] T5（可選）: 首個檔期實跑驗證——挑最近一個事件（依 T2 結果）走完
   「提前準備→發布→回看成效」一輪，把經驗修回 T1 的格式與 T3 的 lead time
+
+## F26: GA4 未濾除開發流量，App 端指標不可信 (epic: E1)
+
+- 狀態: 待辦
+- 來源: marketing/audits/weekly-2026-07-27.md 判讀過程——本週 App 數字
+  無法分辨真實用戶與自家裝置，直接卡住 F13（留存）與 F14（Android 獲客）
+  兩個 P0 的結論
+- 問題：GA4 property 514854947 收得到開發機／模擬器流量，且沒有任何標記
+  可以濾掉。已知落差——
+  - F13 於 2026-07-21 查得：`first_open` 82 次 vs iOS 實際下載 6 次（13 倍）
+  - 2026-07-27：GA4 Android 新用戶 33（07-26 單日 15）vs Play installs
+    匯出 0；GA4 iOS 新用戶 4 vs App Store 下載 2
+- 影響：cohort / 留存 / narration 完成率全部混入開發流量。模擬器每次重裝
+  算一次新用戶且不會隔天回訪，**會把 D1 留存往 0% 壓**——目前無法判斷
+  「D1 0%」有多少是真實現象、多少是測量假象。
+- [ ] T1: 在開發裝置與模擬器上標記 internal traffic（Firebase DebugView /
+  GA4 `traffic_type=internal`，或建 debug build 專用的 GA4 property），
+  讓生產 property 只收真實用戶
+- [ ] T2: 在 GA4 建「排除內部流量」的資料篩選器並確認生效
+- [ ] T3: 生效後回頭重跑一次留存數字，重新判定 F13 的 D1/D7 是否真的是 0%
