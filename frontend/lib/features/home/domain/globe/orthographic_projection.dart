@@ -267,8 +267,10 @@ class OrthographicProjection {
   /// 去猜：邊在球緣附近幾乎是徑向的，切向分量小到正負號由捨入誤差決定，
   /// 猜出來的方向會隨著地球儀轉動忽正忽負。
   ///
-  /// 走的長度因此可能超過半圈——包住遠端極點的陸塊本來就該補一大段，一律
-  /// 走短弧會把該是陸地的地方留白。
+  /// 弧長是方向決定出來的結果，不是另外挑的：往前走到下一個進入點為止，
+  /// 該多長就多長，可能超過半圈。反過來說也不能改成「一律走短弧」——短弧
+  /// 剛好對的時候是巧合，不是判準。（實務上真實陸塊圍的是角半徑遠小於
+  /// 90 度的凸區域，與大圓相交的弧必然不超過半圈；南極洲走的就是短弧。）
   List<Offset> _rimArc(Offset from, Offset to, double sweepSign) {
     final fromAngle = (from - center).direction;
     final toAngle = (to - center).direction;

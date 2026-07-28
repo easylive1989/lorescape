@@ -875,7 +875,17 @@ git commit -m "feat(home): 地球儀正射投影與旋轉角"
 
 **Interfaces:**
 - Consumes: Task 4 的 `OrthographicProjection`。
-- Produces: `List<List<Offset>> clipRing(List<LatLng> ring)`——回傳零到多條已閉合的畫布多邊形。Task 6 的 painter 直接把每條轉成 `Path` 填色。
+- Produces: `List<List<Offset>> clipRing(List<LatLng> ring)`——回傳零到多條已閉合的畫布多邊形。一條環跨過球緣兩次以上時會回傳多條。
+
+**兩個維護上的關鍵事實（實作時實測確認）：**
+
+1. **輪廓資料走 Shapefile 環繞慣例（外環順時針），與 RFC 7946 相反。**
+   128 條環裡 126 條外環是順時針，唯一逆時針的是 52 點的裡海內環（洞）。
+   裁切的補弧方向取自環自身的環繞方向，所以這個慣例不能在 Task 3 的解析
+   端被「正規化」掉。
+2. **Task 6 畫的時候，同一份輪廓的所有環、所有多邊形要加進同一個 `Path`。**
+   裡海那個洞靠 `PathFillType.nonZero` 加上反向環繞挖出來；分成多個 Path
+   各自填色就挖不出洞。
 
 - [ ] **Step 1: 寫失敗測試**
 
@@ -883,7 +893,6 @@ git commit -m "feat(home): 地球儀正射投影與旋轉角"
 
 ```dart
 import 'dart:math' as math;
-import 'dart:ui';
 
 import 'package:context_app/features/home/domain/globe/globe_rotation.dart';
 import 'package:context_app/features/home/domain/globe/orthographic_projection.dart';
@@ -892,6 +901,7 @@ import 'package:latlong2/latlong.dart';
 
 const _center = Offset(100, 100);
 const _radius = 100.0;
+const _discArea = math.pi * _radius * _radius;
 
 OrthographicProjection _facing(LatLng point) => OrthographicProjection(
   rotation: GlobeRotation.facing(point, tilt: 0),
@@ -904,12 +914,33 @@ List<LatLng> _ringAtLatitude(double latitude) => [
   for (var lng = -180.0; lng <= 180.0; lng += 10) LatLng(latitude, lng),
 ];
 
-double _perimeter(List<Offset> ring) {
+/// 畫布座標的 shoelace 有號面積。正負代表環繞方向——洞環必須跟外環反號，
+/// nonZero 填法才挖得出洞。
+double _signedArea(List<Offset> ring) {
   var total = 0.0;
   for (var i = 0; i < ring.length; i++) {
-    total += (ring[(i + 1) % ring.length] - ring[i]).distance;
+    final a = ring[i];
+    final b = ring[(i + 1) % ring.length];
+    total += a.dx * b.dy - b.dx * a.dy;
   }
-  return total;
+  return total / 2;
+}
+
+double _signedAreaOf(List<List<Offset>> rings) =>
+    rings.fold<double>(0, (sum, ring) => sum + _signedArea(ring));
+
+/// 射線法判斷點在不在多邊形內。
+bool _contains(List<Offset> polygon, Offset point) {
+  var inside = false;
+  for (var i = 0; i < polygon.length; i++) {
+    final a = polygon[i];
+    final b = polygon[(i + 1) % polygon.length];
+    if ((a.dy > point.dy) != (b.dy > point.dy)) {
+      final x = a.dx + (point.dy - a.dy) / (b.dy - a.dy) * (b.dx - a.dx);
+      if (x > point.dx) inside = !inside;
+    }
+  }
+  return inside;
 }
 
 void main() {
@@ -981,21 +1012,97 @@ void main() {
   );
 
   test(
-    'given a ring encircling the far pole, '
+    'given a ring bounding the far polar cap, '
     'when clipping it, '
-    'then the closure walks the long way round the rim',
+    'then the cap side of the rim is filled and the rest of the globe is not',
     () {
-      // 視線中心在北緯 40 度，南緯 60 度那一圈只有靠近我們的一段可見，
-      // 缺口必須沿著球緣「繞遠路」補起來，繞近路會把整個南半球填成陸地。
-      final projection = _facing(const LatLng(40, 0));
+      // 視線中心在北緯 20 度，南緯 60 度那一圈只有靠近我們的一段可見。
+      // 缺口要沿球緣補在極冠那一側；補錯邊會把整個北半球填成陸地。
+      final projection = _facing(const LatLng(20, 0));
 
       final clipped = projection.clipRing(_ringAtLatitude(-60));
 
       expect(clipped, hasLength(1));
+      final points = clipped.single;
       expect(
-        _perimeter(clipped.single),
-        greaterThan(math.pi * _radius),
-        reason: '沿球緣補的那段超過半圈，周長必然大於半個圓周',
+        points.every((p) => p.dy >= _center.dy),
+        isTrue,
+        reason: '填的是南極那一側，不該有任何點跑到球心以北',
+      );
+      expect(
+        _contains(points, _center + const Offset(0, 99.3)),
+        isTrue,
+        reason: '南極那側緊貼球緣的一小條要被填起來',
+      );
+      expect(
+        _contains(points, _center + const Offset(0, -99.3)),
+        isFalse,
+        reason: '北邊緊貼球緣處是海，不能被填',
+      );
+    },
+  );
+
+  test(
+    'given a hole ring straddling the horizon, '
+    'when clipping it, '
+    'then it keeps the opposite winding to the same ring wound as land',
+    () {
+      // 裡海是歐亞大陸那條環裡的反向內環。它跨過球緣時若裁成「整個圓盤扣
+      // 掉湖」，nonZero 疊起來會把整塊大陸消成空白。
+      final projection = _facing(const LatLng(0, 0));
+      const land = [
+        LatLng(0, 60),
+        LatLng(20, 60),
+        LatLng(20, 120),
+        LatLng(0, 120),
+      ];
+      final hole = land.reversed.toList();
+
+      final landArea = _signedAreaOf(projection.clipRing(land));
+      final holeArea = _signedAreaOf(projection.clipRing(hole));
+
+      expect(landArea * holeArea, lessThan(0), reason: '兩者必須反號');
+      expect(
+        (landArea.abs() - holeArea.abs()).abs(),
+        lessThan(0.01 * landArea.abs()),
+        reason: '同一塊區域，面積大小應該一樣',
+      );
+      expect(
+        holeArea.abs() / _discArea,
+        lessThan(0.1),
+        reason: '裁出來的該是湖本身，不是圓盤扣掉湖',
+      );
+    },
+  );
+
+  test(
+    'given a ring that crosses the horizon twice, '
+    'when clipping it, '
+    'then the visible runs are paired along the rim instead of in ring order',
+    () {
+      // 一條沿赤道往東、再沿北緯 10 度往西的長條，會被地平線切成兩段可見
+      // 的 run。離開點要接「沿球緣往前走遇到的下一個進入點」，照 run 在環
+      // 上的先後順序接會把整個圓盤填成陸地。
+      final projection = _facing(const LatLng(5, 0));
+      final ring = [
+        for (var lng = -100.0; lng <= 100.0; lng += 10) LatLng(0, lng),
+        for (var lng = 100.0; lng >= -100.0; lng -= 10) LatLng(10, lng),
+      ];
+
+      final clipped = projection.clipRing(ring);
+
+      expect(
+        clipped.every(
+          (poly) =>
+              poly.every((p) => (p - _center).distance <= _radius + 0.01),
+        ),
+        isTrue,
+        reason: '裁切後不該有任何點跑到球外',
+      );
+      expect(
+        _signedAreaOf(clipped).abs() / _discArea,
+        lessThan(0.25),
+        reason: '這條長條很細，填色面積不該接近整個圓盤',
       );
     },
   );
@@ -1009,16 +1116,26 @@ Expected: FAIL，`The method 'clipRing' isn't defined`
 
 - [ ] **Step 3: 實作 `clipRing`**
 
-在 `orthographic_projection.dart` 的 class 內加上（連同檔頭 import `package:flutter/painting.dart` 不需要，只用 `dart:ui` 與 `dart:math`）：
+在 `orthographic_projection.dart` 的 class 內加上（只用 `dart:ui` 與
+`dart:math`，不需要 `package:flutter/painting.dart`）：
 
 ```dart
   /// 把一條球面環裁切到可見半球，回傳可以直接填色的畫布多邊形。
   ///
-  /// 作法：沿著環走一圈，記下每次穿過地平線的交點，把連續可見的一段收成
-  /// 一條「run」。走完後，每個 run 的結尾要接回下一個 run 的開頭——中間那
-  /// 段缺口沿著球緣圓弧補。補的方向由離開球緣時的旋轉方向決定（用最後一
-  /// 段可見邊與半徑的外積判斷），不能一律走短弧：南極洲那種包住遠端極點
-  /// 的陸塊，缺口本來就超過半圈。
+  /// 作法是 Weiler–Atherton：沿著環走一圈，記下每次穿過地平線的交點，把連
+  /// 續可見的一段收成一條「run」（從進入點走到離開點）。缺口沿著球緣圓弧
+  /// 補——從一條 run 的離開點朝球緣自己的環繞方向走，走到下一個進入點為止。
+  ///
+  /// 兩件事不能便宜行事：
+  ///
+  /// 一是補的方向要看環自己怎麼繞（見 [_windingSign]），不能就近走短弧、
+  /// 也不能從最後一段可見邊去猜。方向決定的是缺口補在球緣的哪一側，也就
+  /// 是陸地補在極冠那側還是反過來填掉整片海。
+  ///
+  /// 二是配對不能照 run 在環上的先後順序接。一條環可能分成好幾段可見的
+  /// run，離開點該接的是「沿球緣往前走遇到的下一個進入點」，不見得是下一
+  /// 條 run 的開頭。接錯的話整個圓盤會被填成陸地——南極洲在視線中心北緯
+  /// 5～15 度時就是這個情形。
   List<List<Offset>> clipRing(List<LatLng> ring) {
     if (ring.length < 3) return const [];
 
@@ -1057,25 +1174,85 @@ Expected: FAIL，`The method 'clipRing' isn't defined`
     }
 
     if (runs.isEmpty) return const [];
-    if (runs.length == 1 &&
-        ring.every(isVisible)) {
+    // 整條環都看得見時原封不動回傳。輪廓資料靠環繞方向慣例搭配 nonZero
+    // 填法挖洞（裡海是歐亞大陸那條環裡的一個反向內環），點序一旦被重排或
+    // 反向，洞就會被填成陸地。沒有交點就沒得裁，直接原樣送回最安全。
+    if (runs.length == 1 && ring.every(isVisible)) {
       return [runs.single];
     }
 
-    // 把所有 run 依序接起來，缺口用球緣圓弧補。
-    final merged = <Offset>[];
-    for (var i = 0; i < runs.length; i++) {
-      final run = runs[i];
-      merged.addAll(run);
-      final next = runs[(i + 1) % runs.length];
-      merged.addAll(_rimArc(run, run.last, next.first));
+    // 走到這裡的每條 run 都是「進入點 → 離開點」，兩端都在球緣上。
+    final sweepSign = _windingSign(ring);
+    final entryAngles = [
+      for (final run in runs) (run.first - center).direction,
+    ];
+    final visited = List<bool>.filled(runs.length, false);
+    final polygons = <List<Offset>>[];
+
+    for (var start = 0; start < runs.length; start++) {
+      if (visited[start]) continue;
+      final polygon = <Offset>[];
+      var i = start;
+      while (!visited[i]) {
+        visited[i] = true;
+        polygon.addAll(runs[i]);
+        final next = _nextEntry(runs[i].last, entryAngles, sweepSign);
+        polygon.addAll(_rimArc(runs[i].last, runs[next].first, sweepSign));
+        i = next;
+      }
+      polygons.add(polygon);
     }
-    return [merged];
+    return polygons;
   }
 
-  /// 在 [a]（一端可見、另一端不可見）之間用二分法找出地平線交點。
+  /// 環的環繞方向：順時針（外環）回 +1，逆時針（洞環）回 -1。
   ///
-  /// 大圓上角距離是單調變化的，20 次二分就能收斂到遠小於一個像素。
+  /// 用球面有號面積（Chamberlain–Duquette）而不是把經緯度當平面算：常數項
+  /// 那個 2 讓包住極點的環（南極洲）也算得出來，Δλ 取最短差則讓跨換日線的
+  /// 環不會爆掉。
+  ///
+  /// 補弧的方向必須跟著環自己的方向走。裁切算的是「環所圍的區域 ∩ 可見半
+  /// 球」，而洞環圍的是湖的補集——方向若一律照外環來，裡海一跨過球緣就會
+  /// 裁出「整個圓盤扣掉湖」，nonZero 疊起來剛好把整塊歐亞大陸消成空白。
+  static double _windingSign(List<LatLng> ring) {
+    var total = 0.0;
+    for (var i = 0; i < ring.length; i++) {
+      final a = ring[i];
+      final b = ring[(i + 1) % ring.length];
+      var deltaLambda = (b.longitude - a.longitude) * math.pi / 180;
+      deltaLambda = (deltaLambda + 3 * math.pi) % (2 * math.pi) - math.pi;
+      total +=
+          deltaLambda *
+          (2 +
+              math.sin(a.latitude * math.pi / 180) +
+              math.sin(b.latitude * math.pi / 180));
+    }
+    return total >= 0 ? 1.0 : -1.0;
+  }
+
+  /// 從球緣上的離開點 [exit] 出發，朝 [sweepSign] 的方向沿球緣走，遇到的
+  /// 第一個進入點。
+  ///
+  /// 進出點沿著球緣必然交錯出現（封閉曲線每穿過球緣一次，圓周上的內外就
+  /// 翻一次），所以這個「下一個」是唯一且成雙的，每條 run 恰好被接一次。
+  int _nextEntry(Offset exit, List<double> entryAngles, double sweepSign) {
+    final exitAngle = (exit - center).direction;
+    var best = 0;
+    var bestGap = double.infinity;
+    for (var i = 0; i < entryAngles.length; i++) {
+      final gap = ((entryAngles[i] - exitAngle) * sweepSign) % (2 * math.pi);
+      if (gap < bestGap) {
+        bestGap = gap;
+        best = i;
+      }
+    }
+    return best;
+  }
+
+  /// 在 [a] 與 [b]（一端可見、另一端不可見）之間用二分法找出地平線交點。
+  ///
+  /// 沒有解析解可用：可見性看的是與視線中心的大圓角距離，沿著大圓走時它
+  /// 是單調變化的，所以二分法必然收斂，20 次就遠小於一個像素。
   Offset _horizonCrossing(LatLng a, LatLng b) {
     var lo = 0.0;
     var hi = 1.0;
@@ -1096,10 +1273,17 @@ Expected: FAIL，`The method 'clipRing' isn't defined`
   }
 
   /// 沿著大圓在 [a] 與 [b] 之間取 [t] 比例的點（slerp）。
+  ///
+  /// 用 slerp 而不是對經緯度做線性內插：經緯度是球面的座標而非歐氏空間，
+  /// 線性內插在高緯度或跨換日線時走的不是真正的最短路徑，找出來的交點會
+  /// 偏離地平線。
   LatLng _interpolate(LatLng a, LatLng b, double t) {
     final av = _toVector(a);
     final bv = _toVector(b);
-    final dot = (av[0] * bv[0] + av[1] * bv[1] + av[2] * bv[2]).clamp(-1.0, 1.0);
+    final dot = (av[0] * bv[0] + av[1] * bv[1] + av[2] * bv[2]).clamp(
+      -1.0,
+      1.0,
+    );
     final omega = math.acos(dot);
     if (omega < 1e-9) return a;
     final sinOmega = math.sin(omega);
@@ -1131,25 +1315,21 @@ Expected: FAIL，`The method 'clipRing' isn't defined`
     );
   }
 
-  /// 產生從 [from] 走到 [to] 的球緣圓弧取樣點。
+  /// 產生從 [from] 沿球緣走到 [to] 的圓弧取樣點，方向由 [sweepSign] 決定
+  /// （+1 是角度遞增，畫布 y 軸向下，看起來就是順時針）。
   ///
-  /// 方向取自 [run] 末尾兩點：離開球緣時是順時針還是逆時針轉，缺口就往
-  /// 同一個方向補，這樣包住遠端極點的環才會走對邊。
-  List<Offset> _rimArc(List<Offset> run, Offset from, Offset to) {
+  /// 方向來自環自己的環繞方向（見 [_windingSign]），不是從最後一段可見邊
+  /// 去猜：邊在球緣附近幾乎是徑向的，切向分量小到正負號由捨入誤差決定，
+  /// 猜出來的方向會隨著地球儀轉動忽正忽負。
+  ///
+  /// 弧長是方向決定出來的結果，不是另外挑的：往前走到下一個進入點為止，
+  /// 該多長就多長，可能超過半圈。反過來說也不能改成「一律走短弧」——短弧
+  /// 剛好對的時候是巧合，不是判準。（實務上真實陸塊圍的是角半徑遠小於
+  /// 90 度的凸區域，與大圓相交的弧必然不超過半圈；南極洲走的就是短弧。）
+  List<Offset> _rimArc(Offset from, Offset to, double sweepSign) {
     final fromAngle = (from - center).direction;
     final toAngle = (to - center).direction;
-
-    var sweepSign = 1.0;
-    if (run.length >= 2) {
-      final radial = from - center;
-      final incoming = from - run[run.length - 2];
-      final cross = radial.dx * incoming.dy - radial.dy * incoming.dx;
-      if (cross < 0) sweepSign = -1.0;
-    }
-
-    var delta = (toAngle - fromAngle) * sweepSign;
-    delta = delta % (2 * math.pi);
-    if (delta < 0) delta += 2 * math.pi;
+    final delta = ((toAngle - fromAngle) * sweepSign) % (2 * math.pi);
 
     const step = math.pi / 90; // 2 度取樣，肉眼看不出折線
     final count = math.max(1, (delta / step).ceil());
@@ -1169,7 +1349,15 @@ Expected: FAIL，`The method 'clipRing' isn't defined`
 Run: `cd frontend && fvm flutter test test/features/home/domain/globe/ && fvm flutter analyze --fatal-infos`
 Expected: 全部 PASS、analyze 零問題
 
-若「包住遠端極點」那題失敗，先印出 `_rimArc` 算出的 `sweepSign` 與 `delta`：多半是外積正負號取反了，把 `if (cross < 0)` 改成 `if (cross > 0)` 再跑一次，不要改測試的期望值。
+補弧方向的判準是**環自身的環繞方向**（`_windingSign`，球面有號面積），一
+條環一個值。不要改用「最後一段可見邊與半徑的外積」那種局部判準：環離開
+球緣時，邊的方向幾乎是純徑向的，切向分量趨近 0、正負號由捨入誤差決定，
+方向會隨著地球儀轉動忽正忽負。實測澳洲一碰到球緣，填色面積就從 2.4% 跳
+到 98.8%。
+
+同理，run 的配對要沿球緣找「往前走遇到的下一個進入點」，不能照 run 在環
+上的先後順序接。實測 114 個跨球緣的組合裡有 36 個分成兩段以上，接錯時南
+極洲在視線中心北緯 5～15 度會把整個圓盤填成陸地。
 
 - [ ] **Step 5: 提交**
 
