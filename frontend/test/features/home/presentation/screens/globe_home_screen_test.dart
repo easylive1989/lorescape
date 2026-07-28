@@ -1,7 +1,10 @@
 import 'package:context_app/features/daily_story/domain/models/daily_story.dart';
 import 'package:context_app/features/daily_story/providers.dart';
 import 'package:context_app/features/explore/providers.dart';
+import 'package:context_app/features/home/domain/globe/world_outline.dart';
 import 'package:context_app/features/home/presentation/screens/globe_home_screen.dart';
+import 'package:context_app/features/home/presentation/widgets/globe_view.dart';
+import 'package:context_app/features/home/providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -27,6 +30,15 @@ DailyStory _story({
   latitude: latitude,
   longitude: longitude,
 );
+
+/// 從 2026-07-28 往回數 [daysAgo] 天的日期字串，用來鋪多篇故事時避免手key
+/// 一長串日期。
+String _dateAt(int daysAgo) {
+  final date = DateTime(2026, 7, 28).subtract(Duration(days: daysAgo));
+  return '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
+}
 
 late InMemoryDailyStoryRepository _stories;
 late FakePlacesRepository _places;
@@ -78,6 +90,14 @@ Future<void> _givenHome(
     overrides: [
       dailyStoryRepositoryProvider.overrideWithValue(_stories),
       placesRepositoryProvider.overrideWithValue(_places),
+      // WorldOutline.load 用 compute() 開真正的背景 isolate，testWidgets
+      // 預設跑在 FakeAsync zone 下等不到真實 isolate 的回應，會讓
+      // GlobeView 永遠不出現在畫面上（見 world_outline_test.dart 對同一個
+      // 坑的說明）。這裡直接把 provider 換成同步可解的假輪廓，測試才能
+      // 檢查 GlobeView 本身收到的 pins / focus。
+      worldOutlineProvider.overrideWith(
+        (ref) async => WorldOutline.parse('{"rings":[]}'),
+      ),
     ],
   );
   await tester.pumpAndSettle();
@@ -203,6 +223,112 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(pushed, ['/map?q=京都市']);
+    },
+  );
+
+  testWidgets(
+    'given the globe home, '
+    'when the user taps a story card that is not the selected one, '
+    'then it only scrolls that card into view and does not open the story',
+    (tester) async {
+      // 6 篇夠讓卡片列超出視窗寬度，點擊才會真的觸發捲動（見 _givenHome
+      // 的視窗尺寸註解）。
+      _stories.seed([
+        for (var i = 0; i < 6; i++)
+          _story(
+            date: _dateAt(i),
+            place: '地點$i',
+            latitude: 30 + i.toDouble(),
+            longitude: 100 + i.toDouble(),
+          ),
+      ]);
+      final pushed = <Object?>[];
+      await _givenHome(tester, pushed: pushed);
+
+      await tester.tap(find.byKey(Key('story-card-${_dateAt(1)}')));
+      await tester.pumpAndSettle();
+
+      expect(pushed, isEmpty, reason: '第一次點非選中卡片只是把它捲到中間，不該開故事');
+
+      // 上面那次點擊觸發捲動、把第 1 張捲成選中卡；再點一次同一張，這次
+      // 才該真的打開故事。
+      await tester.tap(find.byKey(Key('story-card-${_dateAt(1)}')));
+      await tester.pumpAndSettle();
+
+      expect(pushed.single, isA<DailyStory>());
+      expect((pushed.single as DailyStory).placeName, '地點1');
+    },
+  );
+
+  testWidgets(
+    'given a story without coordinates, '
+    'when it becomes the selected card, '
+    'then the globe renders with no focus pin instead of crashing',
+    (tester) async {
+      _stories.seed([
+        for (var i = 0; i < 6; i++)
+          _story(
+            date: _dateAt(i),
+            place: '地點$i',
+            latitude: i == 2 ? null : 30 + i.toDouble(),
+            longitude: i == 2 ? null : 100 + i.toDouble(),
+          ),
+      ]);
+      await _givenHome(tester, pushed: []);
+
+      await tester.tap(find.byKey(Key('story-card-${_dateAt(2)}')));
+      await tester.pumpAndSettle();
+
+      final globe = tester.widget<GlobeView>(find.byType(GlobeView));
+      expect(globe.focus, isNull);
+    },
+  );
+
+  testWidgets(
+    'given more daily stories than the pin cap, '
+    'when the globe home loads, '
+    'then only the most recent pinnedStoryCount stories are pinned '
+    'but scrolling to an older one still focuses it',
+    (tester) async {
+      // 12 篇：確保捲到第 8、9 篇（index 7、8）時，目標捲動位置落在
+      // maxScrollExtent 之內，不會被 clamp 到別的索引。
+      _stories.seed([
+        for (var i = 0; i < 12; i++)
+          _story(
+            date: _dateAt(i),
+            place: '地點$i',
+            latitude: 30 + i.toDouble(),
+            longitude: 100 + i.toDouble(),
+          ),
+      ]);
+      await _givenHome(tester, pushed: []);
+
+      expect(
+        tester.widget<GlobeView>(find.byType(GlobeView)).pins.length,
+        GlobeHomeScreen.pinnedStoryCount,
+        reason: '地球儀最多只釘最近 7 篇故事',
+      );
+
+      // StoryRail.stride 是每張卡的橫向間距；直接拖曳捲軸到第 8 篇
+      // （index 7）的位置——用拖曳而不是點卡片，因為卡片離起點太遠，
+      // 一開始還沒被 ListView 懶建出來，點不到。
+      await tester.drag(find.byType(ListView), const Offset(-7 * 324, 0));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<GlobeView>(find.byType(GlobeView)).focus?.label,
+        '地點7',
+        reason: '第 8 篇雖然不在 7 篇的釘點上限內，選中時仍要出現 focus pin',
+      );
+
+      await tester.drag(find.byType(ListView), const Offset(-324, 0));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<GlobeView>(find.byType(GlobeView)).focus?.label,
+        '地點8',
+        reason: '第 9 篇同理',
+      );
     },
   );
 }
