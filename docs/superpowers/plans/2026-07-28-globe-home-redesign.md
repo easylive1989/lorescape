@@ -455,7 +455,9 @@ curl -sL -o /tmp/ne110.geojson \
 python3 tool/build_world_outline.py /tmp/ne110.geojson assets/geo/world_land_110m.json
 ```
 
-預期輸出 127 條環。`pubspec.yaml` 的 assets 清單在 `- assets/map/` 之後加：
+預期輸出 128 條環（127 個 feature，其中歐亞大陸的 Polygon 多挖了一個裡海形
+狀的內環，因為裡海是內陸水域）。`pubspec.yaml` 的 assets 清單在 `- assets/map/`
+之後加：
 
 ```yaml
     # 由 tool/build_world_outline.py 從 Natural Earth 110m 產生，勿手改
@@ -493,9 +495,15 @@ void main() {
     'when loading it, '
     'then it yields the full Natural Earth 110m ring set',
     (tester) async {
-      final outline = await WorldOutline.load(rootBundle);
+      // WorldOutline.load 用 compute() 開真正的背景 isolate；testWidgets
+      // 預設跑在 FakeAsync zone，等不到真實 isolate 的回應會卡死，所以要用
+      // runAsync 讓這段跳出 FakeAsync、用真實事件迴圈執行。
+      final outline = (await tester.runAsync(
+        () => WorldOutline.load(rootBundle),
+      ))!;
 
-      expect(outline.rings, hasLength(127));
+      // 127 個 feature ＋ 歐亞大陸裡海那一個內環，共 128 條環。
+      expect(outline.rings, hasLength(128));
       expect(
         outline.rings.every((ring) => ring.length >= 4),
         isTrue,
@@ -518,6 +526,7 @@ Expected: FAIL，`Target of URI doesn't exist: .../world_outline.dart`
 ```dart
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:latlong2/latlong.dart';
 
