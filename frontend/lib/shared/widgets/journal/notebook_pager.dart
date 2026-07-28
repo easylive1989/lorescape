@@ -159,7 +159,17 @@ class _NotebookPagerState extends State<NotebookPager>
   double _settleFrom = 0;
   double _settleTo = 0;
 
+  /// 正在跑收尾動畫的頁。鬆手的瞬間頁碼就已經換好、手勢狀態也已釋放，
+  /// 動畫只是讓這張紙自己飄完剩下的路——所以收尾期間使用者隨時能開始
+  /// 翻下一頁（改版前新手勢會被吞去續推還沒落地的頁，體感上滑不動）。
+  int? _settlePage;
+  bool _settleForward = true;
+  double _settleT = 0;
+
+  /// 收尾動畫的全程長度；實際長度按剩餘距離等比縮短（見 [_onDragEnd]），
+  /// 甩到快滿的頁才不會在幾乎看不出在動的尾巴上磨滿 660ms。
   static const Duration _settleDuration = Duration(milliseconds: 660);
+  static const Duration _settleMinDuration = Duration(milliseconds: 220);
   static const Curve _settleCurve = Cubic(0.36, 0.72, 0.22, 1);
 
   /// 鬆手時翻過這個比例才算翻頁，否則彈回。
@@ -188,26 +198,20 @@ class _NotebookPagerState extends State<NotebookPager>
 
   void _onSettleTick() {
     final t = _settleCurve.transform(_settle.value);
-    setState(() => _flipT = _settleFrom + (_settleTo - _settleFrom) * t);
-    if (!_settle.isCompleted) return;
-
-    // 落地：翻過去就換頁，彈回就清掉翻頁狀態。
-    final page = _flipPage;
-    if (_settleTo == 1 && page != null) {
-      final next = _flipForward ? page + 1 : page;
-      if (next != _index) {
-        _index = next;
-        widget.onPageChanged?.call(_index);
-      }
-    }
     setState(() {
-      _flipPage = null;
-      _flipT = 0;
+      _settleT = _settleFrom + (_settleTo - _settleFrom) * t;
+      if (_settle.isCompleted) {
+        // 落地：頁碼在鬆手時就換好了，這裡只要清掉動畫狀態。
+        _settlePage = null;
+        _settleT = 0;
+      }
     });
   }
 
-  void _onDragStart(DragStartDetails details) {
-    _settle.stop();
+  /// 換頁並通知外層。頁碼在「確定會翻過去」的當下就換，不等動畫跑完。
+  void _commitTo(int next) {
+    _index = next;
+    widget.onPageChanged?.call(next);
   }
 
   void _onDragUpdate(DragUpdateDetails details, double width) {
@@ -232,19 +236,36 @@ class _NotebookPagerState extends State<NotebookPager>
           _flipPage = _index - 1;
           _flipForward = false;
         }
+        // 抓到的頁若還在收尾動畫中（例如反悔把剛翻走的頁拖回來），接住它
+        // 從目前的角度續拖，不讓手勢與動畫兩套狀態同時控制同一張紙。
+        if (_flipPage != null && _flipPage == _settlePage) {
+          _settle.stop();
+          _flipT = _flipForward == _settleForward ? _settleT : 1 - _settleT;
+          _settlePage = null;
+        }
       }
-      if (_flipPage == null) return;
+      final page = _flipPage;
+      if (page == null) return;
 
       final limit = _flipForward
           ? (_index < last ? 1.0 : _edgeResistance)
           : (_index > 0 ? 1.0 : _edgeResistance);
       final delta = (_flipForward ? -dx : dx) / _stageWidth;
       _flipT = (_flipT + delta).clamp(0.0, limit);
+
+      // 拖曳中就把頁翻滿：立刻換頁並釋放手勢狀態，同一個手勢繼續拖
+      // 就接著翻下一頁，不會把後續位移吞在已經翻完的頁上。
+      if (_flipT >= 1) {
+        _commitTo(_flipForward ? page + 1 : page);
+        _flipPage = null;
+        _flipT = 0;
+      }
     });
   }
 
   void _onDragEnd(DragEndDetails details) {
-    if (_flipPage == null) return;
+    final page = _flipPage;
+    if (page == null) return;
     final last = widget.pages.length - 1;
     final canFlip = _flipForward ? _index < last : _index > 0;
 
@@ -253,12 +274,30 @@ class _NotebookPagerState extends State<NotebookPager>
     final vx = details.primaryVelocity ?? 0;
     final flungAlong = _flipForward ? vx < -_flingVelocity : vx > _flingVelocity;
     final flungBack = _flipForward ? vx > _flingVelocity : vx < -_flingVelocity;
+    final commit =
+        canFlip && !flungBack && (flungAlong || _flipT > _commitThreshold);
 
-    _settleFrom = _flipT;
-    _settleTo =
-        (canFlip && !flungBack && (flungAlong || _flipT > _commitThreshold))
-        ? 1
-        : 0;
+    setState(() {
+      // 手勢狀態立刻釋放、剩下的路交給收尾動畫：下一個手勢不必等這張紙
+      // 落地就能翻下一頁。若這次收尾蓋掉了上一張還沒飄完的紙，那張會直接
+      // 落定（它的頁碼早已換好），只是少了尾巴幾格動畫。
+      _settlePage = page;
+      _settleForward = _flipForward;
+      _settleFrom = _flipT;
+      _settleTo = commit ? 1 : 0;
+      _settleT = _settleFrom;
+      if (commit) _commitTo(_flipForward ? page + 1 : page);
+      _flipPage = null;
+      _flipT = 0;
+    });
+
+    // 收尾長度隨剩餘距離等比縮短：翻剩一點點就快快落地，別讓使用者
+    // 盯著幾乎靜止的尾巴猜「到底翻完了沒」。
+    final ms = (_settleDuration.inMilliseconds * (_settleTo - _settleFrom).abs())
+        .round();
+    _settle.duration = Duration(
+      milliseconds: math.max(_settleMinDuration.inMilliseconds, ms),
+    );
     _settle.forward(from: 0);
   }
 
@@ -266,6 +305,9 @@ class _NotebookPagerState extends State<NotebookPager>
   void _jumpTo(int i) {
     if (i == _index) return;
     setState(() {
+      _settle.stop();
+      _settlePage = null;
+      _settleT = 0;
       _flipPage = null;
       _flipT = 0;
       _index = i;
@@ -278,6 +320,9 @@ class _NotebookPagerState extends State<NotebookPager>
     if (page == _flipPage) {
       return _flipForward ? -180 * _flipT : -180 + 180 * _flipT;
     }
+    if (page == _settlePage) {
+      return _settleForward ? -180 * _settleT : -180 + 180 * _settleT;
+    }
     return page < _index ? -180 : 0;
   }
 
@@ -285,23 +330,35 @@ class _NotebookPagerState extends State<NotebookPager>
   Widget build(BuildContext context) {
     if (widget.pages.isEmpty) return const SizedBox.shrink();
 
-    // 疊在畫面上的最多三頁：攤平在底下的那頁、正在翻的那頁，以及停在左疊
-    // 最上面的那頁——整疊都 build 沒有意義。最後那頁翻過去後停在 -180°，
-    // 幾何上剛好只在左側留白露出紙背的裝訂孔帶，讓非第一頁時看得出
-    // 「左邊還壓著上一頁」；翻回去時掀起的就是它本人，動畫全程連續。
+    // 只 build 看得到的幾頁，整疊都掛上去沒有意義。分三群，由底往上疊：
+    // 右疊攤平的頁（大到小）→ 左疊只露紙背孔帶的 peek → 空中的頁（小到
+    // 大，越晚翻起的越上面）。空中可能同時有兩張：一張在收尾動畫、一張
+    // 在手指下。peek 停在 -180°，幾何上剛好只在左側留白露出裝訂孔帶，
+    // 讓非第一頁時看得出「左邊還壓著上一頁」。
     final flipPage = _flipPage;
-    // 攤平在最底下的頁：閒置時是當前頁，翻頁中是被壓在下面那頁。
-    final base = flipPage == null ? _index : flipPage + 1;
-    // 左疊最上面那頁：閒置與往前翻時是上一頁，往回翻時輪到再前一頁露出來。
-    final peek = (flipPage ?? _index) - 1;
-    // 由底往上疊：攤平頁 → 左疊露出的紙緣 → 正在翻的頁永遠壓在最上面。
-    final pages = <int>[
-      base,
-      peek,
+    final settlePage = _settlePage;
+    final flying = <int>{
+      if (settlePage != null) settlePage,
       if (flipPage != null) flipPage,
+    };
+    final resting = <int>{
+      _index,
+      if (flipPage != null) flipPage + 1,
+      if (settlePage != null) settlePage + 1,
+    }.difference(flying);
+    final peek = [_index, ...flying].reduce(math.min) - 1;
+    final pages = <int>[
+      ...resting.toList()..sort((a, b) => b.compareTo(a)),
+      peek,
+      ...flying.toList()..sort(),
     ].where((i) => i >= 0 && i < widget.pages.length).toList();
 
-    final activeDeg = _degreesFor(flipPage ?? _index).abs();
+    // 疊影跟著最上面那張在空中的紙走。
+    final activeDeg = flipPage != null
+        ? _degreesFor(flipPage).abs()
+        : settlePage != null
+        ? _degreesFor(settlePage).abs()
+        : 0.0;
 
     return Column(
       children: [
@@ -310,7 +367,6 @@ class _NotebookPagerState extends State<NotebookPager>
             builder: (context, constraints) {
               return GestureDetector(
                 behavior: HitTestBehavior.opaque,
-                onHorizontalDragStart: _onDragStart,
                 onHorizontalDragUpdate: (d) =>
                     _onDragUpdate(d, constraints.maxWidth),
                 onHorizontalDragEnd: _onDragEnd,

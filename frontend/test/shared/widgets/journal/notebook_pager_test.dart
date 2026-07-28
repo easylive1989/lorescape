@@ -291,6 +291,46 @@ void main() {
     );
 
     testWidgets(
+      'given a forward flip still settling, when the user flings left again '
+      'before the animation ends, then the pager advances to the third page '
+      'instead of swallowing the gesture',
+      (tester) async {
+        final seen = <int>[];
+        await _givenPager(tester, pages: _threePages, onPageChanged: seen.add);
+
+        await tester.fling(find.byType(NotebookPager), const Offset(-100, 0), 2000);
+        // 只推進 50ms，收尾動畫還在半路上就接著甩第二下。
+        await tester.pump(const Duration(milliseconds: 50));
+        await tester.fling(find.byType(NotebookPager), const Offset(-100, 0), 2000);
+        await tester.pumpAndSettle();
+
+        expect(seen, [1, 2]);
+        expect(find.text('Body 2'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'given a forward flip still settling, when the user drags right to '
+      'catch the page, then the pager returns to the first page',
+      (tester) async {
+        final seen = <int>[];
+        await _givenPager(tester, pages: _threePages, onPageChanged: seen.add);
+
+        await tester.fling(find.byType(NotebookPager), const Offset(-100, 0), 2000);
+        await tester.pump(const Duration(milliseconds: 50));
+        // 反悔：把還在收尾動畫中的那頁往回拖過門檻。
+        await tester.dragFrom(
+          tester.getCenter(find.byType(NotebookPager)),
+          const Offset(300, 0),
+        );
+        await tester.pumpAndSettle();
+
+        expect(seen, [1, 0]);
+        expect(find.text('Body 0'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
       'given three pages, when the pager settles on the second page, '
       'then the flipped first page stays mounted as a backside sliver '
       'on the left edge instead of disappearing',
