@@ -285,18 +285,21 @@ class _NotebookPagerState extends State<NotebookPager>
   Widget build(BuildContext context) {
     if (widget.pages.isEmpty) return const SizedBox.shrink();
 
-    // 疊在畫面上的只有正在翻的那頁與它底下那頁——整疊都 build 沒有意義，
-    // 使用者一次也只看得到兩頁。
-    final visible = <int>{_index};
+    // 疊在畫面上的最多三頁：攤平在底下的那頁、正在翻的那頁，以及停在左疊
+    // 最上面的那頁——整疊都 build 沒有意義。最後那頁翻過去後停在 -180°，
+    // 幾何上剛好只在左側留白露出紙背的裝訂孔帶，讓非第一頁時看得出
+    // 「左邊還壓著上一頁」；翻回去時掀起的就是它本人，動畫全程連續。
     final flipPage = _flipPage;
-    if (flipPage != null) {
-      visible.add(flipPage);
-      visible.add(flipPage + 1);
-    }
-    final pages =
-        visible.where((i) => i >= 0 && i < widget.pages.length).toList()
-          // 翻走的頁要壓在底下，還沒翻的頁照順序疊上來。
-          ..sort((a, b) => b.compareTo(a));
+    // 攤平在最底下的頁：閒置時是當前頁，翻頁中是被壓在下面那頁。
+    final base = flipPage == null ? _index : flipPage + 1;
+    // 左疊最上面那頁：閒置與往前翻時是上一頁，往回翻時輪到再前一頁露出來。
+    final peek = (flipPage ?? _index) - 1;
+    // 由底往上疊：攤平頁 → 左疊露出的紙緣 → 正在翻的頁永遠壓在最上面。
+    final pages = <int>[
+      base,
+      peek,
+      if (flipPage != null) flipPage,
+    ].where((i) => i >= 0 && i < widget.pages.length).toList();
 
     final activeDeg = _degreesFor(flipPage ?? _index).abs();
 

@@ -291,6 +291,32 @@ void main() {
     );
 
     testWidgets(
+      'given three pages, when the pager settles on the second page, '
+      'then the flipped first page stays mounted as a backside sliver '
+      'on the left edge instead of disappearing',
+      (tester) async {
+        await _givenPager(tester, pages: _threePages);
+        // 第一頁時左邊沒有上一頁可露，畫面上只掛著當前頁。
+        expect(find.byKey(const ValueKey(0)), findsOneWidget);
+        expect(find.byKey(const ValueKey(1)), findsNothing);
+
+        await tester.fling(
+          find.byType(NotebookPager),
+          const Offset(-100, 0),
+          2000,
+        );
+        await tester.pumpAndSettle();
+
+        // 翻走的第一頁仍掛在樹上（-180° 的紙背，只在左緣露出孔帶），
+        // 但它的正面內容不再攤平顯示——攤平的是第二頁。
+        expect(find.byKey(const ValueKey(1)), findsOneWidget);
+        expect(find.byKey(const ValueKey(0)), findsOneWidget);
+        expect(find.text('Body 1'), findsOneWidget);
+        expect(find.text('Body 0'), findsNothing);
+      },
+    );
+
+    testWidgets(
       'given more pages than the indicator cap, when the pager renders, '
       'then the page dots stay capped like the story deck',
       (tester) async {
