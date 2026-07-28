@@ -1,4 +1,16 @@
 {
+  "home": {
+    "eyebrow": "每日故事 · DAILY LORE",
+    "brand": "Lorescape",
+    "search_hint": "搜尋地點、城市或地標……",
+    "search_clear": "清除",
+    "locate": "定位",
+    "deck_label": "每日故事 · ANNO MMXXVI",
+    "badge_latest": "最新",
+    "empty": "還沒有故事",
+    "open_journey": "歷程書架",
+    "open_settings": "設定"
+  },
   "gps_strong": "GPS 信號強",
   "audio_ready": "音訊就緒",
   "current_location": "目前位置",

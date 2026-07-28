@@ -1,4 +1,16 @@
 {
+  "home": {
+    "eyebrow": "DAILY LORE",
+    "brand": "Lorescape",
+    "search_hint": "Search a place, city or landmark…",
+    "search_clear": "Clear",
+    "locate": "Nearby",
+    "deck_label": "DAILY LORE · ANNO MMXXVI",
+    "badge_latest": "Latest",
+    "empty": "No stories yet",
+    "open_journey": "Journey shelf",
+    "open_settings": "Settings"
+  },
   "gps_strong": "GPS Strong",
   "audio_ready": "Audio Ready",
   "current_location": "Current Location",
