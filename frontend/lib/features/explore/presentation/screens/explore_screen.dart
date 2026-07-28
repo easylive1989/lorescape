@@ -21,7 +21,10 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ExploreScreen extends ConsumerStatefulWidget {
-  const ExploreScreen({super.key});
+  /// 從首頁搜尋建議進來時帶的關鍵字。null 表示走預設的附近景點模式。
+  final String? initialQuery;
+
+  const ExploreScreen({super.key, this.initialQuery});
 
   @override
   ConsumerState<ExploreScreen> createState() => _ExploreScreenState();
@@ -39,6 +42,20 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
       LatLng(place.location.latitude, place.location.longitude),
       _kFocusZoom,
     );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final query = widget.initialQuery;
+    if (query == null || query.isEmpty) return;
+    _searchController.text = query;
+    // build 期間不能改 provider，等第一幀畫完再送出搜尋。
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(searchQueryProvider.notifier).state = query;
+      ref.read(placesControllerProvider.notifier).search(query);
+    });
   }
 
   @override
@@ -121,6 +138,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             placeCount: places.length,
             searchController: _searchController,
             isFilterActive: isFilterActive,
+            onBack: () => context.pop(),
             onFilter: _showFilterPanel,
             onRefresh: () {
               _searchController.clear();
@@ -255,6 +273,33 @@ class _AttributionButton extends StatelessWidget {
         background: colorScheme.surfaceContainerHighest,
         iconSize: 22,
         onPressed: () => _showAttribution(context),
+      ),
+    );
+  }
+}
+
+/// 從首頁搜尋建議 zoom 進地圖後，用來退回地球儀首頁的返回鈕。
+///
+/// `_CircleButton` 沒有 `tooltip` 參數，比照 `_AttributionButton` 用
+/// `Semantics` 包一層來承載無障礙標籤——順便把 [Key] 放在這層，測試才點得到。
+class _GlobeBackButton extends StatelessWidget {
+  const _GlobeBackButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Semantics(
+      key: const Key('explore-globe-back'),
+      button: true,
+      label: 'explore.back_to_globe'.tr(),
+      child: _CircleButton(
+        icon: Icons.public,
+        iconColor: colorScheme.onSurface,
+        background: colorScheme.surfaceContainerHighest,
+        iconSize: 22,
+        onPressed: onPressed,
       ),
     );
   }
@@ -618,6 +663,7 @@ class _MapTopOverlay extends StatelessWidget {
     required this.placeCount,
     required this.searchController,
     required this.isFilterActive,
+    required this.onBack,
     required this.onFilter,
     required this.onRefresh,
     required this.onSearchChanged,
@@ -628,6 +674,7 @@ class _MapTopOverlay extends StatelessWidget {
   final int placeCount;
   final TextEditingController searchController;
   final bool isFilterActive;
+  final VoidCallback onBack;
   final VoidCallback onFilter;
   final VoidCallback onRefresh;
   final ValueChanged<String> onSearchChanged;
@@ -683,6 +730,8 @@ class _MapTopOverlay extends StatelessWidget {
                   actions: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      _GlobeBackButton(onPressed: onBack),
+                      const SizedBox(width: 8),
                       const _AttributionButton(),
                       const SizedBox(width: 8),
                       _FilterButton(

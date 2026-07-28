@@ -429,6 +429,37 @@ void main() {
         },
       );
     });
+
+    group('initial query', () {
+      testWidgets(
+        'given an initial query, '
+        'when the explore screen loads, '
+        'then the places repository is searched with that query',
+        (tester) async {
+          final repo = FakePlacesRepository();
+
+          await _givenExploreScreen(tester, repo: repo, initialQuery: '京都');
+
+          expect(repo.lastSearchQuery, '京都');
+        },
+      );
+    });
+
+    group('globe back button', () {
+      testWidgets(
+        'given the explore screen pushed on top of home, '
+        'when the user taps the globe button, '
+        'then it pops back to the globe home',
+        (tester) async {
+          await _givenExploreScreenPushedOnMap(tester);
+
+          await tester.tap(find.byKey(const Key('explore-globe-back')));
+          await tester.pumpAndSettle();
+
+          expect(find.byKey(const Key('home-screen')), findsOneWidget);
+        },
+      );
+    });
   });
 }
 
@@ -440,6 +471,7 @@ Future<void> _givenExploreScreen(
   double maxDistance = 10000.0,
   PlaceLocation? userLocation,
   FakeLocationService? locationService,
+  String? initialQuery,
 }) async {
   final fakeLocation =
       locationService ??
@@ -449,7 +481,7 @@ Future<void> _givenExploreScreen(
       );
   await pumpScreen(
     tester,
-    child: const ExploreScreen(),
+    child: ExploreScreen(initialQuery: initialQuery),
     overrides: [
       locationServiceProvider.overrideWithValue(fakeLocation),
       placesRepositoryProvider.overrideWithValue(
@@ -507,6 +539,39 @@ Future<void> _givenExploreScreenWithRouter(
       ...fakeMapStyleOverrides(),
     ],
   );
+  await tester.pump(const Duration(milliseconds: 20));
+  await tester.pump(const Duration(milliseconds: 20));
+  await tester.pump(const Duration(milliseconds: 20));
+  await settleMapTimers(tester);
+}
+
+/// 從首頁 push 到 `/map` 上的探索頁——地球儀返回鈕測試要有東西可以 pop
+/// 回去，不能像其他測試一樣把 [ExploreScreen] 直接當成初始路由。
+Future<void> _givenExploreScreenPushedOnMap(WidgetTester tester) async {
+  await pumpRouterApp(
+    tester,
+    routes: [
+      GoRoute(
+        path: '/',
+        builder: (_, __) => const Scaffold(key: Key('home-screen')),
+      ),
+      GoRoute(path: '/map', builder: (_, __) => const ExploreScreen()),
+    ],
+    overrides: [
+      locationServiceProvider.overrideWithValue(FakeLocationService()),
+      placesRepositoryProvider.overrideWithValue(FakePlacesRepository()),
+      savedLocationsRepositoryProvider.overrideWithValue(
+        InMemorySavedLocationsRepository(),
+      ),
+      dailyStoryRepositoryProvider.overrideWithValue(
+        InMemoryDailyStoryRepository(),
+      ),
+      ...fakeMapStyleOverrides(),
+    ],
+  );
+
+  final context = tester.element(find.byKey(const Key('home-screen')));
+  GoRouter.of(context).push('/map');
   await tester.pump(const Duration(milliseconds: 20));
   await tester.pump(const Duration(milliseconds: 20));
   await tester.pump(const Duration(milliseconds: 20));

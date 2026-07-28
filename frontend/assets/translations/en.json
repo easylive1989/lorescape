@@ -139,6 +139,7 @@
   },
   "explore": {
     "title": "Explore",
+    "back_to_globe": "Back to globe",
     "refresh": "Refresh",
     "search_hint": "Search for places, cities, or landmarks…",
     "empty": "No places found",
