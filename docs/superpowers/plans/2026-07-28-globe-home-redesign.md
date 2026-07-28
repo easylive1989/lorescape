@@ -27,7 +27,7 @@
 
 | 檔案 | 責任 |
 |---|---|
-| `supabase/migrations/20260728000000_add_coords_to_daily_story_places.sql` | 加 `latitude` / `longitude` 欄位與 grant |
+| `supabase/migrations/20260728000000_grant_place_coords_select.sql` | 開放既有 `latitude` / `longitude` 欄位的 select 權限給 anon/authenticated |
 | `scripts/backfill_place_coords.py` | 從 Wikidata P625 補座標 |
 | `scripts/tests/test_backfill_place_coords.py` | 上述腳本的純函式測試 |
 | `frontend/tool/build_world_outline.py` | 把 Natural Earth GeoJSON 壓成 App 用的緊湊格式 |
@@ -72,29 +72,31 @@
 ### Task 1: `daily_story_places` 座標欄位與 backfill 腳本
 
 **Files:**
-- Create: `supabase/migrations/20260728000000_add_coords_to_daily_story_places.sql`
+- Create: `supabase/migrations/20260728000000_grant_place_coords_select.sql`
 - Create: `scripts/backfill_place_coords.py`
 - Test: `scripts/tests/test_backfill_place_coords.py`
 
 **Interfaces:**
 - Consumes: 無。
-- Produces: `daily_story_places.latitude` / `daily_story_places.longitude`（`double precision`，nullable，anon/authenticated 可 select）。Task 2 的 App 端查詢依賴這兩欄存在。
+- Produces: `daily_story_places.latitude` / `daily_story_places.longitude`（既有欄位，型別 `numeric`，nullable）新增開放給 anon/authenticated 的 select 權限。Task 2 的 App 端查詢依賴這兩欄可讀。
 
 - [ ] **Step 1: 寫 migration**
 
-建立 `supabase/migrations/20260728000000_add_coords_to_daily_story_places.sql`：
+建立 `supabase/migrations/20260728000000_grant_place_coords_select.sql`：
 
 ```sql
--- 地球儀首頁需要把每日故事釘在地圖上，所以景點要有經緯度。
--- 既有列由 scripts/backfill_place_coords.py 依 wikidata_id 查 P625 補齊，
+-- `daily_story_places.latitude` / `longitude`（型別 numeric）早在
+-- 20260521120000 就為 IG 圖卡功能加過，是 admin 人工填的欄位；
+-- publisher/src/lorescape_publisher/card/mapper.py 讀這兩欄把座標渲染到
+-- 圖卡上。20260527000000 曾明文把它們列為 operational、admin-only 欄位，
+-- 刻意不 grant 給 anon/authenticated。
+--
+-- 這裡刻意推翻那個決定：v3 地球儀首頁要把每日故事釘在地圖上，App 端
+-- 也需要讀這兩欄。座標本身沿用既有欄位、不新增欄位也不改型別，
+-- 圖卡渲染與地球儀首頁共用同一組座標。
+-- 既有列若還沒被圖卡流程填過座標，由
+-- scripts/backfill_place_coords.py 依 wikidata_id 查 P625 補齊，
 -- 補不到的維持 null——App 端會照常在卡片列顯示，只是不釘上地球儀。
-alter table public.daily_story_places
-  add column if not exists latitude double precision,
-  add column if not exists longitude double precision;
-
--- daily_story_places 沒有開放整表讀取，只逐欄 grant（見
--- 20260527000000_grant_daily_story_places_card_select.sql）。App 的
--- `daily_story_places!left(...)` join 要讀這兩欄，所以一併 grant。
 grant select (latitude, longitude)
   on table public.daily_story_places to anon, authenticated;
 ```
@@ -258,7 +260,7 @@ Expected: 3 passed
 - [ ] **Step 6: 提交**
 
 ```bash
-git add supabase/migrations/20260728000000_add_coords_to_daily_story_places.sql \
+git add supabase/migrations/20260728000000_grant_place_coords_select.sql \
         scripts/backfill_place_coords.py \
         scripts/tests/test_backfill_place_coords.py
 git commit -m "feat(daily-story): daily_story_places 加經緯度欄位與 backfill 腳本"
