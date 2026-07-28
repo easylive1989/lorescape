@@ -2383,7 +2383,7 @@ git commit -m "feat(explore): 支援初始查詢與回到地球儀"
 
 **Interfaces:**
 - Consumes: Task 2 的 `DailyStory.latitude/longitude`、Task 3 的 `WorldOutline`、Task 6 的 `GlobeView` / `GlobePin`、Task 7 的 `placeSuggestionsProvider`。
-- Produces: `GlobeHomeScreen`（`ConsumerStatefulWidget`，無參數）、`homeStoriesProvider`（`FutureProvider<List<DailyStory>>`）、`worldOutlineProvider`（`FutureProvider<WorldOutline>`）。Task 10 的路由掛這個畫面。
+- Produces: `GlobeHomeScreen`（`ConsumerStatefulWidget`，無參數）、`homeStoriesProvider`（`FutureProvider.family<List<DailyStory>, String>`，key 是 DB 語言字串如 `'zh-TW'`，見 Step 4 的說明）、`worldOutlineProvider`（`FutureProvider<WorldOutline>`）。Task 10 的路由掛這個畫面。
 
 - [ ] **Step 1: 加 i18n key**
 
@@ -2636,6 +2636,16 @@ Expected: FAIL，`Target of URI doesn't exist: .../globe_home_screen.dart`
 
 - [ ] **Step 4: 寫 providers**
 
+`homeStoriesProvider` 不能用 `currentLanguageProvider`（`latestDailyStoryProvider`
+/ `dailyStoryHistoryProvider` 底層都是它）：`currentLanguageProvider`
+（`LanguageNotifier.build()`）讀的是 `PlatformDispatcher.instance.locale`
+（作業系統語言），沒有機制隨 `EasyLocalization` 的 `context.locale` 同步
+（目前全專案只有 `ExploreScreen` 會手動呼叫 `updateLanguage()`）。這正是
+`daily_story/providers.dart` 對 `latestDailyStoryByLanguageProvider` 的註解
+提醒的坑，也是 `StoryListScreen`（做的事跟這裡幾乎一樣：合併 latest +
+history）已經在用 by-language family provider、由呼叫端從 `context.locale`
+算出語言字串的原因。`homeStoriesProvider` 照同一套慣例走：
+
 建立 `frontend/lib/features/home/providers.dart`：
 
 ```dart
@@ -2647,9 +2657,21 @@ import 'package:context_app/features/daily_story/providers.dart';
 import 'package:context_app/features/home/domain/globe/world_outline.dart';
 
 /// 首頁卡片列要顯示的故事：最新一篇在前，接著最多 30 篇歷史。
-final homeStoriesProvider = FutureProvider<List<DailyStory>>((ref) async {
-  final latest = await ref.watch(latestDailyStoryProvider.future);
-  final history = await ref.watch(dailyStoryHistoryProvider.future);
+///
+/// 用 DB 語言字串（例如 `'zh-TW'`）當 key，而不是 `currentLanguageProvider`
+/// ——後者讀的是作業系統語言，沒有機制隨 EasyLocalization 的語言同步，會
+/// 跟畫面實際顯示的語言兜不起來。呼叫端從 `context.locale` 算出這個字串
+/// 傳進來，跟 `StoryListScreen._dbLanguageFromLocale` 是同一套邏輯。
+final homeStoriesProvider = FutureProvider.family<List<DailyStory>, String>((
+  ref,
+  language,
+) async {
+  final latest = await ref.watch(
+    latestDailyStoryByLanguageProvider(language).future,
+  );
+  final history = await ref.watch(
+    dailyStoryHistoryByLanguageProvider(language).future,
+  );
   return [if (latest != null) latest, ...history];
 });
 
@@ -2983,7 +3005,10 @@ class _StoryRailState extends State<StoryRail> {
           ),
         ),
         SizedBox(
-          height: 108,
+          // 116：扣掉卡片內距後留給內容的高度要夠放「最新」徽章那一行
+          // （比其他卡片的日期文字高），量測下來 108 會讓那張卡溢位 4px
+          // （`RenderFlex overflowed by 4.0 pixels`）。
+          height: 116,
           child: NotificationListener<ScrollNotification>(
             onNotification: _onScroll,
             child: ListView.separated(
@@ -3192,7 +3217,9 @@ class _GlobeHomeScreenState extends ConsumerState<GlobeHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final stories = ref.watch(homeStoriesProvider).valueOrNull ?? const [];
+    final language = _dbLanguageFromLocale(context.locale);
+    final stories =
+        ref.watch(homeStoriesProvider(language)).valueOrNull ?? const [];
     final outline = ref.watch(worldOutlineProvider).valueOrNull;
 
     final pins = <GlobePin>[
@@ -3331,6 +3358,15 @@ class _LocateButton extends StatelessWidget {
     );
   }
 }
+
+/// 跟 `StoryListScreen._dbLanguageFromLocale` 同一套邏輯（各自 private，
+/// 沒有共用出口，所以照抄一份）：從 EasyLocalization 的 `context.locale`
+/// 換算 DB 的語言字串，避免用只會反映作業系統語言的 `currentLanguageProvider`。
+String _dbLanguageFromLocale(Locale locale) {
+  final tag = locale.toLanguageTag();
+  if (tag.startsWith('zh')) return 'zh-TW';
+  return 'en';
+}
 ```
 
 - [ ] **Step 8: 跑測試確認通過**
@@ -3339,6 +3375,18 @@ Run: `cd frontend && fvm flutter test test/features/home/ && fvm flutter analyze
 Expected: 全部 PASS、analyze 零問題
 
 若「點卡片開故事」那題失敗且訊息是找不到 `story-card-2026-07-28`，先確認 `pumpRouterApp` 的預設 800×600 測試視窗有沒有把 rail 擠出畫面——需要的話在測試中用 `tester.view.physicalSize` 調高，不要改 widget 的版面。
+
+實際採用的視窗尺寸：高度不夠會把卡片列擠出畫面；寬度不夠時，橫向
+`ListView.separated` 的 lazy build（cacheExtent）不會建出捲動範圍外的第
+三張卡片，導致「沒有座標的地方」那張找不到。在 `_givenHome` 裡用：
+
+```dart
+tester.view.physicalSize = const Size(1100 * 3, 900 * 3);
+tester.view.devicePixelRatio = 3;
+addTearDown(tester.view.reset);
+```
+
+（`tester.view.reset` 一次重置 `physicalSize` 與 `devicePixelRatio`，跟其他既有測試如 `trip_bookshelf_test.dart` 的寫法一致。）
 
 - [ ] **Step 9: 提交**
 
