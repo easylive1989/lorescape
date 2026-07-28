@@ -1,3 +1,4 @@
+import 'package:context_app/features/home/domain/globe/globe_rotation.dart';
 import 'package:context_app/features/home/domain/globe/world_outline.dart';
 import 'package:context_app/features/home/domain/models/globe_pin.dart';
 import 'package:context_app/features/home/presentation/widgets/globe_painter.dart';
@@ -64,6 +65,19 @@ void main() {
 
       expect(find.text('四面佛寺'), findsOneWidget);
       expect(find.text('聖伯多祿大殿'), findsNothing);
+
+      // 光是看 chip 文字換了不夠：_FocusMarker 的 label 直接讀
+      // widget.focus.label，跟飛行動畫轉到哪完全無關，就算動畫卡在半路也會
+      // 顯示新標籤。這裡額外驗證 settle 後的旋轉真的落在台中正面，才是
+      // 測試名稱說的「flight settles」。
+      final rotation = (tester
+              .widget<CustomPaint>(find.byKey(GlobeView.canvasKey))
+              .painter!
+          as GlobePainter)
+          .rotation;
+      final expected = GlobeRotation.facing(_taichung.coordinate);
+      expect(rotation.lambda, closeTo(expected.lambda, 0.01));
+      expect(rotation.phi, closeTo(expected.phi, 0.01));
     },
   );
 

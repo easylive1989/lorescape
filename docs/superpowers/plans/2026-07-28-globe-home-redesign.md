@@ -1407,6 +1407,7 @@ git commit -m "feat(home): 地球儀地平線裁切"
 建立 `frontend/test/features/home/presentation/widgets/globe_view_test.dart`：
 
 ```dart
+import 'package:context_app/features/home/domain/globe/globe_rotation.dart';
 import 'package:context_app/features/home/domain/globe/world_outline.dart';
 import 'package:context_app/features/home/domain/models/globe_pin.dart';
 import 'package:context_app/features/home/presentation/widgets/globe_painter.dart';
@@ -1473,6 +1474,19 @@ void main() {
 
       expect(find.text('四面佛寺'), findsOneWidget);
       expect(find.text('聖伯多祿大殿'), findsNothing);
+
+      // 光是看 chip 文字換了不夠：_FocusMarker 的 label 直接讀
+      // widget.focus.label，跟飛行動畫轉到哪完全無關，就算動畫卡在半路也會
+      // 顯示新標籤。這裡額外驗證 settle 後的旋轉真的落在台中正面，才是
+      // 測試名稱說的「flight settles」。
+      final rotation = (tester
+              .widget<CustomPaint>(find.byKey(GlobeView.canvasKey))
+              .painter!
+          as GlobePainter)
+          .rotation;
+      final expected = GlobeRotation.facing(_taichung.coordinate);
+      expect(rotation.lambda, closeTo(expected.lambda, 0.01));
+      expect(rotation.phi, closeTo(expected.phi, 0.01));
     },
   );
 
@@ -1564,7 +1578,9 @@ abstract final class GlobePalette {
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:latlong2/latlong.dart';
+// latlong2 也匯出一個泛型 Path<T>，會跟 dart:ui 的 Path（畫布路徑）撞名，
+// 這裡只需要經緯度型別，把它的 Path 隱藏掉。
+import 'package:latlong2/latlong.dart' hide Path;
 
 import 'package:context_app/features/home/domain/globe/globe_rotation.dart';
 import 'package:context_app/features/home/domain/globe/orthographic_projection.dart';
@@ -1898,9 +1914,11 @@ class _GlobeViewState extends State<GlobeView>
               ),
             ),
           ),
-          if (focus != null)
+          // focusOffset 在焦點剛切換、旋轉還沒轉到那一面時可能是 null（該點暫時
+          // 在地球背面投影不出來）；這種情況先不畫標記，等飛行動畫轉過去再顯示。
+          if (focus != null && focusOffset != null)
             Positioned(
-              left: focusOffset!.dx,
+              left: focusOffset.dx,
               top: focusOffset.dy,
               child: IgnorePointer(
                 child: AnimatedOpacity(
