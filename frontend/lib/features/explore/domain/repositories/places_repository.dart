@@ -15,4 +15,10 @@ abstract class PlacesRepository {
   ///
   /// Returns `null` if the place is not found.
   Future<Place?> getPlaceById(String placeId, {required Language language});
+
+  /// 標題自動完成，給搜尋列的即時建議用。失敗時回空陣列。
+  Future<List<String>> suggestPlaceNames(
+    String query, {
+    required Language language,
+  });
 }

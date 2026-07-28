@@ -121,6 +121,40 @@ class WikipediaPlacesService {
     return results;
   }
 
+  /// 標題自動完成，給首頁搜尋列的即時建議用。
+  ///
+  /// 用 `action=opensearch`——它只回標題陣列，比 `generator=search` 輕得多，
+  /// 打字每一下都打得起。失敗時回空陣列而不是丟例外：建議清單消失比跳錯誤
+  /// 對使用者干擾小。
+  Future<List<String>> suggestTitles(
+    String query, {
+    required String wikiLang,
+    int limit = 5,
+  }) async {
+    final uri = Uri.https('$wikiLang.wikipedia.org', '/w/api.php', {
+      'action': 'opensearch',
+      'search': query,
+      'limit': limit.toString(),
+      'namespace': '0',
+      'format': 'json',
+    });
+
+    try {
+      final response = await _client.get(
+        uri,
+        headers: {'User-Agent': _userAgent},
+      );
+      if (response.statusCode != 200) return const [];
+      final decoded = jsonDecode(response.body);
+      if (decoded is! List || decoded.length < 2) return const [];
+      final titles = decoded[1];
+      if (titles is! List) return const [];
+      return titles.whereType<String>().toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
   static const int _batchSize = 50;
 
   /// Batch-fetches Wikidata entities by id.

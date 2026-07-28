@@ -54,6 +54,12 @@ class CachingPlacesRepository implements PlacesRepository {
     return _delegate.getPlaceById(placeId, language: language);
   }
 
+  @override
+  Future<List<String>> suggestPlaceNames(
+    String query, {
+    required Language language,
+  }) => _delegate.suggestPlaceNames(query, language: language);
+
   String _langKey(Language language) =>
       language.code.split('-').first.toLowerCase();
 }

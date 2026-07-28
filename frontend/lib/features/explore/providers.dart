@@ -211,3 +211,14 @@ class PlacesController extends AsyncNotifier<List<Place>> {
     state = await AsyncValue.guard(() => _loadNearbyPlaces(radius: radius));
   }
 }
+
+/// 搜尋列的即時建議。查詢字串當 family key，`autoDispose` 讓離開畫面後
+/// 自動清掉——建議清單沒有跨畫面重用的價值。
+final placeSuggestionsProvider = FutureProvider.autoDispose
+    .family<List<String>, String>((ref, query) async {
+      final trimmed = query.trim();
+      if (trimmed.isEmpty) return const [];
+      final repository = ref.watch(placesRepositoryProvider);
+      final language = ref.watch(currentLanguageProvider);
+      return repository.suggestPlaceNames(trimmed, language: language);
+    });
