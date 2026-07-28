@@ -291,6 +291,72 @@ void main() {
     );
 
     testWidgets(
+      'given a forward flip still settling, when the user flings left again '
+      'before the animation ends, then the pager advances to the third page '
+      'instead of swallowing the gesture',
+      (tester) async {
+        final seen = <int>[];
+        await _givenPager(tester, pages: _threePages, onPageChanged: seen.add);
+
+        await tester.fling(find.byType(NotebookPager), const Offset(-100, 0), 2000);
+        // 只推進 50ms，收尾動畫還在半路上就接著甩第二下。
+        await tester.pump(const Duration(milliseconds: 50));
+        await tester.fling(find.byType(NotebookPager), const Offset(-100, 0), 2000);
+        await tester.pumpAndSettle();
+
+        expect(seen, [1, 2]);
+        expect(find.text('Body 2'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'given a forward flip still settling, when the user drags right to '
+      'catch the page, then the pager returns to the first page',
+      (tester) async {
+        final seen = <int>[];
+        await _givenPager(tester, pages: _threePages, onPageChanged: seen.add);
+
+        await tester.fling(find.byType(NotebookPager), const Offset(-100, 0), 2000);
+        await tester.pump(const Duration(milliseconds: 50));
+        // 反悔：把還在收尾動畫中的那頁往回拖過門檻。
+        await tester.dragFrom(
+          tester.getCenter(find.byType(NotebookPager)),
+          const Offset(300, 0),
+        );
+        await tester.pumpAndSettle();
+
+        expect(seen, [1, 0]);
+        expect(find.text('Body 0'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'given three pages, when the pager settles on the second page, '
+      'then the flipped first page stays mounted as a backside sliver '
+      'on the left edge instead of disappearing',
+      (tester) async {
+        await _givenPager(tester, pages: _threePages);
+        // 第一頁時左邊沒有上一頁可露，畫面上只掛著當前頁。
+        expect(find.byKey(const ValueKey(0)), findsOneWidget);
+        expect(find.byKey(const ValueKey(1)), findsNothing);
+
+        await tester.fling(
+          find.byType(NotebookPager),
+          const Offset(-100, 0),
+          2000,
+        );
+        await tester.pumpAndSettle();
+
+        // 翻走的第一頁仍掛在樹上（-180° 的紙背，只在左緣露出孔帶），
+        // 但它的正面內容不再攤平顯示——攤平的是第二頁。
+        expect(find.byKey(const ValueKey(1)), findsOneWidget);
+        expect(find.byKey(const ValueKey(0)), findsOneWidget);
+        expect(find.text('Body 1'), findsOneWidget);
+        expect(find.text('Body 0'), findsNothing);
+      },
+    );
+
+    testWidgets(
       'given more pages than the indicator cap, when the pager renders, '
       'then the page dots stay capped like the story deck',
       (tester) async {
