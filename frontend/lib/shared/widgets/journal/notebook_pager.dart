@@ -165,6 +165,11 @@ class _NotebookPagerState extends State<NotebookPager>
   /// 鬆手時翻過這個比例才算翻頁，否則彈回。
   static const double _commitThreshold = 0.28;
 
+  /// 鬆手速度超過這個值（邏輯像素／秒）就視為甩動，不足距離門檻也翻頁。
+  /// 沒有這條的話，從螢幕左半起手的往左快滑永遠滑不滿 [_commitThreshold]
+  /// 的距離（手指先碰到螢幕邊緣），翻頁就變成「只有某些位置滑得動」。
+  static const double _flingVelocity = 700;
+
   /// 已經到頭時仍讓紙翻起一點點，手感上知道「沒有下一頁了」。
   static const double _edgeResistance = 0.07;
 
@@ -211,6 +216,13 @@ class _NotebookPagerState extends State<NotebookPager>
     final last = widget.pages.length - 1;
 
     setState(() {
+      // 進度已歸零而手指正往反方向走時解除方向鎖：起手的微小抖動（先往右
+      // 一兩個像素再往左滑）不該讓整個手勢卡死在錯的方向、放手也沒反應。
+      if (_flipPage != null &&
+          _flipT == 0 &&
+          (_flipForward ? dx > 0 : dx < 0)) {
+        _flipPage = null;
+      }
       if (_flipPage == null) {
         // 第一個有效位移決定方向：往左翻下一頁、往右翻回上一頁。
         if (dx < 0) {
@@ -235,8 +247,18 @@ class _NotebookPagerState extends State<NotebookPager>
     if (_flipPage == null) return;
     final last = widget.pages.length - 1;
     final canFlip = _flipForward ? _index < last : _index > 0;
+
+    // 甩動優先於距離：順著翻頁方向甩就翻、逆著甩就收回，距離門檻只在
+    // 慢慢拖、鬆手沒有速度時才出場——與 PageView 的手感一致。
+    final vx = details.primaryVelocity ?? 0;
+    final flungAlong = _flipForward ? vx < -_flingVelocity : vx > _flingVelocity;
+    final flungBack = _flipForward ? vx > _flingVelocity : vx < -_flingVelocity;
+
     _settleFrom = _flipT;
-    _settleTo = (canFlip && _flipT > _commitThreshold) ? 1 : 0;
+    _settleTo =
+        (canFlip && !flungBack && (flungAlong || _flipT > _commitThreshold))
+        ? 1
+        : 0;
     _settle.forward(from: 0);
   }
 

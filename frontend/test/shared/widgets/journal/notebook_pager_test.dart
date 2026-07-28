@@ -153,6 +153,144 @@ void main() {
     );
 
     testWidgets(
+      'given three pages, when the user drags left past the commit threshold, '
+      'then the pager flips to the next page',
+      (tester) async {
+        final seen = <int>[];
+        await _givenPager(tester, pages: _threePages, onPageChanged: seen.add);
+
+        await tester.dragFrom(
+          tester.getCenter(find.byType(NotebookPager)),
+          const Offset(-300, 0),
+        );
+        await tester.pumpAndSettle();
+
+        expect(seen, [1]);
+        expect(find.text('Body 1'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'given three pages, when the user flicks left fast but shorter than '
+      'the distance threshold, then the fling still flips to the next page',
+      (tester) async {
+        final seen = <int>[];
+        await _givenPager(tester, pages: _threePages, onPageChanged: seen.add);
+
+        // 100px 遠低於 28% 螢幕寬的距離門檻，只靠甩動速度過關——修正前這
+        // 種真實世界的快滑（起手點偏左時滑不出長距離）會被彈回原頁。
+        await tester.fling(find.byType(NotebookPager), const Offset(-100, 0), 2000);
+        await tester.pumpAndSettle();
+
+        expect(seen, [1]);
+        expect(find.text('Body 1'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'given the pager on its second page, when the user flicks right with a '
+      'short fast swipe, then the pager flips back to the previous page',
+      (tester) async {
+        final seen = <int>[];
+        await _givenPager(tester, pages: _threePages, onPageChanged: seen.add);
+        await tester.fling(find.byType(NotebookPager), const Offset(-100, 0), 2000);
+        await tester.pumpAndSettle();
+
+        await tester.fling(find.byType(NotebookPager), const Offset(100, 0), 2000);
+        await tester.pumpAndSettle();
+
+        expect(seen, [1, 0]);
+        expect(find.text('Body 0'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'given a leftward swipe that starts with a small rightward jitter, '
+      'when the finger settles into dragging left, then the direction lock '
+      'releases and the pager still flips forward',
+      (tester) async {
+        final seen = <int>[];
+        await _givenPager(tester, pages: _threePages, onPageChanged: seen.add);
+
+        final gesture = await tester.startGesture(
+          tester.getCenter(find.byType(NotebookPager)),
+        );
+        // 起手先往右一小段（手指抖動），再一路往左滑過門檻。
+        await gesture.moveBy(const Offset(30, 0));
+        for (var i = 0; i < 10; i += 1) {
+          await gesture.moveBy(const Offset(-30, 0));
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        await gesture.up();
+        await tester.pumpAndSettle();
+
+        expect(seen, [1]);
+      },
+    );
+
+    testWidgets(
+      'given a swipe starting on the footer actions, when the user drags '
+      'left past the threshold, then the pager still flips forward',
+      (tester) async {
+        final seen = <int>[];
+        await _givenPager(
+          tester,
+          pages: [
+            for (var i = 0; i < 3; i += 1)
+              _buildPage(text: 'Body $i', onShare: () {}),
+          ],
+          onPageChanged: seen.add,
+        );
+
+        await tester.dragFrom(
+          tester.getCenter(find.text('common.share')),
+          const Offset(-300, 0),
+        );
+        await tester.pumpAndSettle();
+
+        expect(seen, [1]);
+      },
+    );
+
+    testWidgets(
+      'given a slow short drag under both thresholds, when the user lets '
+      'go, then the page springs back and no page change is reported',
+      (tester) async {
+        final seen = <int>[];
+        await _givenPager(tester, pages: _threePages, onPageChanged: seen.add);
+
+        await tester.timedDragFrom(
+          tester.getCenter(find.byType(NotebookPager)),
+          const Offset(-100, 0),
+          const Duration(milliseconds: 500),
+        );
+        await tester.pumpAndSettle();
+
+        expect(seen, isEmpty);
+        expect(find.text('Body 0'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'given the pager on its last page, when the user flicks left, '
+      'then the pager stays put',
+      (tester) async {
+        final seen = <int>[];
+        await _givenPager(
+          tester,
+          pages: [_buildPage(text: 'Body 0')],
+          onPageChanged: seen.add,
+        );
+
+        await tester.fling(find.byType(NotebookPager), const Offset(-100, 0), 2000);
+        await tester.pumpAndSettle();
+
+        expect(seen, isEmpty);
+        expect(find.text('Body 0'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
       'given more pages than the indicator cap, when the pager renders, '
       'then the page dots stay capped like the story deck',
       (tester) async {
@@ -188,6 +326,11 @@ const _longNote =
     'doubles the building at dusk, and the garden path loops behind the hill '
     'to a small teahouse where the shogun once received his guests.';
 
+/// 翻頁測試用的三頁，正文帶頁碼方便斷言目前停在哪一頁。
+List<NotebookPage> get _threePages => [
+  for (var i = 0; i < 3; i += 1) _buildPage(text: 'Body $i'),
+];
+
 NotebookPage _buildPage({
   String text = 'A golden pavilion by the pond.',
   VoidCallback? onReplay,
@@ -207,6 +350,10 @@ NotebookPage _buildPage({
 Future<void> _givenPager(
   WidgetTester tester, {
   required List<NotebookPage> pages,
+  ValueChanged<int>? onPageChanged,
 }) async {
-  await pumpScreen(tester, child: NotebookPager(pages: pages));
+  await pumpScreen(
+    tester,
+    child: NotebookPager(pages: pages, onPageChanged: onPageChanged),
+  );
 }
