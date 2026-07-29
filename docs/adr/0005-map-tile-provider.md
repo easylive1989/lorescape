@@ -89,11 +89,25 @@ Geoapify Free + raster（見「未採納但保留的選項」），但那將是�
 其他要注意的：
 
 - **Attribution 是義務不是選配**：必須顯示
-  `OpenFreeMap © OpenMapTiles Data from OpenStreetMap`。原本是地圖右下角的
-  文字角標；2026-07 改為探索頁頂部 icon 列裡的一顆 ⓘ 按鈕，點擊彈出完整出處
-  與 openstreetmap.org/copyright 連結。OSM attribution guideline 允許在小螢幕
-  上把文字收進「明顯且直接可及」的入口，這顆 ⓘ 即為該入口——不得整個移除，也
-  不得藏進使用者到不了的地方。
+  `OpenFreeMap © OpenMapTiles Data from OpenStreetMap`。做法變更過兩次：
+
+  1. 最初是地圖右下角的文字角標。
+  2. 2026-07 改為探索頁頂部 icon 列裡的一顆 ⓘ 按鈕。
+  3. 2026-07-30 改回角標，並在設定頁另加一份完整說明（現行做法）。
+
+  現行做法是兩份並存，**兩份都不得移除**：
+
+  - **地圖右下角的文字角標**（`LorescapeMap._AttributionBadge`）——OSM
+    attribution guideline 要求署名要能從地圖上直接可及，這一份就是那個義務。
+    角標畫在 `LorescapeMap` 內而非呼叫端，任何用到這張底圖的畫面都會自動帶
+    著署名。呼叫端若在地圖上疊了貼底的浮層，**必須**用
+    `attributionBottomInset` 把角標推到浮層上方（探索頁的地點卡片列就是這種
+    情況）——署名被蓋掉等同沒有署名。
+  - **設定頁的「地圖資料來源」**（`_MapSourceGroup`）——完整出處與
+    openstreetmap.org/copyright 連結。
+
+  之所以從 ⓘ 改回角標：ⓘ 佔掉探索頁頂部 icon 列一個位置，而該列在 v3 導覽
+  重組後還要放地球儀返回鈕；角標是 OSM 最標準的做法，且不佔互動元素的位置。
 - **beta 相依**：`9.0.0-beta.9` 要在 `pubspec.yaml` 釘死確切版本，不用
   caret range，避免 beta 之間的破壞性變更無聲進來。
 - **無 SLA**：OpenFreeMap 由單一維護者以捐款支撐專用主機。這是接受的風險，

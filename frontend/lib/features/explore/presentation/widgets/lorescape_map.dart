@@ -26,6 +26,7 @@ class LorescapeMap extends ConsumerStatefulWidget {
     this.onMapReady,
     this.children = const [],
     this.fitToPoints = const [],
+    this.attributionBottomInset = 0,
   });
 
   /// 世界視野的預設中心。實際開圖時通常會被 `fitBounds` 覆寫（見 T3），
@@ -43,6 +44,11 @@ class LorescapeMap extends ConsumerStatefulWidget {
   final VoidCallback? onMapReady;
   final List<Widget> children;
   final List<LatLng> fitToPoints;
+
+  /// 出處角標距離底緣的距離。呼叫端若在地圖上疊了貼底的浮層（探索頁的地點
+  /// 卡片列就是），要把這個值設成那層的高度，否則角標會被蓋掉——而署名被蓋
+  /// 掉等同沒有署名，是授權違規。見 `docs/adr/0005-map-tile-provider.md`。
+  final double attributionBottomInset;
 
   @override
   ConsumerState<LorescapeMap> createState() => _LorescapeMapState();
@@ -146,7 +152,50 @@ class _LorescapeMapState extends ConsumerState<LorescapeMap> {
                     as dynamic,
           ),
           ...widget.children,
+          _AttributionBadge(bottomInset: widget.attributionBottomInset),
         ],
+      ),
+    );
+  }
+}
+
+/// OpenFreeMap / OpenMapTiles / OpenStreetMap 的出處標示。
+///
+/// **這是授權義務，不是裝飾**：OpenFreeMap 要求顯示
+/// `OpenFreeMap © OpenMapTiles Data from OpenStreetMap`，不得移除。文字是
+/// 授權指定字樣，所以不進 i18n。完整出處與版權連結另外放在設定頁的「地圖
+/// 資料來源」，這裡的角標是 OSM guideline 要求的「從地圖上直接可及」那一份。
+///
+/// 刻意畫在 [LorescapeMap] 內而不是呼叫端：任何用到這張底圖的畫面都會自動
+/// 帶著署名，不會因為新畫面忘記加而違約。
+class _AttributionBadge extends StatelessWidget {
+  const _AttributionBadge({required this.bottomInset});
+
+  final double bottomInset;
+
+  static const String _text =
+      'OpenFreeMap © OpenMapTiles Data from OpenStreetMap';
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = material.Theme.of(context).extension<LorescapeTokens>();
+    final paper = tokens?.paper ?? const Color(0xFFF7F1E6);
+    final ink3 = tokens?.ink3 ?? const Color(0xFF918471);
+
+    return Align(
+      alignment: Alignment.bottomRight,
+      child: Padding(
+        padding: EdgeInsets.only(bottom: bottomInset),
+        child: ColoredBox(
+          color: paper.withValues(alpha: 0.7),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+            child: Text(
+              _text,
+              style: TextStyle(fontSize: 10, height: 1.2, color: ink3),
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -52,6 +52,27 @@ void main() {
       _thenUpgradeCtaIsHidden();
     });
 
+    testWidgets('given the settings screen, '
+        'when the user taps the map data source row, '
+        'then the full attribution and the copyright link are shown', (
+      tester,
+    ) async {
+      await _givenSettingsScreen(tester);
+
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('settings-map-source')),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.byKey(const Key('settings-map-source')));
+      await tester.pumpAndSettle();
+
+      // 出處是 OpenFreeMap / OSM 的授權義務（見 ADR 0005）。地圖角標是
+      // 「從地圖直接可及」那一份，這裡是完整版，兩份都不得移除。
+      expect(find.text('settings_map.source_body'), findsOneWidget);
+      expect(find.text('settings_map.source_link'), findsOneWidget);
+    });
+
     testWidgets(
       'given the app version future resolves, when the screen settles, '
       'then the version label is rendered',

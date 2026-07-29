@@ -18,7 +18,6 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class ExploreScreen extends ConsumerStatefulWidget {
   /// 從首頁搜尋建議進來時帶的關鍵字。null 表示走預設的附近景點模式。
@@ -108,6 +107,12 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         children: [
           LorescapeMap(
             mapController: _mapController,
+            // 出處角標要落在卡片列上方，否則會被整個蓋住——署名被蓋掉等同
+            // 沒有署名。
+            attributionBottomInset:
+                MediaQuery.paddingOf(context).bottom +
+                _MapCardsRail.railBottomGap +
+                _MapCardsRail.railHeight,
             fitToPoints: [
               for (final place in places)
                 LatLng(place.location.latitude, place.location.longitude),
@@ -230,61 +235,10 @@ class _RefreshButton extends StatelessWidget {
   }
 }
 
-/// 地圖資料來源標示，改用一顆 ⓘ 收在頂部 icon 列裡。
-///
-/// **這是授權義務，不是裝飾**：OpenFreeMap / OpenMapTiles / OpenStreetMap 的
-/// 出處必須讓看地圖的人合理可及（見 ADR 0005）。OSM attribution guideline
-/// 允許在小螢幕上把完整文字收進一個明顯、直接可點的入口——這顆 ⓘ 就是那個
-/// 入口，點擊彈出完整出處與版權連結，等同於原本角落那行文字的義務。
-class _AttributionButton extends StatelessWidget {
-  const _AttributionButton();
-
-  static final Uri _osmCopyright = Uri.parse(
-    'https://www.openstreetmap.org/copyright',
-  );
-
-  Future<void> _showAttribution(BuildContext context) {
-    return showAdaptiveAlertDialog<void>(
-      context: context,
-      title: 'explore.map.attribution_title'.tr(),
-      content: 'explore.map.attribution_body'.tr(),
-      actions: [
-        AdaptiveDialogAction(
-          label: 'explore.map.attribution_source'.tr(),
-          onPressed: () {
-            Navigator.of(context).pop();
-            launchUrl(_osmCopyright, mode: LaunchMode.externalApplication);
-          },
-        ),
-        AdaptiveDialogAction(
-          label: 'explore.map.attribution_close'.tr(),
-          isDefault: true,
-        ),
-      ],
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Semantics(
-      button: true,
-      label: 'explore.map.attribution_tooltip'.tr(),
-      child: _CircleButton(
-        icon: Icons.info_outline,
-        iconColor: colorScheme.onSurface,
-        background: colorScheme.surfaceContainerHighest,
-        iconSize: 22,
-        onPressed: () => _showAttribution(context),
-      ),
-    );
-  }
-}
-
 /// 從首頁搜尋建議 zoom 進地圖後，用來退回地球儀首頁的返回鈕。
 ///
-/// `_CircleButton` 沒有 `tooltip` 參數，比照 `_AttributionButton` 用
-/// `Semantics` 包一層來承載無障礙標籤——順便把 [Key] 放在這層，測試才點得到。
+/// `_CircleButton` 沒有 `tooltip` 參數，所以用 `Semantics` 包一層來承載無障礙
+/// 標籤——順便把 [Key] 放在這層，測試才點得到。
 class _GlobeBackButton extends StatelessWidget {
   const _GlobeBackButton({required this.onPressed});
 
@@ -734,8 +688,6 @@ class _MapTopOverlay extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       _GlobeBackButton(onPressed: onBack),
-                      const SizedBox(width: 8),
-                      const _AttributionButton(),
                       const SizedBox(width: 8),
                       _FilterButton(
                         isActive: isFilterActive,

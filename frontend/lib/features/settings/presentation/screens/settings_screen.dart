@@ -11,6 +11,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -42,6 +43,8 @@ class SettingsScreen extends ConsumerWidget {
                 const _SyncGroup(),
                 const SizedBox(height: 26),
                 const _OnboardingGroup(),
+                const SizedBox(height: 26),
+                const _MapSourceGroup(),
                 const SizedBox(height: 36),
                 const _Footer(),
               ],
@@ -387,6 +390,62 @@ class _OnboardingGroup extends ConsumerWidget {
   }
 }
 
+/// 地圖資料來源。
+///
+/// **這是授權義務，不是裝飾**：OpenFreeMap / OpenMapTiles / OpenStreetMap 的
+/// 出處必須讓使用者合理可及（見 `docs/adr/0005-map-tile-provider.md`）。地圖
+/// 上本身已有右下角的角標，那是 OSM guideline 要求的「從地圖直接可及」那一
+/// 份；這裡是完整版，附 openstreetmap.org/copyright 連結。**兩者都不得移除。**
+class _MapSourceGroup extends StatelessWidget {
+  const _MapSourceGroup();
+
+  static final Uri _osmCopyright = Uri.parse(
+    'https://www.openstreetmap.org/copyright',
+  );
+
+  Future<void> _showAttribution(BuildContext context) {
+    return showAdaptiveAlertDialog<void>(
+      context: context,
+      title: 'settings_map.source_title'.tr(),
+      content: 'settings_map.source_body'.tr(),
+      actions: [
+        AdaptiveDialogAction(
+          label: 'settings_map.source_link'.tr(),
+          onPressed: () {
+            Navigator.of(context).pop();
+            launchUrl(_osmCopyright, mode: LaunchMode.externalApplication);
+          },
+        ),
+        AdaptiveDialogAction(
+          label: 'settings_map.source_close'.tr(),
+          isDefault: true,
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ink3 =
+        Theme.of(context).extension<LorescapeTokens>()?.ink3 ??
+        Theme.of(context).colorScheme.onSurfaceVariant;
+    return _SettingsGroup(
+      label: 'settings_map.section'.tr(),
+      child: _SettingsCard(
+        children: [
+          _SettingsRow(
+            key: const Key('settings-map-source'),
+            icon: Icons.public_outlined,
+            title: 'settings_map.source_title'.tr(),
+            trailing: Icon(Icons.chevron_right, color: ink3, size: 18),
+            onTap: () => _showAttribution(context),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _Footer extends ConsumerWidget {
   const _Footer();
 
@@ -514,6 +573,7 @@ class _SettingsCard extends StatelessWidget {
 /// optional subtitle, and an optional trailing widget.
 class _SettingsRow extends StatelessWidget {
   const _SettingsRow({
+    super.key,
     required this.icon,
     required this.title,
     this.subtitle,

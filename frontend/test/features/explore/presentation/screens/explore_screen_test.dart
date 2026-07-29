@@ -55,21 +55,21 @@ void main() {
       },
     );
 
-    testWidgets(
-      'given the map is shown, when the user taps the attribution info '
-      'button, then the map data sources are shown',
-      (tester) async {
-        await _givenExploreScreen(tester);
+    testWidgets('given the map is shown, '
+        'when the top icon row is rendered, '
+        'then attribution is a corner badge rather than an info button', (
+      tester,
+    ) async {
+      await _givenExploreScreen(tester);
 
-        await tester.tap(find.byIcon(Icons.info_outline));
-        await tester.pumpAndSettle();
-
-        // 出處是 OpenFreeMap / OSM 的授權義務（見 ADR 0005）；改收在 ⓘ 後面。
-        expect(find.text('explore.map.attribution_title'), findsOneWidget);
-        expect(find.text('explore.map.attribution_body'), findsOneWidget);
-        expect(find.text('explore.map.attribution_source'), findsOneWidget);
-      },
-    );
+      // 出處是 OpenFreeMap / OSM 的授權義務（見 ADR 0005）。2026-07-30 從
+      // 頂部的 ⓘ 改回地圖角標，完整說明搬到設定頁；角標本身不得消失。
+      expect(find.byIcon(Icons.info_outline), findsNothing);
+      expect(
+        find.text('OpenFreeMap © OpenMapTiles Data from OpenStreetMap'),
+        findsOneWidget,
+      );
+    });
 
     testWidgets('given nearby places are returned, when the screen loads, '
         'then a place card is rendered for each place', (tester) async {

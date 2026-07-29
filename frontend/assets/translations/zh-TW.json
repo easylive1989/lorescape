@@ -152,12 +152,7 @@
       "reset": "重設為預設值"
     },
     "map": {
-      "unavailable": "地圖暫時無法載入",
-      "attribution_tooltip": "地圖資料來源",
-      "attribution_title": "地圖資料來源",
-      "attribution_body": "OpenFreeMap © OpenMapTiles\nData from OpenStreetMap",
-      "attribution_source": "檢視 OpenStreetMap 版權",
-      "attribution_close": "關閉"
+      "unavailable": "地圖暫時無法載入"
     },
     "location_gate": {
       "service_disabled": {
@@ -189,7 +184,7 @@
     "language_chinese_traditional": "繁體中文",
     "error_prefix": "錯誤",
     "place_label": "地點",
-        "share": "分享",
+    "share": "分享",
     "delete": "刪除"
   },
   "auth": {
@@ -404,6 +399,13 @@
     "confirm_replay_title": "重新進行新手導覽？",
     "confirm_replay_body": "下次開啟 App 會再次顯示歡迎畫面。",
     "confirm_replay_action": "確定"
+  },
+  "settings_map": {
+    "section": "地圖",
+    "source_title": "地圖資料來源",
+    "source_body": "OpenFreeMap © OpenMapTiles\nData from OpenStreetMap",
+    "source_link": "檢視 OpenStreetMap 版權",
+    "source_close": "關閉"
   },
   "narration": {
     "grounding_footer": "資料來源 · {} 則",

@@ -15,45 +15,80 @@ void main() {
     await initTestEnvironment();
   });
 
+  testWidgets('given the map style is still loading, '
+      'when the map is shown, '
+      'then no map is rendered yet and no error is surfaced', (tester) async {
+    await _givenLorescapeMap(tester, style: () => Completer<Style>().future);
+
+    expect(find.byType(FlutterMap), findsNothing);
+    expect(find.text('explore.map.unavailable'), findsNothing);
+  });
+
+  testWidgets('given the map style fails to load, '
+      'when the map is shown, '
+      'then the unavailable message is rendered instead of the map', (
+    tester,
+  ) async {
+    await _givenLorescapeMap(tester, style: () => Future<Style>.error('boom'));
+
+    expect(find.text('explore.map.unavailable'), findsOneWidget);
+    expect(find.byType(FlutterMap), findsNothing);
+  });
+
+  testWidgets('given the map style loaded, '
+      'when the map is shown, '
+      'then the map renders and overlay children are placed on top', (
+    tester,
+  ) async {
+    await _givenLorescapeMap(
+      tester,
+      style: () => Future<Style>.value(fakeMapStyle()),
+      children: const [SizedBox(key: Key('overlay'))],
+    );
+
+    expect(find.byType(FlutterMap), findsOneWidget);
+    expect(find.byKey(const Key('overlay')), findsOneWidget);
+  });
+
+  testWidgets('given the map style loaded, '
+      'when the map is shown, '
+      'then the licence-mandated attribution badge is painted on the map', (
+    tester,
+  ) async {
+    await _givenLorescapeMap(
+      tester,
+      style: () => Future<Style>.value(fakeMapStyle()),
+    );
+
+    // 授權義務，不是裝飾：OpenFreeMap 要求原字樣顯示（見 ADR 0005）。
+    // 角標畫在 LorescapeMap 內，任何用到底圖的畫面都自動帶著它。
+    expect(
+      find.text('OpenFreeMap © OpenMapTiles Data from OpenStreetMap'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets(
-    'given the map style is still loading, '
-    'when the map is shown, '
-    'then no map is rendered yet and no error is surfaced',
+    'given a caller that stacks a bottom-anchored overlay on the map, '
+    'when it passes attributionBottomInset, '
+    'then the badge sits above that overlay instead of behind it',
     (tester) async {
-      await _givenLorescapeMap(tester, style: () => Completer<Style>().future);
-
-      expect(find.byType(FlutterMap), findsNothing);
-      expect(find.text('explore.map.unavailable'), findsNothing);
-    },
-  );
-
-  testWidgets(
-    'given the map style fails to load, '
-    'when the map is shown, '
-    'then the unavailable message is rendered instead of the map',
-    (tester) async {
-      await _givenLorescapeMap(tester, style: () => Future<Style>.error('boom'));
-
-      expect(find.text('explore.map.unavailable'), findsOneWidget);
-      expect(find.byType(FlutterMap), findsNothing);
-    },
-  );
-
-  testWidgets(
-    'given the map style loaded, '
-    'when the map is shown, '
-    'then the map renders and overlay children are placed on top',
-    (tester) async {
+      const inset = 128.0;
       await _givenLorescapeMap(
         tester,
         style: () => Future<Style>.value(fakeMapStyle()),
-        children: const [SizedBox(key: Key('overlay'))],
+        attributionBottomInset: inset,
       );
 
-      expect(find.byType(FlutterMap), findsOneWidget);
-      expect(find.byKey(const Key('overlay')), findsOneWidget);
-      // Attribution 從地圖角標移到探索頁頂部的 ⓘ 按鈕（見 ADR 0005 與
-      // explore_screen_test）；地圖本身不再直接畫出出處文字。
+      // 角標被浮層蓋住等同沒有署名，所以這裡驗的是實際幾何而不是參數有傳。
+      final badge = find.text(
+        'OpenFreeMap © OpenMapTiles Data from OpenStreetMap',
+      );
+      final mapBottom = tester.getRect(find.byType(FlutterMap)).bottom;
+      expect(
+        tester.getRect(badge).bottom,
+        lessThanOrEqualTo(mapBottom - inset),
+      );
     },
   );
 }
@@ -62,10 +97,14 @@ Future<void> _givenLorescapeMap(
   WidgetTester tester, {
   required Future<Style> Function() style,
   List<Widget> children = const [],
+  double attributionBottomInset = 0,
 }) async {
   await pumpScreen(
     tester,
-    child: LorescapeMap(children: children),
+    child: LorescapeMap(
+      attributionBottomInset: attributionBottomInset,
+      children: children,
+    ),
     // 用 factory 而非現成的 Future：先建好的 Future.error 在被 provider
     // 接手前就成了 unhandled error，測試框架會直接判定失敗。
     overrides: [

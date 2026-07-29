@@ -81,7 +81,7 @@
     "cancel": "Cancel",
     "today": "Today",
     "yesterday": "Yesterday",
-        "login_required": "Sign in to view your journey history",
+    "login_required": "Sign in to view your journey history",
     "replay_note": "Replay this note",
     "notebook": {
       "entry_no": "Note · No.{}",
@@ -151,12 +151,7 @@
       "reset": "Reset to default"
     },
     "map": {
-      "unavailable": "Map is temporarily unavailable",
-      "attribution_tooltip": "Map data sources",
-      "attribution_title": "Map data sources",
-      "attribution_body": "OpenFreeMap © OpenMapTiles\nData from OpenStreetMap",
-      "attribution_source": "View OpenStreetMap copyright",
-      "attribution_close": "Close"
+      "unavailable": "Map is temporarily unavailable"
     },
     "location_gate": {
       "service_disabled": {
@@ -188,7 +183,7 @@
     "language_chinese_traditional": "繁體中文",
     "error_prefix": "Error",
     "place_label": "PLACE",
-        "share": "Share",
+    "share": "Share",
     "delete": "Delete"
   },
   "auth": {
@@ -403,6 +398,13 @@
     "confirm_replay_title": "Replay the welcome tour?",
     "confirm_replay_body": "The welcome screens will show again the next time you open the app.",
     "confirm_replay_action": "OK"
+  },
+  "settings_map": {
+    "section": "Map",
+    "source_title": "Map data source",
+    "source_body": "OpenFreeMap © OpenMapTiles\nData from OpenStreetMap",
+    "source_link": "View OpenStreetMap copyright",
+    "source_close": "Close"
   },
   "narration": {
     "grounding_footer": "Sources · {}",
