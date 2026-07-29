@@ -138,7 +138,10 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             placeCount: places.length,
             searchController: _searchController,
             isFilterActive: isFilterActive,
-            onBack: () => context.pop(),
+            // trip_empty_state 的「去探索」CTA 用 context.go('/map')（見該檔
+            // 註解），此時整個路由堆疊只剩 `/map` 一頁，context.pop() 會丟
+            // GoError。沒有可 pop 的頁面時退回首頁而不是硬 pop。
+            onBack: () => context.canPop() ? context.pop() : context.go('/'),
             onFilter: _showFilterPanel,
             onRefresh: () {
               _searchController.clear();

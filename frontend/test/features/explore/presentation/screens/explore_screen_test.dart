@@ -433,6 +433,25 @@ void main() {
         expect(find.byType(ExploreScreen), findsNothing);
         expect(find.byKey(const Key('home-screen')), findsOneWidget);
       });
+
+      testWidgets('given the explore screen reached via go (no back stack), '
+          'when the user taps the globe button, '
+          'then it navigates to the globe home instead of throwing', (
+        tester,
+      ) async {
+        // trip_empty_state 的「去探索」CTA 用 context.go('/map')，把整個
+        // 路由堆疊換成只剩 /map 一頁——這裡重現那個狀態，canPop() 必須是
+        // false，跟 _givenExploreScreenPushedOnMap 的 push 情境不同。
+        await _givenExploreScreenReplacedHomeWithMap(tester);
+
+        expect(find.byType(ExploreScreen), findsOneWidget);
+
+        await tester.tap(find.byKey(const Key('explore-globe-back')));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(ExploreScreen), findsNothing);
+        expect(find.byKey(const Key('home-screen')), findsOneWidget);
+      });
     });
   });
 }
@@ -547,6 +566,39 @@ Future<void> _givenExploreScreenPushedOnMap(WidgetTester tester) async {
 
   final context = tester.element(find.byKey(const Key('home-screen')));
   GoRouter.of(context).push('/map');
+  await tester.pump(const Duration(milliseconds: 20));
+  await tester.pump(const Duration(milliseconds: 20));
+  await tester.pump(const Duration(milliseconds: 20));
+  await settleMapTimers(tester);
+}
+
+/// 用 `go('/map')` 把首頁換掉，模擬 `trip_empty_state` 的「去探索」CTA——
+/// 換完之後路由堆疊只剩 `/map`，沒有東西可以 pop 回去。
+Future<void> _givenExploreScreenReplacedHomeWithMap(WidgetTester tester) async {
+  await pumpRouterApp(
+    tester,
+    routes: [
+      GoRoute(
+        path: '/',
+        builder: (_, __) => const Scaffold(key: Key('home-screen')),
+      ),
+      GoRoute(path: '/map', builder: (_, __) => const ExploreScreen()),
+    ],
+    overrides: [
+      locationServiceProvider.overrideWithValue(FakeLocationService()),
+      placesRepositoryProvider.overrideWithValue(FakePlacesRepository()),
+      savedLocationsRepositoryProvider.overrideWithValue(
+        InMemorySavedLocationsRepository(),
+      ),
+      dailyStoryRepositoryProvider.overrideWithValue(
+        InMemoryDailyStoryRepository(),
+      ),
+      ...fakeMapStyleOverrides(),
+    ],
+  );
+
+  final context = tester.element(find.byKey(const Key('home-screen')));
+  GoRouter.of(context).go('/map');
   await tester.pump(const Duration(milliseconds: 20));
   await tester.pump(const Duration(milliseconds: 20));
   await tester.pump(const Duration(milliseconds: 20));
