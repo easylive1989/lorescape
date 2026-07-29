@@ -65,10 +65,6 @@
     "save_failed": "儲存失敗",
     "suggested_retry": "建議 {delay} 後重試"
   },
-  "story": {
-    "deck_prev": "上一則",
-    "deck_next": "下一則"
-  },
   "journey": {
     "title": "歷程",
     "title_uppercase": "探索歷程",

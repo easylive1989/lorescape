@@ -65,10 +65,6 @@
     "save_failed": "Save failed",
     "suggested_retry": "Suggested retry after {delay}"
   },
-  "story": {
-    "deck_prev": "Previous",
-    "deck_next": "Next"
-  },
   "journey": {
     "title": "Journey",
     "title_uppercase": "JOURNEY OF EXPLORATION",
