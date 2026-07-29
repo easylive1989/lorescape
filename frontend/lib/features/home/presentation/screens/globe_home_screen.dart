@@ -91,9 +91,13 @@ class _GlobeHomeScreenState extends ConsumerState<GlobeHomeScreen> {
 
     final secondary =
         ModalRoute.of(context)?.secondaryAnimation ?? kAlwaysDismissedAnimation;
-    final zoom = CurvedAnimation(
-      parent: secondary,
-      curve: const Cubic(0.55, 0, 0.85, 0.36),
+    // 用 drive(CurveTween) 而不是 CurvedAnimation：後者的建構子會在 parent
+    // （這裡的 secondaryAnimation，跟著 `/` 這頁活整個 App 生命週期）上掛一個
+    // status listener，只有 dispose() 會移除，但這段是 build() 裡的區域變數
+    // 沒地方 dispose——每次 build（每敲一個字、每換一張卡）都會多掛一個。
+    // drive() 不需要額外持有、也不用手動釋放。
+    final zoom = secondary.drive(
+      CurveTween(curve: const Cubic(0.55, 0, 0.85, 0.36)),
     );
 
     return Scaffold(
