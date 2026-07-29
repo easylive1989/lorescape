@@ -140,66 +140,54 @@ void main() {
     },
   );
 
-  testWidgets(
-    'given the globe home, '
-    'when the user taps the selected story card, '
-    'then the daily story detail is pushed with that story',
-    (tester) async {
-      final pushed = <Object?>[];
-      await _givenHome(tester, pushed: pushed);
+  testWidgets('given the globe home, '
+      'when the user taps the selected story card, '
+      'then the daily story detail is pushed with that story', (tester) async {
+    final pushed = <Object?>[];
+    await _givenHome(tester, pushed: pushed);
 
-      await tester.tap(find.byKey(const Key('story-card-2026-07-28')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('story-card-2026-07-28')));
+    await tester.pumpAndSettle();
 
-      expect(pushed.single, isA<DailyStory>());
-      expect((pushed.single as DailyStory).placeName, '聖伯多祿大殿');
-    },
-  );
+    expect(pushed.single, isA<DailyStory>());
+    expect((pushed.single as DailyStory).placeName, '聖伯多祿大殿');
+  });
 
-  testWidgets(
-    'given the globe home, '
-    'when the user taps the locate button, '
-    'then the map opens with no query',
-    (tester) async {
-      final pushed = <Object?>[];
-      await _givenHome(tester, pushed: pushed);
+  testWidgets('given the globe home, '
+      'when the user taps the locate button, '
+      'then the map opens with no query', (tester) async {
+    final pushed = <Object?>[];
+    await _givenHome(tester, pushed: pushed);
 
-      await tester.tap(find.byKey(const Key('home-locate')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('home-locate')));
+    await tester.pumpAndSettle();
 
-      expect(pushed, ['/map?q=']);
-    },
-  );
+    expect(pushed, ['/map?q=']);
+  });
 
-  testWidgets(
-    'given the globe home, '
-    'when the user taps the shelf button, '
-    'then the journey screen opens',
-    (tester) async {
-      final pushed = <Object?>[];
-      await _givenHome(tester, pushed: pushed);
+  testWidgets('given the globe home, '
+      'when the user taps the shelf button, '
+      'then the journey screen opens', (tester) async {
+    final pushed = <Object?>[];
+    await _givenHome(tester, pushed: pushed);
 
-      await tester.tap(find.byKey(const Key('home-open-journey')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('home-open-journey')));
+    await tester.pumpAndSettle();
 
-      expect(pushed, ['/journey']);
-    },
-  );
+    expect(pushed, ['/journey']);
+  });
 
-  testWidgets(
-    'given the globe home, '
-    'when the user taps the settings button, '
-    'then the settings screen opens',
-    (tester) async {
-      final pushed = <Object?>[];
-      await _givenHome(tester, pushed: pushed);
+  testWidgets('given the globe home, '
+      'when the user taps the settings button, '
+      'then the settings screen opens', (tester) async {
+    final pushed = <Object?>[];
+    await _givenHome(tester, pushed: pushed);
 
-      await tester.tap(find.byKey(const Key('home-open-settings')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('home-open-settings')));
+    await tester.pumpAndSettle();
 
-      expect(pushed, ['/settings']);
-    },
-  );
+    expect(pushed, ['/settings']);
+  });
 
   testWidgets(
     'given suggestions from the places repository, '
@@ -226,109 +214,180 @@ void main() {
     },
   );
 
-  testWidgets(
-    'given the globe home, '
-    'when the user taps a story card that is not the selected one, '
-    'then it only scrolls that card into view and does not open the story',
-    (tester) async {
-      // 6 篇夠讓卡片列超出視窗寬度，點擊才會真的觸發捲動（見 _givenHome
-      // 的視窗尺寸註解）。
-      _stories.seed([
-        for (var i = 0; i < 6; i++)
-          _story(
-            date: _dateAt(i),
-            place: '地點$i',
-            latitude: 30 + i.toDouble(),
-            longitude: 100 + i.toDouble(),
+  testWidgets('given the globe home, '
+      'when the user taps a story card that is not the selected one, '
+      'then it only scrolls that card into view and does not open the story', (
+    tester,
+  ) async {
+    // 6 篇夠讓卡片列超出視窗寬度，點擊才會真的觸發捲動（見 _givenHome
+    // 的視窗尺寸註解）。
+    _stories.seed([
+      for (var i = 0; i < 6; i++)
+        _story(
+          date: _dateAt(i),
+          place: '地點$i',
+          latitude: 30 + i.toDouble(),
+          longitude: 100 + i.toDouble(),
+        ),
+    ]);
+    final pushed = <Object?>[];
+    await _givenHome(tester, pushed: pushed);
+
+    await tester.tap(find.byKey(Key('story-card-${_dateAt(1)}')));
+    await tester.pumpAndSettle();
+
+    expect(pushed, isEmpty, reason: '第一次點非選中卡片只是把它捲到中間，不該開故事');
+
+    // 上面那次點擊觸發捲動、把第 1 張捲成選中卡；再點一次同一張，這次
+    // 才該真的打開故事。
+    await tester.tap(find.byKey(Key('story-card-${_dateAt(1)}')));
+    await tester.pumpAndSettle();
+
+    expect(pushed.single, isA<DailyStory>());
+    expect((pushed.single as DailyStory).placeName, '地點1');
+  });
+
+  testWidgets('given a story without coordinates, '
+      'when it becomes the selected card, '
+      'then the globe renders with no focus pin instead of crashing', (
+    tester,
+  ) async {
+    _stories.seed([
+      for (var i = 0; i < 6; i++)
+        _story(
+          date: _dateAt(i),
+          place: '地點$i',
+          latitude: i == 2 ? null : 30 + i.toDouble(),
+          longitude: i == 2 ? null : 100 + i.toDouble(),
+        ),
+    ]);
+    await _givenHome(tester, pushed: []);
+
+    await tester.tap(find.byKey(Key('story-card-${_dateAt(2)}')));
+    await tester.pumpAndSettle();
+
+    final globe = tester.widget<GlobeView>(find.byType(GlobeView));
+    expect(globe.focus, isNull);
+  });
+
+  testWidgets('given more daily stories than the pin cap, '
+      'when the globe home loads, '
+      'then only the most recent pinnedStoryCount stories are pinned '
+      'but scrolling to an older one still focuses it', (tester) async {
+    // 12 篇：確保捲到第 8、9 篇（index 7、8）時，目標捲動位置落在
+    // maxScrollExtent 之內，不會被 clamp 到別的索引。
+    _stories.seed([
+      for (var i = 0; i < 12; i++)
+        _story(
+          date: _dateAt(i),
+          place: '地點$i',
+          latitude: 30 + i.toDouble(),
+          longitude: 100 + i.toDouble(),
+        ),
+    ]);
+    await _givenHome(tester, pushed: []);
+
+    expect(
+      tester.widget<GlobeView>(find.byType(GlobeView)).pins.length,
+      GlobeHomeScreen.pinnedStoryCount,
+      reason: '地球儀最多只釘最近 7 篇故事',
+    );
+
+    // StoryRail.stride 是每張卡的橫向間距；直接拖曳捲軸到第 8 篇
+    // （index 7）的位置——用拖曳而不是點卡片，因為卡片離起點太遠，
+    // 一開始還沒被 ListView 懶建出來，點不到。
+    await tester.drag(find.byType(ListView), const Offset(-7 * 324, 0));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<GlobeView>(find.byType(GlobeView)).focus?.label,
+      '地點7',
+      reason: '第 8 篇雖然不在 7 篇的釘點上限內，選中時仍要出現 focus pin',
+    );
+
+    await tester.drag(find.byType(ListView), const Offset(-324, 0));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<GlobeView>(find.byType(GlobeView)).focus?.label,
+      '地點8',
+      reason: '第 9 篇同理',
+    );
+  });
+
+  testWidgets('given the globe home pushed under /map via the same '
+      'CustomTransitionPage duration as production, '
+      'when the transition is midway, '
+      'then the globe has scaled up and faded — proving secondaryAnimation '
+      'actually drives it (not stuck at t=0)', (tester) async {
+    tester.view.physicalSize = const Size(1100 * 3, 900 * 3);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+
+    await pumpRouterApp(
+      tester,
+      routes: [
+        // 跟 router_config.dart 的 `/` 路由一樣用 pageBuilder +
+        // NoTransitionPage，不能用預設的 builder:——預設會產生
+        // MaterialPage（MaterialRouteTransitionMixin），它的
+        // canTransitionTo 只在下一頁也是 MaterialPage 或有
+        // delegatedTransition 時才會接上 secondaryAnimation，CustomTransitionPage
+        // 兩者都不是，會被直接擋下（這正是這顆測試原本要抓的 bug）。
+        GoRoute(
+          path: '/',
+          pageBuilder: (context, state) => NoTransitionPage<void>(
+            key: state.pageKey,
+            child: const GlobeHomeScreen(),
           ),
-      ]);
-      final pushed = <Object?>[];
-      await _givenHome(tester, pushed: pushed);
-
-      await tester.tap(find.byKey(Key('story-card-${_dateAt(1)}')));
-      await tester.pumpAndSettle();
-
-      expect(pushed, isEmpty, reason: '第一次點非選中卡片只是把它捲到中間，不該開故事');
-
-      // 上面那次點擊觸發捲動、把第 1 張捲成選中卡；再點一次同一張，這次
-      // 才該真的打開故事。
-      await tester.tap(find.byKey(Key('story-card-${_dateAt(1)}')));
-      await tester.pumpAndSettle();
-
-      expect(pushed.single, isA<DailyStory>());
-      expect((pushed.single as DailyStory).placeName, '地點1');
-    },
-  );
-
-  testWidgets(
-    'given a story without coordinates, '
-    'when it becomes the selected card, '
-    'then the globe renders with no focus pin instead of crashing',
-    (tester) async {
-      _stories.seed([
-        for (var i = 0; i < 6; i++)
-          _story(
-            date: _dateAt(i),
-            place: '地點$i',
-            latitude: i == 2 ? null : 30 + i.toDouble(),
-            longitude: i == 2 ? null : 100 + i.toDouble(),
+        ),
+        GoRoute(
+          path: '/map',
+          // 跟 router_config.dart 的 /map 路由用同一顆 640ms
+          // CustomTransitionPage：這裡要驗證的正是首頁的縮放淡出真的是
+          // 被這顆轉場的 secondaryAnimation 驅動，而不是恆為靜止的
+          // kAlwaysDismissedAnimation。
+          pageBuilder: (context, state) => CustomTransitionPage<void>(
+            key: state.pageKey,
+            transitionDuration: const Duration(milliseconds: 640),
+            reverseTransitionDuration: const Duration(milliseconds: 640),
+            child: const Scaffold(key: Key('map-screen')),
+            transitionsBuilder: (context, animation, _, child) =>
+                FadeTransition(opacity: animation, child: child),
           ),
-      ]);
-      await _givenHome(tester, pushed: []);
+        ),
+      ],
+      overrides: [
+        dailyStoryRepositoryProvider.overrideWithValue(_stories),
+        placesRepositoryProvider.overrideWithValue(_places),
+        worldOutlineProvider.overrideWith(
+          (ref) async => WorldOutline.parse('{"rings":[]}'),
+        ),
+      ],
+    );
+    await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(Key('story-card-${_dateAt(2)}')));
-      await tester.pumpAndSettle();
+    Opacity globeOpacity() => tester.widget<Opacity>(
+      find
+          .ancestor(of: find.byType(GlobeView), matching: find.byType(Opacity))
+          .first,
+    );
 
-      final globe = tester.widget<GlobeView>(find.byType(GlobeView));
-      expect(globe.focus, isNull);
-    },
-  );
+    expect(globeOpacity().opacity, 1.0, reason: '轉場開始前地球儀應該是完全不透明、原尺寸');
 
-  testWidgets(
-    'given more daily stories than the pin cap, '
-    'when the globe home loads, '
-    'then only the most recent pinnedStoryCount stories are pinned '
-    'but scrolling to an older one still focuses it',
-    (tester) async {
-      // 12 篇：確保捲到第 8、9 篇（index 7、8）時，目標捲動位置落在
-      // maxScrollExtent 之內，不會被 clamp 到別的索引。
-      _stories.seed([
-        for (var i = 0; i < 12; i++)
-          _story(
-            date: _dateAt(i),
-            place: '地點$i',
-            latitude: 30 + i.toDouble(),
-            longitude: 100 + i.toDouble(),
-          ),
-      ]);
-      await _givenHome(tester, pushed: []);
+    final homeContext = tester.element(find.byType(GlobeHomeScreen));
+    GoRouter.of(homeContext).push('/map');
+    await tester.pump();
+    // 640ms 轉場的中間點。
+    await tester.pump(const Duration(milliseconds: 320));
 
-      expect(
-        tester.widget<GlobeView>(find.byType(GlobeView)).pins.length,
-        GlobeHomeScreen.pinnedStoryCount,
-        reason: '地球儀最多只釘最近 7 篇故事',
-      );
+    expect(
+      globeOpacity().opacity,
+      lessThan(1.0),
+      reason:
+          '/map 轉場走到一半，secondaryAnimation 已經前進，地球儀該淡出中——'
+          '若這裡還是 1.0，代表轉場沒有真的接到 secondaryAnimation 上',
+    );
 
-      // StoryRail.stride 是每張卡的橫向間距；直接拖曳捲軸到第 8 篇
-      // （index 7）的位置——用拖曳而不是點卡片，因為卡片離起點太遠，
-      // 一開始還沒被 ListView 懶建出來，點不到。
-      await tester.drag(find.byType(ListView), const Offset(-7 * 324, 0));
-      await tester.pumpAndSettle();
-
-      expect(
-        tester.widget<GlobeView>(find.byType(GlobeView)).focus?.label,
-        '地點7',
-        reason: '第 8 篇雖然不在 7 篇的釘點上限內，選中時仍要出現 focus pin',
-      );
-
-      await tester.drag(find.byType(ListView), const Offset(-324, 0));
-      await tester.pumpAndSettle();
-
-      expect(
-        tester.widget<GlobeView>(find.byType(GlobeView)).focus?.label,
-        '地點8',
-        reason: '第 9 篇同理',
-      );
-    },
-  );
+    await tester.pumpAndSettle();
+  });
 }

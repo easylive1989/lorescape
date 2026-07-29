@@ -216,9 +216,10 @@ class _LocateButton extends StatelessWidget {
   }
 }
 
-/// 跟 `StoryListScreen._dbLanguageFromLocale` 同一套邏輯（各自 private，
-/// 沒有共用出口，所以照抄一份）：從 EasyLocalization 的 `context.locale`
-/// 換算 DB 的語言字串，避免用只會反映作業系統語言的 `currentLanguageProvider`。
+/// 從 EasyLocalization 的 `context.locale` 換算 DB 的語言字串，避免用只會
+/// 反映作業系統語言的 `currentLanguageProvider`（同一套邏輯的說明另見
+/// `daily_story/providers.dart` 對 `latestDailyStoryByLanguageProvider` 的
+/// 註解）。
 String _dbLanguageFromLocale(Locale locale) {
   final tag = locale.toLanguageTag();
   if (tag.startsWith('zh')) return 'zh-TW';

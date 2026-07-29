@@ -10,7 +10,7 @@ import 'package:context_app/features/home/domain/globe/world_outline.dart';
 /// 用 DB 語言字串（例如 `'zh-TW'`）當 key，而不是 `currentLanguageProvider`
 /// ——後者讀的是作業系統語言，沒有機制隨 EasyLocalization 的語言同步，會
 /// 跟畫面實際顯示的語言兜不起來。呼叫端從 `context.locale` 算出這個字串
-/// 傳進來，跟 `StoryListScreen._dbLanguageFromLocale` 是同一套邏輯（另見
+/// 傳進來，跟 `GlobeHomeScreen._dbLanguageFromLocale` 是同一套邏輯（另見
 /// `daily_story/providers.dart` 對 `latestDailyStoryByLanguageProvider` 的
 /// 說明——同一個理由）。
 final homeStoriesProvider = FutureProvider.family<List<DailyStory>, String>((

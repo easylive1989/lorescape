@@ -3,14 +3,17 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:context_app/app/shell/main_screen.dart';
 import 'package:context_app/features/analytics/providers.dart';
 import 'package:context_app/features/explore/domain/models/place.dart';
+import 'package:context_app/features/explore/presentation/screens/explore_screen.dart';
+import 'package:context_app/features/home/presentation/screens/globe_home_screen.dart';
+import 'package:context_app/features/journey/presentation/screens/journey_screen.dart';
 import 'package:context_app/features/narration/presentation/screens/select_story_hook_screen.dart';
 import 'package:context_app/features/narration/presentation/screens/narration_screen.dart';
 import 'package:context_app/features/narration/domain/models/narration_content.dart';
 import 'package:context_app/features/onboarding/presentation/controllers/onboarding_controller.dart';
 import 'package:context_app/features/onboarding/presentation/screens/onboarding_welcome_screen.dart';
+import 'package:context_app/features/settings/presentation/screens/settings_screen.dart';
 import 'package:context_app/features/splash/presentation/splash_screen.dart';
 import 'package:context_app/features/subscription/presentation/screens/subscription_screen.dart';
 import 'package:context_app/features/trip/presentation/screens/trip_detail_screen.dart';
@@ -64,24 +67,42 @@ class RouterConfig {
         GoRoute(
           path: '/',
           name: 'home',
-          builder: (context, state) {
-            final tab = state.uri.queryParameters['tab'];
-            final index = switch (tab) {
-              'explore' => 1,
-              'journey' => 2,
-              _ => 0,
-            };
-            // GoRouter 的 pageKey 只看路徑（見 go_router 原始碼
-            // match.dart 的 `ValueKey<String>(newMatchedPath)`），同樣是
-            // `/` 但 tab 參數不同時會重用同一個 Page，MainScreen 的
-            // State 也就跟著留用——但 initialIndex 只在 initState 讀一次，
-            // 新的 tab 進不去。這裡用 tab 值當 widget key，逼 tab 改變時
-            // 強制重建 State，讓新的 initialIndex 生效。
-            return MainScreen(
-              key: ValueKey('main-screen-${tab ?? 'default'}'),
-              initialIndex: index,
-            );
-          },
+          // 用 pageBuilder + NoTransitionPage 而不是預設的 builder:——預設
+          // builder: 會產生 MaterialPage（掛 MaterialRouteTransitionMixin），
+          // 而它的 canTransitionTo 只有在下一頁「也是 MaterialPage」或「有
+          // delegatedTransition」時才會接上 secondaryAnimation。/map 是
+          // CustomTransitionPage，兩者都不是，會被直接擋下，secondaryAnimation
+          // 永遠停在 0，地球儀縮放淡出的轉場等於沒接上。NoTransitionPage 本身
+          // 也是 CustomTransitionPage 家族，不會被這個檢查擋掉；首頁幾乎只會
+          // 是初始路徑或 redirect 目的地，本來就不需要自己的進場轉場。
+          pageBuilder: (context, state) => NoTransitionPage<void>(
+            key: state.pageKey,
+            child: const GlobeHomeScreen(),
+          ),
+        ),
+        GoRoute(
+          path: '/map',
+          name: 'map',
+          // 自訂轉場：首頁那一頁會讀 secondaryAnimation 把地球儀放大淡出，
+          // 這裡只負責讓地圖淡入，兩段動畫共用同一個 640ms 時長才接得起來。
+          pageBuilder: (context, state) => CustomTransitionPage<void>(
+            key: state.pageKey,
+            transitionDuration: const Duration(milliseconds: 640),
+            reverseTransitionDuration: const Duration(milliseconds: 640),
+            child: ExploreScreen(initialQuery: state.uri.queryParameters['q']),
+            transitionsBuilder: (context, animation, _, child) =>
+                FadeTransition(opacity: animation, child: child),
+          ),
+        ),
+        GoRoute(
+          path: '/journey',
+          name: 'journey',
+          builder: (context, state) => const JourneyScreen(),
+        ),
+        GoRoute(
+          path: '/settings',
+          name: 'settings',
+          builder: (context, state) => const SettingsScreen(),
         ),
         GoRoute(
           path: '/onboarding',

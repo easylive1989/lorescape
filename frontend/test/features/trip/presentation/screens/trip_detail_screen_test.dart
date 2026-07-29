@@ -22,29 +22,28 @@ void main() {
   });
 
   group('TripDetailScreen', () {
-    testWidgets(
-      'given a trip with entries, when the detail screen loads, '
-      'then the trip name and each timeline entry are rendered',
-      (tester) async {
-        final trip = buildTrip(id: 'kyoto', name: 'Kyoto Temples');
-        final entry = buildJourneyEntry(id: 'e1', tripId: 'kyoto');
+    testWidgets('given a trip with entries, when the detail screen loads, '
+        'then the trip name and each timeline entry are rendered', (
+      tester,
+    ) async {
+      final trip = buildTrip(id: 'kyoto', name: 'Kyoto Temples');
+      final entry = buildJourneyEntry(id: 'e1', tripId: 'kyoto');
 
-        await _givenTripDetailScreen(
-          tester,
-          tripId: 'kyoto',
-          seededTrips: [trip],
-          seededJourneys: [entry],
-        );
+      await _givenTripDetailScreen(
+        tester,
+        tripId: 'kyoto',
+        seededTrips: [trip],
+        seededJourneys: [entry],
+      );
 
-        _thenTripNameIsVisible('Kyoto Temples');
-        _thenNotebookPagerIsShown();
-        // 手記本身帶三顆動作；重聽鍵是筆記標題右側的 icon 圓鈕。
-        expect(find.text('trip.add_to_trip'), findsOneWidget);
-        expect(find.text('common.share'), findsOneWidget);
-        expect(find.text('common.delete'), findsOneWidget);
-        expect(find.byIcon(Icons.play_arrow_rounded), findsOneWidget);
-      },
-    );
+      _thenTripNameIsVisible('Kyoto Temples');
+      _thenNotebookPagerIsShown();
+      // 手記本身帶三顆動作；重聽鍵是筆記標題右側的 icon 圓鈕。
+      expect(find.text('trip.add_to_trip'), findsOneWidget);
+      expect(find.text('common.share'), findsOneWidget);
+      expect(find.text('common.delete'), findsOneWidget);
+      expect(find.byIcon(Icons.play_arrow_rounded), findsOneWidget);
+    });
 
     testWidgets(
       'given a trip entry in reading mode, when the user taps add-to-trip, '
@@ -134,21 +133,18 @@ void main() {
       },
     );
 
-    testWidgets(
-      'given a trip with no entries, when the detail screen loads, '
-      'then the empty state is rendered',
-      (tester) async {
-        final trip = buildTrip(id: 'empty', name: 'Empty Trip');
+    testWidgets('given a trip with no entries, when the detail screen loads, '
+        'then the empty state is rendered', (tester) async {
+      final trip = buildTrip(id: 'empty', name: 'Empty Trip');
 
-        await _givenTripDetailScreen(
-          tester,
-          tripId: 'empty',
-          seededTrips: [trip],
-        );
+      await _givenTripDetailScreen(
+        tester,
+        tripId: 'empty',
+        seededTrips: [trip],
+      );
 
-        _thenEmptyStateIsVisible();
-      },
-    );
+      _thenEmptyStateIsVisible();
+    });
 
     testWidgets(
       'given a trip pushed from home with no entries, when the user taps '
@@ -172,7 +168,7 @@ void main() {
         await tester.tap(find.text('trip.empty_cta'));
         await tester.pumpAndSettle();
 
-        expect(visitedLocations, contains('/?tab=explore'));
+        expect(visitedLocations, contains('/map'));
         // 用 go 而非 push：確認旅程路由被取代，返回堆疊裡沒留下它——若退回
         // push，這裡會變成能 pop。
         final homeContext = tester.element(
@@ -182,22 +178,21 @@ void main() {
       },
     );
 
-    testWidgets(
-      'given the uncategorized bucket, when the screen loads, '
-      'then the uncategorized title and checklist action are shown',
-      (tester) async {
-        final orphan = buildJourneyEntry(id: 'o1');
+    testWidgets('given the uncategorized bucket, when the screen loads, '
+        'then the uncategorized title and checklist action are shown', (
+      tester,
+    ) async {
+      final orphan = buildJourneyEntry(id: 'o1');
 
-        await _givenTripDetailScreen(
-          tester,
-          tripId: null,
-          seededJourneys: [orphan],
-        );
+      await _givenTripDetailScreen(
+        tester,
+        tripId: null,
+        seededJourneys: [orphan],
+      );
 
-        _thenUncategorizedTitleIsVisible();
-        _thenSelectionModeIsAvailable();
-      },
-    );
+      _thenUncategorizedTitleIsVisible();
+      _thenSelectionModeIsAvailable();
+    });
 
     testWidgets(
       'given uncategorized entries, when the user enters selection mode, '
@@ -216,118 +211,103 @@ void main() {
       },
     );
 
-    testWidgets(
-      'given selection mode, when the user taps an entry, '
-      'then that entry is marked with a check icon',
-      (tester) async {
-        final a = buildJourneyEntry(id: 'a');
-        final b = buildJourneyEntry(id: 'b');
+    testWidgets('given selection mode, when the user taps an entry, '
+        'then that entry is marked with a check icon', (tester) async {
+      final a = buildJourneyEntry(id: 'a');
+      final b = buildJourneyEntry(id: 'b');
 
-        await _givenTripDetailScreen(
-          tester,
-          tripId: null,
-          seededJourneys: [a, b],
-        );
-        await _whenUserEntersSelectionMode(tester);
+      await _givenTripDetailScreen(
+        tester,
+        tripId: null,
+        seededJourneys: [a, b],
+      );
+      await _whenUserEntersSelectionMode(tester);
 
-        await tester.tap(find.byKey(const ValueKey('a')));
-        await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('a')));
+      await tester.pump();
 
-        expect(find.byIcon(Icons.check), findsOneWidget);
-      },
-    );
+      expect(find.byIcon(Icons.check), findsOneWidget);
+    });
 
-    testWidgets(
-      'given selection mode, when the user taps Select all, '
-      'then every entry becomes selected',
-      (tester) async {
-        final a = buildJourneyEntry(id: 'a');
-        final b = buildJourneyEntry(id: 'b');
+    testWidgets('given selection mode, when the user taps Select all, '
+        'then every entry becomes selected', (tester) async {
+      final a = buildJourneyEntry(id: 'a');
+      final b = buildJourneyEntry(id: 'b');
 
-        await _givenTripDetailScreen(
-          tester,
-          tripId: null,
-          seededJourneys: [a, b],
-        );
-        await _whenUserEntersSelectionMode(tester);
+      await _givenTripDetailScreen(
+        tester,
+        tripId: null,
+        seededJourneys: [a, b],
+      );
+      await _whenUserEntersSelectionMode(tester);
 
-        await tester.tap(find.text('trip.select_all'));
-        await tester.pump();
+      await tester.tap(find.text('trip.select_all'));
+      await tester.pump();
 
-        expect(find.byIcon(Icons.check), findsNWidgets(2));
-      },
-    );
+      expect(find.byIcon(Icons.check), findsNWidgets(2));
+    });
 
-    testWidgets(
-      'given selection mode, when the user taps the close icon, '
-      'then the screen returns to the default app bar',
-      (tester) async {
-        final orphan = buildJourneyEntry(id: 'o1');
+    testWidgets('given selection mode, when the user taps the close icon, '
+        'then the screen returns to the default app bar', (tester) async {
+      final orphan = buildJourneyEntry(id: 'o1');
 
-        await _givenTripDetailScreen(
-          tester,
-          tripId: null,
-          seededJourneys: [orphan],
-        );
-        await _whenUserEntersSelectionMode(tester);
+      await _givenTripDetailScreen(
+        tester,
+        tripId: null,
+        seededJourneys: [orphan],
+      );
+      await _whenUserEntersSelectionMode(tester);
 
-        await tester.tap(find.byIcon(Icons.close));
-        await tester.pump();
+      await tester.tap(find.byIcon(Icons.close));
+      await tester.pump();
 
-        expect(find.text('trip.selected_count'), findsNothing);
-        expect(find.byIcon(Icons.checklist), findsOneWidget);
-      },
-    );
+      expect(find.text('trip.selected_count'), findsNothing);
+      expect(find.byIcon(Icons.checklist), findsOneWidget);
+    });
 
-    testWidgets(
-      'given a trip with start and end dates, when the screen loads, '
-      'then the meta header shows a formatted date range',
-      (tester) async {
-        final trip = buildTrip(
-          id: 'kyoto',
-          name: 'Kyoto Temples',
-          startDate: DateTime(2024, 5, 1),
-          endDate: DateTime(2024, 5, 3),
-        );
+    testWidgets('given a trip with start and end dates, when the screen loads, '
+        'then the meta header shows a formatted date range', (tester) async {
+      final trip = buildTrip(
+        id: 'kyoto',
+        name: 'Kyoto Temples',
+        startDate: DateTime(2024, 5, 1),
+        endDate: DateTime(2024, 5, 3),
+      );
 
-        await _givenTripDetailScreen(
-          tester,
-          tripId: 'kyoto',
-          seededTrips: [trip],
-        );
+      await _givenTripDetailScreen(
+        tester,
+        tripId: 'kyoto',
+        seededTrips: [trip],
+      );
 
-        expect(find.byIcon(Icons.event), findsOneWidget);
-        // Contains an en-dash between two formatted dates.
-        expect(
-          find.byWidgetPredicate(
-            (w) => w is Text && (w.data?.contains(' – ') ?? false),
-          ),
-          findsOneWidget,
-        );
-      },
-    );
+      expect(find.byIcon(Icons.event), findsOneWidget);
+      // Contains an en-dash between two formatted dates.
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is Text && (w.data?.contains(' – ') ?? false),
+        ),
+        findsOneWidget,
+      );
+    });
 
-    testWidgets(
-      'given a named trip, when the user opens the menu, '
-      'then all trip actions are listed',
-      (tester) async {
-        final trip = buildTrip(id: 'kyoto', name: 'Kyoto');
+    testWidgets('given a named trip, when the user opens the menu, '
+        'then all trip actions are listed', (tester) async {
+      final trip = buildTrip(id: 'kyoto', name: 'Kyoto');
 
-        await _givenTripDetailScreen(
-          tester,
-          tripId: 'kyoto',
-          seededTrips: [trip],
-        );
+      await _givenTripDetailScreen(
+        tester,
+        tripId: 'kyoto',
+        seededTrips: [trip],
+      );
 
-        await tester.tap(find.byIcon(Icons.more_vert));
-        await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.more_vert));
+      await tester.pumpAndSettle();
 
-        expect(find.text('trip.set_as_current'), findsOneWidget);
-        expect(find.text('trip.edit_action'), findsOneWidget);
-        expect(find.text('export.menu_item'), findsOneWidget);
-        expect(find.text('trip.delete_action'), findsOneWidget);
-      },
-    );
+      expect(find.text('trip.set_as_current'), findsOneWidget);
+      expect(find.text('trip.edit_action'), findsOneWidget);
+      expect(find.text('export.menu_item'), findsOneWidget);
+      expect(find.text('trip.delete_action'), findsOneWidget);
+    });
 
     testWidgets(
       'given this trip is the current trip, when the user opens the menu, '
@@ -350,90 +330,81 @@ void main() {
       },
     );
 
-    testWidgets(
-      'given the trip menu is open, when the user taps Delete, '
-      'then the delete-confirmation dialog appears',
-      (tester) async {
-        final trip = buildTrip(id: 'kyoto', name: 'Kyoto');
+    testWidgets('given the trip menu is open, when the user taps Delete, '
+        'then the delete-confirmation dialog appears', (tester) async {
+      final trip = buildTrip(id: 'kyoto', name: 'Kyoto');
 
-        await _givenTripDetailScreen(
-          tester,
-          tripId: 'kyoto',
-          seededTrips: [trip],
-        );
+      await _givenTripDetailScreen(
+        tester,
+        tripId: 'kyoto',
+        seededTrips: [trip],
+      );
 
-        await tester.tap(find.byIcon(Icons.more_vert));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('trip.delete_action'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.more_vert));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('trip.delete_action'));
+      await tester.pumpAndSettle();
 
-        expect(find.text('trip.delete_title'), findsOneWidget);
-        expect(find.text('trip.delete_message'), findsOneWidget);
-        expect(find.text('trip.delete_confirm'), findsOneWidget);
-        expect(find.text('trip.cancel'), findsOneWidget);
-      },
-    );
+      expect(find.text('trip.delete_title'), findsOneWidget);
+      expect(find.text('trip.delete_message'), findsOneWidget);
+      expect(find.text('trip.delete_confirm'), findsOneWidget);
+      expect(find.text('trip.cancel'), findsOneWidget);
+    });
 
-    testWidgets(
-      'given the delete dialog is open, when the user cancels, '
-      'then the trip remains in the repository',
-      (tester) async {
-        final trip = buildTrip(id: 'kyoto', name: 'Kyoto');
-        final tripRepo = InMemoryTripRepository();
-        await tripRepo.save(trip);
+    testWidgets('given the delete dialog is open, when the user cancels, '
+        'then the trip remains in the repository', (tester) async {
+      final trip = buildTrip(id: 'kyoto', name: 'Kyoto');
+      final tripRepo = InMemoryTripRepository();
+      await tripRepo.save(trip);
 
-        await _givenTripDetailScreenWithRepos(
-          tester,
-          tripId: 'kyoto',
-          tripRepo: tripRepo,
-          journeyRepo: InMemoryJourneyRepository(),
-        );
+      await _givenTripDetailScreenWithRepos(
+        tester,
+        tripId: 'kyoto',
+        tripRepo: tripRepo,
+        journeyRepo: InMemoryJourneyRepository(),
+      );
 
-        await tester.tap(find.byIcon(Icons.more_vert));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('trip.delete_action'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('trip.cancel'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.more_vert));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('trip.delete_action'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('trip.cancel'));
+      await tester.pumpAndSettle();
 
-        expect(await tripRepo.getById('kyoto'), isNotNull);
-      },
-    );
+      expect(await tripRepo.getById('kyoto'), isNotNull);
+    });
 
-    testWidgets(
-      'given the trip menu is open under a router, '
-      'when the user confirms delete, '
-      'then the trip is removed and the screen pops',
-      (tester) async {
-        final trip = buildTrip(id: 'kyoto', name: 'Kyoto');
-        final entry = buildJourneyEntry(id: 'e1', tripId: 'kyoto');
-        final tripRepo = InMemoryTripRepository();
-        final journeyRepo = InMemoryJourneyRepository();
-        await tripRepo.save(trip);
-        await journeyRepo.save(entry);
+    testWidgets('given the trip menu is open under a router, '
+        'when the user confirms delete, '
+        'then the trip is removed and the screen pops', (tester) async {
+      final trip = buildTrip(id: 'kyoto', name: 'Kyoto');
+      final entry = buildJourneyEntry(id: 'e1', tripId: 'kyoto');
+      final tripRepo = InMemoryTripRepository();
+      final journeyRepo = InMemoryJourneyRepository();
+      await tripRepo.save(trip);
+      await journeyRepo.save(entry);
 
-        await _givenTripDetailScreenWithRouter(
-          tester,
-          tripId: 'kyoto',
-          tripRepo: tripRepo,
-          journeyRepo: journeyRepo,
-        );
+      await _givenTripDetailScreenWithRouter(
+        tester,
+        tripId: 'kyoto',
+        tripRepo: tripRepo,
+        journeyRepo: journeyRepo,
+      );
 
-        await tester.tap(find.byIcon(Icons.more_vert));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('trip.delete_action'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('trip.delete_confirm'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.more_vert));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('trip.delete_action'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('trip.delete_confirm'));
+      await tester.pumpAndSettle();
 
-        expect(await tripRepo.getById('kyoto'), isNull);
-        // Orphaned journey entry's tripId is cleared to null.
-        final remaining = await journeyRepo.getAll();
-        expect(remaining.single.tripId, isNull);
-        // The screen popped back to the home route placeholder.
-        expect(find.byKey(const ValueKey('home-screen')), findsOneWidget);
-      },
-    );
+      expect(await tripRepo.getById('kyoto'), isNull);
+      // Orphaned journey entry's tripId is cleared to null.
+      final remaining = await journeyRepo.getAll();
+      expect(remaining.single.tripId, isNull);
+      // The screen popped back to the home route placeholder.
+      expect(find.byKey(const ValueKey('home-screen')), findsOneWidget);
+    });
 
     testWidgets(
       'given the trip is not current, when the user taps set-as-current, '
@@ -573,6 +544,15 @@ Future<void> _givenTripDetailScreenWithRouter(
               ),
             ),
           );
+        },
+      ),
+      GoRoute(
+        path: '/map',
+        // 探索頁的 stand-in：只需要證明「go 到 /map」真的落點在此，並且
+        // 沒有把旅程頁留在 back stack 上，不需要真正的 ExploreScreen。
+        builder: (_, state) {
+          visitedLocations?.add(state.uri.toString());
+          return const Scaffold(key: ValueKey('home-screen'));
         },
       ),
       GoRoute(

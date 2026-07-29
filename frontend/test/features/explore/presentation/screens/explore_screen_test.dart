@@ -25,15 +25,12 @@ void main() {
   });
 
   group('ExploreScreen', () {
-    testWidgets(
-      'given no nearby places, when the screen loads, '
-      'then the empty-state copy is shown',
-      (tester) async {
-        await _givenExploreScreen(tester);
+    testWidgets('given no nearby places, when the screen loads, '
+        'then the empty-state copy is shown', (tester) async {
+      await _givenExploreScreen(tester);
 
-        _thenEmptyStateIsVisible();
-      },
-    );
+      _thenEmptyStateIsVisible();
+    });
 
     testWidgets(
       'given the overlay header, when the screen loads, then the title and '
@@ -74,74 +71,65 @@ void main() {
       },
     );
 
-    testWidgets(
-      'given nearby places are returned, when the screen loads, '
-      'then a place card is rendered for each place',
-      (tester) async {
-        final places = [
-          buildPlace(id: 'p1', name: 'Senso-ji'),
-          buildPlace(id: 'p2', name: 'Meiji Shrine'),
-        ];
+    testWidgets('given nearby places are returned, when the screen loads, '
+        'then a place card is rendered for each place', (tester) async {
+      final places = [
+        buildPlace(id: 'p1', name: 'Senso-ji'),
+        buildPlace(id: 'p2', name: 'Meiji Shrine'),
+      ];
 
-        await _givenExploreScreen(tester, places: places);
+      await _givenExploreScreen(tester, places: places);
 
-        _thenPlaceNamesAreVisible(['Senso-ji', 'Meiji Shrine']);
-      },
-    );
+      _thenPlaceNamesAreVisible(['Senso-ji', 'Meiji Shrine']);
+    });
 
-    testWidgets(
-      'given a distance filter of 500 m, when the list is filtered, '
-      'then only places within range are shown',
-      (tester) async {
-        // Place near origin (lat 0, lon 0), one within 500 m, one outside.
-        final places = [
-          buildPlace(
-            id: 'p1',
-            name: 'Near',
-            latitude: 0.001, // ~111 m
-            longitude: 0.0,
-          ),
-          buildPlace(
-            id: 'p2',
-            name: 'Far',
-            latitude: 0.01, // ~1111 m
-            longitude: 0.0,
-          ),
-        ];
+    testWidgets('given a distance filter of 500 m, when the list is filtered, '
+        'then only places within range are shown', (tester) async {
+      // Place near origin (lat 0, lon 0), one within 500 m, one outside.
+      final places = [
+        buildPlace(
+          id: 'p1',
+          name: 'Near',
+          latitude: 0.001, // ~111 m
+          longitude: 0.0,
+        ),
+        buildPlace(
+          id: 'p2',
+          name: 'Far',
+          latitude: 0.01, // ~1111 m
+          longitude: 0.0,
+        ),
+      ];
 
-        await _givenExploreScreen(
-          tester,
-          places: places,
-          maxDistance: 500.0,
-          userLocation: const PlaceLocation(latitude: 0.0, longitude: 0.0),
-        );
+      await _givenExploreScreen(
+        tester,
+        places: places,
+        maxDistance: 500.0,
+        userLocation: const PlaceLocation(latitude: 0.0, longitude: 0.0),
+      );
 
-        _thenPlaceNamesAreVisible(['Near']);
-        _thenPlaceNamesAreHidden(['Far']);
-      },
-    );
+      _thenPlaceNamesAreVisible(['Near']);
+      _thenPlaceNamesAreHidden(['Far']);
+    });
 
-    testWidgets(
-      'given the user types in the search box and submits, '
-      'when the repository returns search results, '
-      'then the result list replaces the nearby places',
-      (tester) async {
-        final repo = FakePlacesRepository(
-          nearbyPlaces: [buildPlace(id: 'p1', name: 'Nearby Place')],
-          searchResults: [buildPlace(id: 's1', name: 'Searched Place')],
-        );
+    testWidgets('given the user types in the search box and submits, '
+        'when the repository returns search results, '
+        'then the result list replaces the nearby places', (tester) async {
+      final repo = FakePlacesRepository(
+        nearbyPlaces: [buildPlace(id: 'p1', name: 'Nearby Place')],
+        searchResults: [buildPlace(id: 's1', name: 'Searched Place')],
+      );
 
-        await _givenExploreScreen(tester, repo: repo);
+      await _givenExploreScreen(tester, repo: repo);
 
-        await tester.enterText(find.byType(TextField), 'searched');
-        await tester.testTextInput.receiveAction(TextInputAction.done);
-        await tester.pump(const Duration(milliseconds: 20));
-        await tester.pump(const Duration(milliseconds: 20));
+      await tester.enterText(find.byType(TextField), 'searched');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump(const Duration(milliseconds: 20));
+      await tester.pump(const Duration(milliseconds: 20));
 
-        expect(find.text('Searched Place'), findsOneWidget);
-        expect(find.text('Nearby Place'), findsNothing);
-      },
-    );
+      expect(find.text('Searched Place'), findsOneWidget);
+      expect(find.text('Nearby Place'), findsNothing);
+    });
 
     testWidgets(
       'given a submitted search term, when the user taps the clear icon, '
@@ -171,24 +159,21 @@ void main() {
       },
     );
 
-    testWidgets(
-      'given places are on screen, when the user taps refresh, '
-      'then the nearby-places use case is invoked again',
-      (tester) async {
-        final repo = FakePlacesRepository(
-          nearbyPlaces: [buildPlace(id: 'p1', name: 'Nearby')],
-        );
+    testWidgets('given places are on screen, when the user taps refresh, '
+        'then the nearby-places use case is invoked again', (tester) async {
+      final repo = FakePlacesRepository(
+        nearbyPlaces: [buildPlace(id: 'p1', name: 'Nearby')],
+      );
 
-        await _givenExploreScreen(tester, repo: repo);
-        final before = repo.nearbyCallCount;
+      await _givenExploreScreen(tester, repo: repo);
+      final before = repo.nearbyCallCount;
 
-        await tester.tap(find.byIcon(Icons.refresh));
-        await tester.pump(const Duration(milliseconds: 20));
-        await tester.pump(const Duration(milliseconds: 20));
+      await tester.tap(find.byIcon(Icons.refresh));
+      await tester.pump(const Duration(milliseconds: 20));
+      await tester.pump(const Duration(milliseconds: 20));
 
-        expect(repo.nearbyCallCount, greaterThan(before));
-      },
-    );
+      expect(repo.nearbyCallCount, greaterThan(before));
+    });
 
     testWidgets(
       'given the filter is at its default value (10000 m), when the screen '
@@ -202,30 +187,24 @@ void main() {
       },
     );
 
-    testWidgets(
-      'given a non-default maxDistance, when the screen renders, '
-      'then the active dot is shown',
-      (tester) async {
-        await _givenExploreScreen(tester, maxDistance: 500.0);
+    testWidgets('given a non-default maxDistance, when the screen renders, '
+        'then the active dot is shown', (tester) async {
+      await _givenExploreScreen(tester, maxDistance: 500.0);
 
-        expect(_activeDotFinder(), findsOneWidget);
-      },
-    );
+      expect(_activeDotFinder(), findsOneWidget);
+    });
 
-    testWidgets(
-      'given the filter button is present, when the user taps it, '
-      'then the filter panel bottom sheet is shown',
-      (tester) async {
-        await _givenExploreScreen(tester);
+    testWidgets('given the filter button is present, when the user taps it, '
+        'then the filter panel bottom sheet is shown', (tester) async {
+      await _givenExploreScreen(tester);
 
-        await tester.tap(find.byIcon(Icons.tune));
-        await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.tune));
+      await tester.pumpAndSettle();
 
-        expect(find.text('explore.filter.title'), findsOneWidget);
-        expect(find.text('explore.filter.max_distance'), findsOneWidget);
-        expect(find.text('explore.filter.reset'), findsOneWidget);
-      },
-    );
+      expect(find.text('explore.filter.title'), findsOneWidget);
+      expect(find.text('explore.filter.max_distance'), findsOneWidget);
+      expect(find.text('explore.filter.reset'), findsOneWidget);
+    });
 
     testWidgets(
       'given an unsaved place card, when the user taps the bookmark icon, '
@@ -290,21 +269,18 @@ void main() {
       },
     );
 
-    testWidgets(
-      'given nearby places, when the screen loads, '
-      'then one map pin is rendered per place',
-      (tester) async {
-        await _givenExploreScreen(
-          tester,
-          places: [
-            buildPlace(id: 'p1', name: 'Senso-ji'),
-            buildPlace(id: 'p2', name: 'Meiji Shrine'),
-          ],
-        );
+    testWidgets('given nearby places, when the screen loads, '
+        'then one map pin is rendered per place', (tester) async {
+      await _givenExploreScreen(
+        tester,
+        places: [
+          buildPlace(id: 'p1', name: 'Senso-ji'),
+          buildPlace(id: 'p2', name: 'Meiji Shrine'),
+        ],
+      );
 
-        expect(find.byType(PlaceMapPin), findsNWidgets(2));
-      },
-    );
+      expect(find.byType(PlaceMapPin), findsNWidgets(2));
+    });
 
     group('location gate', () {
       testWidgets(
@@ -409,56 +385,54 @@ void main() {
         },
       );
 
-      testWidgets(
-        'given a non-location error, when the screen loads, '
-        'then no gate card is shown',
-        (tester) async {
-          await _givenExploreScreen(
-            tester,
-            locationService: FakeLocationService(error: Exception('boom')),
-          );
+      testWidgets('given a non-location error, when the screen loads, '
+          'then no gate card is shown', (tester) async {
+        await _givenExploreScreen(
+          tester,
+          locationService: FakeLocationService(error: Exception('boom')),
+        );
 
-          expect(
-            find.text('explore.location_gate.permission_denied.title'),
-            findsNothing,
-          );
-          expect(
-            find.text('explore.location_gate.service_disabled.title'),
-            findsNothing,
-          );
-        },
-      );
+        expect(
+          find.text('explore.location_gate.permission_denied.title'),
+          findsNothing,
+        );
+        expect(
+          find.text('explore.location_gate.service_disabled.title'),
+          findsNothing,
+        );
+      });
     });
 
     group('initial query', () {
-      testWidgets(
-        'given an initial query, '
-        'when the explore screen loads, '
-        'then the places repository is searched with that query',
-        (tester) async {
-          final repo = FakePlacesRepository();
+      testWidgets('given an initial query, '
+          'when the explore screen loads, '
+          'then the places repository is searched with that query', (
+        tester,
+      ) async {
+        final repo = FakePlacesRepository();
 
-          await _givenExploreScreen(tester, repo: repo, initialQuery: '京都');
+        await _givenExploreScreen(tester, repo: repo, initialQuery: '京都');
 
-          expect(repo.lastSearchQuery, '京都');
-        },
-      );
+        expect(repo.lastSearchQuery, '京都');
+      });
     });
 
     group('globe back button', () {
-      testWidgets(
-        'given the explore screen pushed on top of home, '
-        'when the user taps the globe button, '
-        'then it pops back to the globe home',
-        (tester) async {
-          await _givenExploreScreenPushedOnMap(tester);
+      testWidgets('given the explore screen pushed on top of home, '
+          'when the user taps the globe button, '
+          'then it pops back to the globe home', (tester) async {
+        await _givenExploreScreenPushedOnMap(tester);
 
-          await tester.tap(find.byKey(const Key('explore-globe-back')));
-          await tester.pumpAndSettle();
+        // 點擊前先確認探索頁真的在畫面上——首頁的 Scaffold 從頭到尾都
+        // 沒被卸載，光看它還在無法證明 pop 真的發生，必須看探索頁消失。
+        expect(find.byType(ExploreScreen), findsOneWidget);
 
-          expect(find.byKey(const Key('home-screen')), findsOneWidget);
-        },
-      );
+        await tester.tap(find.byKey(const Key('explore-globe-back')));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(ExploreScreen), findsNothing);
+        expect(find.byKey(const Key('home-screen')), findsOneWidget);
+      });
     });
   });
 }
@@ -477,7 +451,8 @@ Future<void> _givenExploreScreen(
       locationService ??
       FakeLocationService(
         location:
-            userLocation ?? const PlaceLocation(latitude: 25.0, longitude: 121.0),
+            userLocation ??
+            const PlaceLocation(latitude: 25.0, longitude: 121.0),
       );
   await pumpScreen(
     tester,
