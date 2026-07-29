@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: "Support — Lorescape",
   description:
     "Contact Lorescape support or browse frequently asked questions about the AI audio guide.",
+  alternates: { canonical: "/support" },
 };
 
 export default function SupportPage() {

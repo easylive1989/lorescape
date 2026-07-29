@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: "Terms of Use — Lorescape",
   description:
     "The rules and conditions that govern your use of the Lorescape app and services.",
+  alternates: { canonical: "/terms" },
 };
 
 export default function TermsPage() {

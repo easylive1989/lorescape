@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: "Image Credits — Lorescape",
   description:
     "Attribution for the photography used on the Lorescape landing page.",
+  alternates: { canonical: "/credits" },
 };
 
 interface Credit {
