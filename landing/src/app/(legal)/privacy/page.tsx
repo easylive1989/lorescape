@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: "Privacy Policy — Lorescape",
   description:
     "How Lorescape collects, uses, and protects your information when you use our AI audio guide.",
+  alternates: { canonical: "/privacy" },
 };
 
 export default function PrivacyPage() {
