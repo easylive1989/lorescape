@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:context_app/app/config/lorescape_tokens.dart';
 import 'package:context_app/features/explore/providers.dart';
+import 'package:context_app/features/settings/domain/models/language.dart';
 
 /// 首頁頂部：眼眉字＋字標＋歷程/設定兩顆 icon，底下是搜尋列與建議清單。
 class HomeTopBar extends ConsumerWidget {
@@ -29,9 +30,16 @@ class HomeTopBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tokens = context.tokens;
+    // 用 App 實際顯示的語言（EasyLocalization 的 context.locale），不要用
+    // currentLanguageProvider——後者初始值是作業系統語言，使用者還沒進過
+    // `/map` 之前不會跟畫面顯示的語言同步，會讓建議清單語言跟首頁其餘部分
+    // 兜不起來。
+    final language = languageFromLocaleTag(context.locale.toLanguageTag());
     final suggestions = query.isEmpty
         ? const AsyncValue<List<String>>.data([])
-        : ref.watch(placeSuggestionsProvider(query));
+        : ref.watch(
+            placeSuggestionsProvider((query: query, language: language)),
+          );
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 4, 18, 0),

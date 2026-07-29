@@ -5,6 +5,7 @@ import 'package:context_app/features/home/domain/globe/world_outline.dart';
 import 'package:context_app/features/home/presentation/screens/globe_home_screen.dart';
 import 'package:context_app/features/home/presentation/widgets/globe_view.dart';
 import 'package:context_app/features/home/providers.dart';
+import 'package:context_app/features/settings/domain/models/language.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -213,6 +214,29 @@ void main() {
       expect(pushed, ['/map?q=京都市']);
     },
   );
+
+  testWidgets('given the OS locale differs from the App language, '
+      'when the user types in the home search bar, '
+      'then the suggestion request follows the App locale, not the OS locale', (
+    tester,
+  ) async {
+    // pumpRouterApp 預設把 App（EasyLocalization）語言設成 zh-TW；這裡把
+    // 作業系統語言設成英文，兩者刻意不同——首頁其餘部分（story rail）已經
+    // 用 context.locale 判定語言，搜尋建議也必須跟著用同一套，不能落回
+    // 只反映 OS 語言的 currentLanguageProvider。
+    tester.platformDispatcher.localeTestValue = const Locale('en');
+    addTearDown(tester.platformDispatcher.clearLocaleTestValue);
+
+    _places.suggestions = const ['京都市'];
+    final pushed = <Object?>[];
+    await _givenHome(tester, pushed: pushed);
+
+    await tester.enterText(find.byKey(const Key('home-search')), '京都');
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+
+    expect(_places.lastSuggestLanguage, Language.traditionalChinese);
+  });
 
   testWidgets('given the globe home, '
       'when the user taps a story card that is not the selected one, '

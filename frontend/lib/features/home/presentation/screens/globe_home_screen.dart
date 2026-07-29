@@ -8,11 +8,13 @@ import 'package:latlong2/latlong.dart';
 
 import 'package:context_app/app/config/lorescape_tokens.dart';
 import 'package:context_app/features/daily_story/domain/models/daily_story.dart';
+import 'package:context_app/features/daily_story/providers.dart';
 import 'package:context_app/features/home/domain/models/globe_pin.dart';
 import 'package:context_app/features/home/presentation/widgets/globe_view.dart';
 import 'package:context_app/features/home/presentation/widgets/home_top_bar.dart';
 import 'package:context_app/features/home/presentation/widgets/story_rail.dart';
 import 'package:context_app/features/home/providers.dart';
+import 'package:context_app/features/settings/domain/models/language.dart';
 
 /// 首頁：一顆釘著每日故事地點的地球儀，底下是故事卡片列。
 ///
@@ -219,9 +221,8 @@ class _LocateButton extends StatelessWidget {
 /// 從 EasyLocalization 的 `context.locale` 換算 DB 的語言字串，避免用只會
 /// 反映作業系統語言的 `currentLanguageProvider`（同一套邏輯的說明另見
 /// `daily_story/providers.dart` 對 `latestDailyStoryByLanguageProvider` 的
-/// 註解）。
-String _dbLanguageFromLocale(Locale locale) {
-  final tag = locale.toLanguageTag();
-  if (tag.startsWith('zh')) return 'zh-TW';
-  return 'en';
-}
+/// 註解）。「locale → Language」與「Language → DB 字串」都各自只有一份共用
+/// 實作（分別是 `languageFromLocaleTag` 與 `dbLanguageOf`），這裡只是把兩段
+/// 接起來。
+String _dbLanguageFromLocale(Locale locale) =>
+    dbLanguageOf(languageFromLocaleTag(locale.toLanguageTag()));

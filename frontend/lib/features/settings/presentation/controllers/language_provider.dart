@@ -11,20 +11,11 @@ class LanguageNotifier extends Notifier<Language> {
   Language build() {
     // 初始值使用系統語言
     final locale = PlatformDispatcher.instance.locale;
-    return _languageFromLocale(locale.toLanguageTag());
+    return languageFromLocaleTag(locale.toLanguageTag());
   }
 
   /// 更新當前語言（由 Widget 層在 EasyLocalization 語言變化時呼叫）
   void updateLanguage(String localeTag) {
-    state = _languageFromLocale(localeTag);
-  }
-
-  /// 從 locale tag 轉換為 Language
-  static Language _languageFromLocale(String localeTag) {
-    if (localeTag.startsWith('zh')) {
-      return Language.traditionalChinese;
-    } else {
-      return Language.english;
-    }
+    state = languageFromLocaleTag(localeTag);
   }
 }
