@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import 'package:context_app/app/config/lorescape_tokens.dart';
@@ -93,56 +95,71 @@ class _GlobeViewState extends State<GlobeView>
 
   @override
   Widget build(BuildContext context) {
-    final projection = OrthographicProjection(
-      rotation: _rotation,
-      center: Offset(widget.size / 2, widget.size / 2),
-      radius: widget.size / 2 - 3,
-    );
-    final focus = widget.focus;
-    final focusOffset = focus == null
-        ? null
-        : projection.project(focus.coordinate);
-    final focusVisible =
-        focus != null &&
-        focusOffset != null &&
-        projection.angularDistanceTo(focus.coordinate) < 1.32;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 螢幕比預設的 344pt 窄時（320pt 裝置、或開了「顯示縮放」的
+        // iPhone），外層給的是 loose constraints，SizedBox 會被壓小；如果
+        // 投影只用 widget.size 算 focus marker 的位置，就會跟畫布實際尺寸
+        // 脫鉤——marker 用 344 的基準，painter 卻畫在更小的圓上，選中的
+        // pin 會偏離陸地。這裡把投影、CustomPaint、SizedBox 都夾到同一個
+        // 有效尺寸，確保三者永遠算的是同一顆球。
+        final effectiveSize = constraints.hasBoundedWidth
+            ? math.min(widget.size, constraints.maxWidth)
+            : widget.size;
 
-    return SizedBox(
-      width: widget.size,
-      height: widget.size,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          GestureDetector(
-            onPanStart: _onDragStart,
-            onPanUpdate: _onDragUpdate,
-            child: CustomPaint(
-              key: GlobeView.canvasKey,
-              size: Size.square(widget.size),
-              painter: GlobePainter(
-                outline: widget.outline,
-                pins: widget.pins,
-                rotation: _rotation,
-                focusId: focus?.id,
-              ),
-            ),
-          ),
-          // focusOffset 在焦點剛切換、旋轉還沒轉到那一面時可能是 null（該點暫時
-          // 在地球背面投影不出來）；這種情況先不畫標記，等飛行動畫轉過去再顯示。
-          if (focus != null && focusOffset != null)
-            Positioned(
-              left: focusOffset.dx,
-              top: focusOffset.dy,
-              child: IgnorePointer(
-                child: AnimatedOpacity(
-                  opacity: focusVisible ? 1 : 0,
-                  duration: const Duration(milliseconds: 250),
-                  child: _FocusMarker(label: focus.label),
+        final projection = OrthographicProjection(
+          rotation: _rotation,
+          center: Offset(effectiveSize / 2, effectiveSize / 2),
+          radius: effectiveSize / 2 - 3,
+        );
+        final focus = widget.focus;
+        final focusOffset = focus == null
+            ? null
+            : projection.project(focus.coordinate);
+        final focusVisible =
+            focus != null &&
+            focusOffset != null &&
+            projection.angularDistanceTo(focus.coordinate) < 1.32;
+
+        return SizedBox(
+          width: effectiveSize,
+          height: effectiveSize,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              GestureDetector(
+                onPanStart: _onDragStart,
+                onPanUpdate: _onDragUpdate,
+                child: CustomPaint(
+                  key: GlobeView.canvasKey,
+                  size: Size.square(effectiveSize),
+                  painter: GlobePainter(
+                    outline: widget.outline,
+                    pins: widget.pins,
+                    rotation: _rotation,
+                    focusId: focus?.id,
+                  ),
                 ),
               ),
-            ),
-        ],
-      ),
+              // focusOffset 在焦點剛切換、旋轉還沒轉到那一面時可能是
+              // null（該點暫時在地球背面投影不出來）；這種情況先不畫標記，
+              // 等飛行動畫轉過去再顯示。
+              if (focus != null && focusOffset != null)
+                Positioned(
+                  left: focusOffset.dx,
+                  top: focusOffset.dy,
+                  child: IgnorePointer(
+                    child: AnimatedOpacity(
+                      opacity: focusVisible ? 1 : 0,
+                      duration: const Duration(milliseconds: 250),
+                      child: _FocusMarker(label: focus.label),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
