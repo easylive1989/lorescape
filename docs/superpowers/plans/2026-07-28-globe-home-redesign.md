@@ -3270,6 +3270,24 @@ class _StoryCard extends StatelessWidget {
 }
 ```
 
+**事後補記（merge 前最終審查後補上，控制者確認漏寫，非實作階段取捨）：**
+spec `docs/superpowers/specs/2026-07-28-globe-home-redesign-design.md:151-155`
+其實還寫了兩項這裡漏掉的規格，寫本輪 plan 時忘了收進 Step 6：
+
+- **橫向 snap**：`ListView.separated` 用預設 `ScrollPhysics`，甩動後會停
+  在兩張卡中間，「目前選中的是哪一張」變得曖昧。改用自訂
+  `_SnapScrollPhysics extends ScrollPhysics`（做法同 Flutter 內建的
+  `PageScrollPhysics`，只是用固定 `itemExtent`＝`StoryRail.stride` 而非整
+  頁），`createBallisticSimulation` 一律收斂到 `stride` 的整數倍，掛在
+  `ListView.separated` 的 `physics:`。
+- **分頁圓點**：卡片列下方加一排指示目前位置的圓點，選中的那顆用 clay
+  色。不用重刻——沿用手記翻頁器已經在用的共用元件
+  `lib/shared/widgets/page_dots.dart` 的 `PageDots`（`count` / `index` /
+  `padding`，`onSelect` 留 null 表示純顯示、不可點）。
+
+兩者都不影響 `StoryRail` 的建構參數或既有測試涵蓋的互動路徑（點卡片、捲
+動回報 `activeIndex`），純粹是同一個 `build()` 裡的追加。
+
 - [ ] **Step 7: 寫 `GlobeHomeScreen`**
 
 建立 `frontend/lib/features/home/presentation/screens/globe_home_screen.dart`：
