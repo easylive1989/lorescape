@@ -11,11 +11,14 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
 import requests
 from dotenv import load_dotenv
 from lorescape_publisher.config import Config
 from supabase import create_client
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 _WIKIDATA_ENTITY_URL = "https://www.wikidata.org/wiki/Special:EntityData/{qid}.json"
 _USER_AGENT = "Lorescape/1.0 (https://lorescape.app; ops@lorescape.app)"
@@ -55,7 +58,9 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
-    load_dotenv()
+    # Supabase 憑證放在 publisher/.env，不在 scripts/.env——與
+    # manual_daily_story.py、publish_reel.py、archive_ig_cards.py 同一慣例。
+    load_dotenv(REPO_ROOT / "publisher" / ".env")
     config = Config.from_env()
     supabase = create_client(config.supabase_url, config.supabase_service_role_key)
 
