@@ -65,18 +65,9 @@
     "save_failed": "Save failed",
     "suggested_retry": "Suggested retry after {delay}"
   },
-  "bottom_nav": {
-    "stories": "Stories",
-    "explore": "Explore",
-    "journey": "Journey",
-    "settings": "Settings"
-  },
   "story": {
     "deck_prev": "Previous",
-    "deck_next": "Next",
-    "list_eyebrow": "Anno · {} stories",
-    "list_title": "Stories",
-    "list_empty": "No stories yet"
+    "deck_next": "Next"
   },
   "journey": {
     "title": "Journey",

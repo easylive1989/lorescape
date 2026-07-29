@@ -7,7 +7,9 @@ import 'package:context_app/features/subscription/domain/models/subscription_sta
 import 'package:context_app/features/subscription/providers.dart';
 import 'package:context_app/features/usage/providers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../fakes/fake_auth_service.dart';
@@ -124,7 +126,63 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getBool('sync_enabled'), isTrue);
     });
+
+    testWidgets('given the settings screen pushed from home, '
+        'when the user taps the back button, '
+        'then it returns to the previous screen', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 2000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await pumpRouterApp(
+        tester,
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, __) => const Scaffold(key: Key('home-screen')),
+          ),
+          GoRoute(
+            path: '/settings',
+            builder: (_, __) => const SettingsScreen(),
+          ),
+        ],
+        overrides: _settingsOverrides(),
+      );
+      final context = tester.element(find.byKey(const Key('home-screen')));
+      GoRouter.of(context).push('/settings');
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('home-screen')), findsNothing);
+      expect(find.byType(SettingsScreen), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('floating-back')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('home-screen')), findsOneWidget);
+      expect(find.byType(SettingsScreen), findsNothing);
+    });
   });
+}
+
+List<Override> _settingsOverrides({
+  InMemoryUsageRepository? usage,
+  SubscriptionStatus status = SubscriptionStatus.free,
+  FakeAuthService? authService,
+}) {
+  final usageRepo = usage ?? InMemoryUsageRepository(usedToday: 0);
+  final auth = authService ?? FakeAuthService();
+
+  return [
+    authServiceProvider.overrideWithValue(auth),
+    usageRepositoryProvider.overrideWithValue(usageRepo),
+    usageStatusProvider.overrideWith((ref) async => usageRepo.getUsageStatus()),
+    subscriptionStatusProvider.overrideWith(
+      (ref) => Stream<SubscriptionStatus>.value(status),
+    ),
+    appVersionStringProvider.overrideWith((ref) async => _fakeVersionLabel),
+    onboardingRepositoryProvider.overrideWithValue(
+      InMemoryOnboardingRepository(welcomeDone: true),
+    ),
+  ];
 }
 
 Future<void> _givenSettingsScreen(
@@ -133,9 +191,6 @@ Future<void> _givenSettingsScreen(
   SubscriptionStatus status = SubscriptionStatus.free,
   FakeAuthService? authService,
 }) async {
-  final usageRepo = usage ?? InMemoryUsageRepository(usedToday: 0);
-  final auth = authService ?? FakeAuthService();
-
   // The settings screen is taller than the default 800x600 test surface
   // after the onboarding section was added. Enlarging the surface lets
   // `find.text` locate tiles below the fold without having to scroll.
@@ -145,20 +200,11 @@ Future<void> _givenSettingsScreen(
   await pumpScreen(
     tester,
     child: const SettingsScreen(),
-    overrides: [
-      authServiceProvider.overrideWithValue(auth),
-      usageRepositoryProvider.overrideWithValue(usageRepo),
-      usageStatusProvider.overrideWith(
-        (ref) async => usageRepo.getUsageStatus(),
-      ),
-      subscriptionStatusProvider.overrideWith(
-        (ref) => Stream<SubscriptionStatus>.value(status),
-      ),
-      appVersionStringProvider.overrideWith((ref) async => _fakeVersionLabel),
-      onboardingRepositoryProvider.overrideWithValue(
-        InMemoryOnboardingRepository(welcomeDone: true),
-      ),
-    ],
+    overrides: _settingsOverrides(
+      usage: usage,
+      status: status,
+      authService: authService,
+    ),
   );
   await tester.pump(const Duration(milliseconds: 20));
 }

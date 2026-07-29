@@ -1,6 +1,7 @@
 import 'package:context_app/features/journey/presentation/widgets/trip_bookshelf.dart';
 import 'package:context_app/features/trip/domain/models/trip.dart';
 import 'package:context_app/features/trip/providers.dart';
+import 'package:context_app/shared/widgets/journal/floating_back_button.dart';
 import 'package:context_app/shared/widgets/journal/masthead.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -21,46 +22,53 @@ class JourneyScreen extends ConsumerWidget {
     final asyncCounts = ref.watch(tripItemCountsProvider);
 
     return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 建立旅程的入口不在頁首——它是書架末端那本虛線佔位書。
-              Masthead(
-                eyebrow: 'journey.eyebrow'.tr(),
-                title: 'journey.title'.tr(),
-              ),
-              const _CurrentTripBanner(),
-              asyncTrips.when(
-                loading: () => const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 48),
-                  child: Center(child: AdaptiveProgressIndicator()),
-                ),
-                error: (error, _) => Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(
-                    '${'trip.load_error'.tr()}: $error',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
+      body: Stack(
+        children: [
+          SafeArea(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 讓出頁首左上角浮動返回鈕的位置。
+                  const SizedBox(height: 44),
+                  // 建立旅程的入口不在頁首——它是書架末端那本虛線佔位書。
+                  Masthead(
+                    eyebrow: 'journey.eyebrow'.tr(),
+                    title: 'journey.title'.tr(),
                   ),
-                ),
-                data: (trips) {
-                  final counts =
-                      asyncCounts.asData?.value ?? const <String?, int>{};
-                  return TripBookshelf(
-                    caption: 'journey.bookshelf'.tr(
-                      args: ['${_bookCount(trips, counts)}'],
+                  const _CurrentTripBanner(),
+                  asyncTrips.when(
+                    loading: () => const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 48),
+                      child: Center(child: AdaptiveProgressIndicator()),
                     ),
-                    books: _buildBooks(context, trips, counts),
-                    onAddTrip: () => context.push('/trip/edit'),
-                  );
-                },
+                    error: (error, _) => Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(
+                        '${'trip.load_error'.tr()}: $error',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    ),
+                    data: (trips) {
+                      final counts =
+                          asyncCounts.asData?.value ?? const <String?, int>{};
+                      return TripBookshelf(
+                        caption: 'journey.bookshelf'.tr(
+                          args: ['${_bookCount(trips, counts)}'],
+                        ),
+                        books: _buildBooks(context, trips, counts),
+                        onAddTrip: () => context.push('/trip/edit'),
+                      );
+                    },
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
+          const FloatingBackButton(),
+        ],
       ),
     );
   }

@@ -65,18 +65,9 @@
     "save_failed": "儲存失敗",
     "suggested_retry": "建議 {delay} 後重試"
   },
-  "bottom_nav": {
-    "stories": "故事",
-    "explore": "探索",
-    "journey": "歷程",
-    "settings": "設定"
-  },
   "story": {
     "deck_prev": "上一則",
-    "deck_next": "下一則",
-    "list_eyebrow": "Anno · {} 則",
-    "list_title": "故事",
-    "list_empty": "還沒有故事"
+    "deck_next": "下一則"
   },
   "journey": {
     "title": "歷程",
