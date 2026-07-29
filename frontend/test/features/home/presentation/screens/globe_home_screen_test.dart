@@ -271,6 +271,24 @@ void main() {
     expect((pushed.single as DailyStory).placeName, '地點1');
   });
 
+  testWidgets('given the daily story repository fails on first load, '
+      'when the rail shows the error state and the user taps retry, '
+      'then it actually re-fetches and the stories appear', (tester) async {
+    // errorOnNextCall 只丟一次就自動清掉，模擬「第一次沒網路，重試時
+    // 已經恢復」。
+    _stories.errorOnNextCall = Exception('network down');
+    await _givenHome(tester, pushed: []);
+
+    expect(find.text('home.load_error'), findsOneWidget);
+    expect(find.text('聖伯多祿大殿'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('home-stories-retry')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('home.load_error'), findsNothing);
+    expect(find.text('聖伯多祿大殿'), findsWidgets);
+  });
+
   testWidgets('given a story without coordinates, '
       'when it becomes the selected card, '
       'then the globe renders with no focus pin instead of crashing', (

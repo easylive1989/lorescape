@@ -62,6 +62,16 @@ class _GlobeHomeScreenState extends ConsumerState<GlobeHomeScreen> {
     context.push('/map$suffix');
   }
 
+  /// 重新抓故事卡片列。`homeStoriesProvider` 不是 autoDispose，只
+  /// invalidate 它自己沒有用——它的 body 是 `ref.watch(...future)`
+  /// 兩個底層 per-language provider，那兩個才是真正快取住錯誤的地方，
+  /// 三個都要一起清掉才會真的重打 API。
+  void _retryStories(String language) {
+    ref.invalidate(latestDailyStoryByLanguageProvider(language));
+    ref.invalidate(dailyStoryHistoryByLanguageProvider(language));
+    ref.invalidate(homeStoriesProvider(language));
+  }
+
   GlobePin? _pinFor(DailyStory story) {
     final lat = story.latitude;
     final lng = story.longitude;
@@ -77,8 +87,8 @@ class _GlobeHomeScreenState extends ConsumerState<GlobeHomeScreen> {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final language = _dbLanguageFromLocale(context.locale);
-    final stories =
-        ref.watch(homeStoriesProvider(language)).valueOrNull ?? const [];
+    final storiesState = ref.watch(homeStoriesProvider(language));
+    final stories = storiesState.valueOrNull ?? const [];
     final outline = ref.watch(worldOutlineProvider).valueOrNull;
 
     final pins = <GlobePin>[
@@ -162,6 +172,8 @@ class _GlobeHomeScreenState extends ConsumerState<GlobeHomeScreen> {
                     opacity: 1 - t,
                     child: StoryRail(
                       stories: stories,
+                      isError: storiesState.hasError,
+                      onRetry: () => _retryStories(language),
                       activeIndex: _activeIndex,
                       onActiveChanged: (index) =>
                           setState(() => _activeIndex = index),

@@ -4,21 +4,32 @@ import 'package:flutter/material.dart';
 
 import 'package:context_app/app/config/lorescape_tokens.dart';
 import 'package:context_app/features/daily_story/domain/models/daily_story.dart';
+import 'package:context_app/shared/widgets/page_dots.dart';
 
 /// 底部的每日故事橫向卡片列。
 ///
 /// 捲動時回報目前置中的索引，首頁拿它去轉地球儀；點選中的那張才進故事，
-/// 點旁邊的卡片只是把它捲到中間（跟設計稿一致，避免誤觸）。
+/// 點旁邊的卡片只是把它捲到中間（跟設計稿一致，避免誤觸）。甩動放開後會
+/// 用 [_SnapScrollPhysics] 停在卡片邊界，不會停在兩張卡中間；下方的
+/// [PageDots] 標出目前位置。
 class StoryRail extends StatefulWidget {
   const StoryRail({
     super.key,
     required this.stories,
+    required this.isError,
+    required this.onRetry,
     required this.activeIndex,
     required this.onActiveChanged,
     required this.onOpen,
   });
 
   final List<DailyStory> stories;
+
+  /// 載入故事失敗（`homeStoriesProvider` 的 AsyncError）。跟 [stories] 為
+  /// 空但沒出錯（真的沒有故事，或還在載入中）分開處理——前者要給重試入口。
+  final bool isError;
+  final VoidCallback onRetry;
+
   final int activeIndex;
   final ValueChanged<int> onActiveChanged;
   final ValueChanged<DailyStory> onOpen;
@@ -62,7 +73,14 @@ class _StoryRailState extends State<StoryRail> {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
+
+    if (widget.isError) {
+      return _RailErrorState(onRetry: widget.onRetry);
+    }
+
     if (widget.stories.isEmpty) {
+      // 涵蓋兩種情況：真的還沒有故事，或還在第一次載入中——後者維持現狀
+      // 直接當空的處理，不特別做骨架屏。
       return Padding(
         padding: const EdgeInsets.all(20),
         child: Text('home.empty'.tr(), textAlign: TextAlign.center),
@@ -100,6 +118,7 @@ class _StoryRailState extends State<StoryRail> {
             child: ListView.separated(
               controller: _controller,
               scrollDirection: Axis.horizontal,
+              physics: const _SnapScrollPhysics(itemExtent: StoryRail.stride),
               padding: const EdgeInsets.symmetric(horizontal: 20),
               itemCount: widget.stories.length,
               separatorBuilder: (_, __) => const SizedBox(width: 12),
@@ -112,7 +131,94 @@ class _StoryRailState extends State<StoryRail> {
             ),
           ),
         ),
+        PageDots(
+          count: widget.stories.length,
+          index: widget.activeIndex,
+          padding: const EdgeInsets.only(top: 10),
+        ),
       ],
+    );
+  }
+}
+
+/// 甩動放開後停在某張卡片的邊界，不會停在兩張卡中間——否則「目前選中的是
+/// 哪一張」會曖昧，地球儀該轉到哪個定點也跟著曖昧。做法跟 Flutter 內建的
+/// [PageScrollPhysics] 相同（往最近的 [itemExtent] 倍數收斂），只是這裡的
+/// 卡片是固定寬度而非整頁，所以自己實作而不是用 PageView。
+class _SnapScrollPhysics extends ScrollPhysics {
+  const _SnapScrollPhysics({super.parent, required this.itemExtent});
+
+  final double itemExtent;
+
+  @override
+  _SnapScrollPhysics applyTo(ScrollPhysics? ancestor) {
+    return _SnapScrollPhysics(
+      parent: buildParent(ancestor),
+      itemExtent: itemExtent,
+    );
+  }
+
+  double _targetPixels(ScrollMetrics position) {
+    final page = position.pixels / itemExtent;
+    return page.roundToDouble() * itemExtent;
+  }
+
+  @override
+  Simulation? createBallisticSimulation(
+    ScrollMetrics position,
+    double velocity,
+  ) {
+    // 已經滑出邊界，交給預設行為處理回彈，不要在這裡搶著收斂。
+    if ((velocity <= 0.0 && position.pixels <= position.minScrollExtent) ||
+        (velocity >= 0.0 && position.pixels >= position.maxScrollExtent)) {
+      return super.createBallisticSimulation(position, velocity);
+    }
+
+    final tolerance = toleranceFor(position);
+    final target = _targetPixels(
+      position,
+    ).clamp(position.minScrollExtent, position.maxScrollExtent);
+    if ((target - position.pixels).abs() < tolerance.distance) return null;
+    return ScrollSpringSimulation(
+      spring,
+      position.pixels,
+      target,
+      velocity,
+      tolerance: tolerance,
+    );
+  }
+
+  @override
+  bool get allowImplicitScrolling => false;
+}
+
+/// 首頁故事卡片列載入失敗時的訊息＋重試鈕。
+class _RailErrorState extends StatelessWidget {
+  const _RailErrorState({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'home.load_error'.tr(),
+            textAlign: TextAlign.center,
+            style: TextStyle(color: tokens.ink3),
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            key: const Key('home-stories-retry'),
+            onPressed: onRetry,
+            child: Text('home.retry'.tr()),
+          ),
+        ],
+      ),
     );
   }
 }

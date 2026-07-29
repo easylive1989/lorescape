@@ -9,7 +9,9 @@
     "badge_latest": "Latest",
     "empty": "No stories yet",
     "open_journey": "Journey shelf",
-    "open_settings": "Settings"
+    "open_settings": "Settings",
+    "load_error": "Failed to load",
+    "retry": "Retry"
   },
   "gps_strong": "GPS Strong",
   "audio_ready": "Audio Ready",

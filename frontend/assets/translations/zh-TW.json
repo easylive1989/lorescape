@@ -9,7 +9,9 @@
     "badge_latest": "最新",
     "empty": "還沒有故事",
     "open_journey": "歷程書架",
-    "open_settings": "設定"
+    "open_settings": "設定",
+    "load_error": "載入失敗",
+    "retry": "重試"
   },
   "gps_strong": "GPS 信號強",
   "audio_ready": "音訊就緒",
