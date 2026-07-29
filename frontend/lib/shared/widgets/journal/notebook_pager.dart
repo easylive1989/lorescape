@@ -272,7 +272,9 @@ class _NotebookPagerState extends State<NotebookPager>
     // 甩動優先於距離：順著翻頁方向甩就翻、逆著甩就收回，距離門檻只在
     // 慢慢拖、鬆手沒有速度時才出場——與 PageView 的手感一致。
     final vx = details.primaryVelocity ?? 0;
-    final flungAlong = _flipForward ? vx < -_flingVelocity : vx > _flingVelocity;
+    final flungAlong = _flipForward
+        ? vx < -_flingVelocity
+        : vx > _flingVelocity;
     final flungBack = _flipForward ? vx > _flingVelocity : vx < -_flingVelocity;
     final commit =
         canFlip && !flungBack && (flungAlong || _flipT > _commitThreshold);
@@ -293,8 +295,9 @@ class _NotebookPagerState extends State<NotebookPager>
 
     // 收尾長度隨剩餘距離等比縮短：翻剩一點點就快快落地，別讓使用者
     // 盯著幾乎靜止的尾巴猜「到底翻完了沒」。
-    final ms = (_settleDuration.inMilliseconds * (_settleTo - _settleFrom).abs())
-        .round();
+    final ms =
+        (_settleDuration.inMilliseconds * (_settleTo - _settleFrom).abs())
+            .round();
     _settle.duration = Duration(
       milliseconds: math.max(_settleMinDuration.inMilliseconds, ms),
     );
