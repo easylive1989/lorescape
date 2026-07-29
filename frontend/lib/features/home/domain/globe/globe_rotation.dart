@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:latlong2/latlong.dart';
 
 /// 地球儀的旋轉角，沿用 d3.geoOrthographic 的慣例：
@@ -33,10 +31,6 @@ class GlobeRotation {
     deltaLambda = (deltaLambda % 360 + 540) % 360 - 180;
     return GlobeRotation(lambda + deltaLambda * t, phi + (other.phi - phi) * t);
   }
-
-  double get lambdaRadians => lambda * math.pi / 180;
-
-  double get phiRadians => phi * math.pi / 180;
 
   @override
   String toString() => 'GlobeRotation($lambda, $phi)';
