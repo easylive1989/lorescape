@@ -157,6 +157,8 @@ flutter:
     - assets/translations/
     # 由 tool/build_map_style.py 產生，勿手改（見 docs/adr/0005-map-tile-provider.md）
     - assets/map/
+    # 由 tool/build_world_outline.py 從 Natural Earth 110m 產生，勿手改
+    - assets/geo/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

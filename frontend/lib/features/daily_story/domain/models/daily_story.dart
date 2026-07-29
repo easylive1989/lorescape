@@ -57,6 +57,13 @@ class DailyStory extends Equatable {
   /// the App hides the "explore more stories" CTA in that case.
   final String? wikidataId;
 
+  /// 景點的緯度，來自 `daily_story_places.latitude`。地球儀首頁用它決定
+  /// 要不要把這篇故事釘上地球。舊資料尚未 backfill 時為 null。
+  final double? latitude;
+
+  /// 景點的經度，來自 `daily_story_places.longitude`。
+  final double? longitude;
+
   const DailyStory({
     required this.publishDate,
     required this.language,
@@ -77,6 +84,8 @@ class DailyStory extends Equatable {
     this.cardCityCh,
     this.cardCityEn,
     this.wikidataId,
+    this.latitude,
+    this.longitude,
   });
 
   @override
@@ -100,5 +109,7 @@ class DailyStory extends Equatable {
     cardCityCh,
     cardCityEn,
     wikidataId,
+    latitude,
+    longitude,
   ];
 }

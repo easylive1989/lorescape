@@ -172,6 +172,49 @@ void main() {
       final story = SupabaseDailyStoryRepository.rowToStory(row);
       expect(story.wikidataId, isNull);
     });
+
+    test(
+      'given a row whose place join carries coordinates, '
+      'when rowToStory parses it, '
+      'then latitude and longitude are mapped',
+      () {
+        final story = SupabaseDailyStoryRepository.rowToStory({
+          'publish_date': '2026-07-28',
+          'language': 'zh-TW',
+          'place_name': '聖伯多祿大殿',
+          'place_location': '義大利羅馬',
+          'era': '公元 1506-1626 年',
+          'story': '內文',
+          'image_url': null,
+          'wikipedia_url': 'https://zh.wikipedia.org/wiki/聖伯多祿大殿',
+          'daily_story_places': {'latitude': 41.9022, 'longitude': 12.4539},
+        });
+
+        expect(story.latitude, 41.9022);
+        expect(story.longitude, 12.4539);
+      },
+    );
+
+    test(
+      'given a row with no place join, '
+      'when rowToStory parses it, '
+      'then latitude and longitude are null',
+      () {
+        final story = SupabaseDailyStoryRepository.rowToStory({
+          'publish_date': '2026-07-28',
+          'language': 'zh-TW',
+          'place_name': '聖伯多祿大殿',
+          'place_location': '義大利羅馬',
+          'era': '公元 1506-1626 年',
+          'story': '內文',
+          'image_url': null,
+          'wikipedia_url': 'https://zh.wikipedia.org/wiki/聖伯多祿大殿',
+        });
+
+        expect(story.latitude, isNull);
+        expect(story.longitude, isNull);
+      },
+    );
   });
 
   group('SupabaseDailyStoryRepository.fetchByDate', () {

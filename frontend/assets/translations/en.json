@@ -1,4 +1,18 @@
 {
+  "home": {
+    "eyebrow": "DAILY LORE",
+    "brand": "Lorescape",
+    "search_hint": "Search a place, city or landmark…",
+    "search_clear": "Clear",
+    "locate": "Nearby",
+    "deck_label": "DAILY LORE · ANNO MMXXVI",
+    "badge_latest": "Latest",
+    "empty": "No stories yet",
+    "open_journey": "Journey shelf",
+    "open_settings": "Settings",
+    "load_error": "Failed to load",
+    "retry": "Retry"
+  },
   "gps_strong": "GPS Strong",
   "audio_ready": "Audio Ready",
   "current_location": "Current Location",
@@ -52,19 +66,6 @@
     "please_login": "Please login first",
     "save_failed": "Save failed",
     "suggested_retry": "Suggested retry after {delay}"
-  },
-  "bottom_nav": {
-    "stories": "Stories",
-    "explore": "Explore",
-    "journey": "Journey",
-    "settings": "Settings"
-  },
-  "story": {
-    "deck_prev": "Previous",
-    "deck_next": "Next",
-    "list_eyebrow": "Anno · {} stories",
-    "list_title": "Stories",
-    "list_empty": "No stories yet"
   },
   "journey": {
     "title": "Journey",
@@ -139,6 +140,7 @@
   },
   "explore": {
     "title": "Explore",
+    "back_to_globe": "Back to globe",
     "refresh": "Refresh",
     "search_hint": "Search for places, cities, or landmarks…",
     "empty": "No places found",

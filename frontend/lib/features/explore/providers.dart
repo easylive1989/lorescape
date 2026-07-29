@@ -15,6 +15,7 @@ import 'package:context_app/features/explore/data/repositories/places_repository
 import 'package:context_app/features/explore/data/repositories/caching_places_repository.dart';
 import 'package:context_app/features/explore/domain/models/place.dart';
 import 'package:context_app/features/explore/domain/models/place_location.dart';
+import 'package:context_app/features/settings/domain/models/language.dart';
 import 'package:context_app/features/settings/providers.dart';
 import 'package:vector_map_tiles/vector_map_tiles.dart';
 import 'package:vector_tile_renderer/vector_tile_renderer.dart'
@@ -211,3 +212,20 @@ class PlacesController extends AsyncNotifier<List<Place>> {
     state = await AsyncValue.guard(() => _loadNearbyPlaces(radius: radius));
   }
 }
+
+/// 搜尋列的即時建議。查詢字串＋語言一起當 family key，`autoDispose` 讓離開
+/// 畫面後自動清掉——建議清單沒有跨畫面重用的價值。
+///
+/// 語言由呼叫端傳入，不讀 `currentLanguageProvider`——後者的初始值是作業
+/// 系統語言，在使用者第一次進到 `/map` 之前都不會跟 EasyLocalization 同步
+/// （見 `HomeTopBar` 呼叫端的說明）。
+final placeSuggestionsProvider = FutureProvider.autoDispose
+    .family<List<String>, ({String query, Language language})>((
+      ref,
+      key,
+    ) async {
+      final trimmed = key.query.trim();
+      if (trimmed.isEmpty) return const [];
+      final repository = ref.watch(placesRepositoryProvider);
+      return repository.suggestPlaceNames(trimmed, language: key.language);
+    });

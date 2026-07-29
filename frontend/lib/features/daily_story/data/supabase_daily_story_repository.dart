@@ -13,7 +13,7 @@ class SupabaseDailyStoryRepository implements DailyStoryRepository {
   // `!left` so we still get the story row even if the place join is empty.
   // ignore: lines_longer_than_80_chars
   static const _select =
-      '*, daily_story_places!left(card_location_en, card_city_ch, card_city_en, wikidata_id)';
+      '*, daily_story_places!left(card_location_en, card_city_ch, card_city_en, wikidata_id, latitude, longitude)';
 
   @override
   Future<DailyStory?> fetchLatest({required String language}) async {
@@ -85,6 +85,8 @@ class SupabaseDailyStoryRepository implements DailyStoryRepository {
       cardCityCh: place?['card_city_ch'] as String?,
       cardCityEn: place?['card_city_en'] as String?,
       wikidataId: place?['wikidata_id'] as String?,
+      latitude: (place?['latitude'] as num?)?.toDouble(),
+      longitude: (place?['longitude'] as num?)?.toDouble(),
     );
   }
 

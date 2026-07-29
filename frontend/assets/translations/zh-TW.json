@@ -1,4 +1,18 @@
 {
+  "home": {
+    "eyebrow": "每日故事 · DAILY LORE",
+    "brand": "Lorescape",
+    "search_hint": "搜尋地點、城市或地標……",
+    "search_clear": "清除",
+    "locate": "定位",
+    "deck_label": "每日故事 · ANNO MMXXVI",
+    "badge_latest": "最新",
+    "empty": "還沒有故事",
+    "open_journey": "歷程書架",
+    "open_settings": "設定",
+    "load_error": "載入失敗",
+    "retry": "重試"
+  },
   "gps_strong": "GPS 信號強",
   "audio_ready": "音訊就緒",
   "current_location": "目前位置",
@@ -52,19 +66,6 @@
     "please_login": "請先登入",
     "save_failed": "儲存失敗",
     "suggested_retry": "建議 {delay} 後重試"
-  },
-  "bottom_nav": {
-    "stories": "故事",
-    "explore": "探索",
-    "journey": "歷程",
-    "settings": "設定"
-  },
-  "story": {
-    "deck_prev": "上一則",
-    "deck_next": "下一則",
-    "list_eyebrow": "Anno · {} 則",
-    "list_title": "故事",
-    "list_empty": "還沒有故事"
   },
   "journey": {
     "title": "歷程",
@@ -140,6 +141,7 @@
   },
   "explore": {
     "title": "探索",
+    "back_to_globe": "回到地球儀",
     "refresh": "重新整理",
     "search_hint": "搜尋地點、城市或地標……",
     "empty": "找不到符合的地點",

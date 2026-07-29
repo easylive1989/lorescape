@@ -85,4 +85,10 @@ class FakePlacesRepository implements PlacesRepository {
         )
         .toList();
   }
+
+  @override
+  Future<List<String>> suggestPlaceNames(
+    String query, {
+    required Language language,
+  }) async => const [];
 }

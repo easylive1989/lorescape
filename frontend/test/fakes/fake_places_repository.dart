@@ -15,6 +15,16 @@ class FakePlacesRepository implements PlacesRepository {
   int searchCallCount = 0;
   String? lastSearchQuery;
 
+  /// 測試可預先設定的建議清單。
+  List<String> suggestions = const [];
+
+  /// `suggestPlaceNames` 被呼叫過幾次，用來驗證 debounce。
+  int suggestCallCount = 0;
+
+  /// `suggestPlaceNames` 最後一次被呼叫時收到的語言，用來驗證呼叫端傳的
+  /// 是哪一套語言判定。
+  Language? lastSuggestLanguage;
+
   FakePlacesRepository({
     this.nearbyPlaces = const [],
     this.searchResults = const [],
@@ -49,5 +59,15 @@ class FakePlacesRepository implements PlacesRepository {
       if (place.id == placeId) return place;
     }
     return null;
+  }
+
+  @override
+  Future<List<String>> suggestPlaceNames(
+    String query, {
+    required Language language,
+  }) async {
+    suggestCallCount++;
+    lastSuggestLanguage = language;
+    return suggestions;
   }
 }

@@ -231,6 +231,12 @@ class PlacesRepositoryImpl implements PlacesRepository {
     );
   }
 
+  @override
+  Future<List<String>> suggestPlaceNames(
+    String query, {
+    required Language language,
+  }) => _service.suggestTitles(query, wikiLang: _wikiLang(language));
+
   String _wikiLang(Language language) =>
       language.code.split('-').first.toLowerCase();
 }

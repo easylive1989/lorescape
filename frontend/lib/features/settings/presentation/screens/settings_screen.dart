@@ -6,6 +6,7 @@ import 'package:context_app/features/settings/providers.dart';
 import 'package:context_app/features/subscription/providers.dart';
 import 'package:context_app/features/sync/providers.dart';
 import 'package:context_app/shared/widgets/adaptive/adaptive_widgets.dart';
+import 'package:context_app/shared/widgets/journal/floating_back_button.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,30 +18,37 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 4, bottom: 14),
-              child: Text(
-                'settings.title'.tr(),
-                style: Theme.of(context).textTheme.displayLarge,
-              ),
+      body: Stack(
+        children: [
+          SafeArea(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+              children: [
+                // 讓出頁首左上角浮動返回鈕的位置。
+                const SizedBox(height: 44),
+                Padding(
+                  padding: const EdgeInsets.only(top: 4, bottom: 14),
+                  child: Text(
+                    'settings.title'.tr(),
+                    style: Theme.of(context).textTheme.displayLarge,
+                  ),
+                ),
+                const _UpgradeBanner(),
+                const SizedBox(height: 26),
+                const _PreferencesGroup(),
+                const SizedBox(height: 26),
+                const _AccountGroup(),
+                const SizedBox(height: 26),
+                const _SyncGroup(),
+                const SizedBox(height: 26),
+                const _OnboardingGroup(),
+                const SizedBox(height: 36),
+                const _Footer(),
+              ],
             ),
-            const _UpgradeBanner(),
-            const SizedBox(height: 26),
-            const _PreferencesGroup(),
-            const SizedBox(height: 26),
-            const _AccountGroup(),
-            const SizedBox(height: 26),
-            const _SyncGroup(),
-            const SizedBox(height: 26),
-            const _OnboardingGroup(),
-            const SizedBox(height: 36),
-            const _Footer(),
-          ],
-        ),
+          ),
+          const FloatingBackButton(),
+        ],
       ),
     );
   }

@@ -21,17 +21,14 @@ void main() {
   });
 
   group('JourneyScreen', () {
-    testWidgets(
-      'given no trips at all, when the shelf loads, '
-      'then the uncategorized volume is still on the shelf',
-      (tester) async {
-        await _givenJourneyScreen(tester);
+    testWidgets('given no trips at all, when the shelf loads, '
+        'then the uncategorized volume is still on the shelf', (tester) async {
+      await _givenJourneyScreen(tester);
 
-        // 一本都沒有時書架不能整個空掉——未分類永遠有自己的一本。
-        expect(find.byType(TripBookshelf), findsOneWidget);
-        expect(_bookFinder(), findsOneWidget);
-      },
-    );
+      // 一本都沒有時書架不能整個空掉——未分類永遠有自己的一本。
+      expect(find.byType(TripBookshelf), findsOneWidget);
+      expect(_bookFinder(), findsOneWidget);
+    });
 
     testWidgets(
       'given saved trips and no loose entries, when the shelf loads, '
@@ -49,19 +46,18 @@ void main() {
       },
     );
 
-    testWidgets(
-      'given entries that belong to no trip, when the shelf loads, '
-      'then the uncategorized volume appears alongside the trips',
-      (tester) async {
-        await _givenJourneyScreen(
-          tester,
-          seededTrips: [buildTrip(id: 't1', name: '京都')],
-          seededJourneys: [buildJourneyEntry(id: 'e1')],
-        );
+    testWidgets('given entries that belong to no trip, when the shelf loads, '
+        'then the uncategorized volume appears alongside the trips', (
+      tester,
+    ) async {
+      await _givenJourneyScreen(
+        tester,
+        seededTrips: [buildTrip(id: 't1', name: '京都')],
+        seededJourneys: [buildJourneyEntry(id: 'e1')],
+      );
 
-        expect(_bookFinder(), findsNWidgets(2));
-      },
-    );
+      expect(_bookFinder(), findsNWidgets(2));
+    });
 
     testWidgets(
       'given a trip on the shelf under a router, when its book is tapped, '
@@ -105,19 +101,48 @@ void main() {
       },
     );
 
-    testWidgets(
-      'given a current trip is set, when the shelf loads, '
-      'then the current-trip banner is shown above the shelf',
-      (tester) async {
-        await _givenJourneyScreen(
-          tester,
-          seededTrips: [buildTrip(id: 't1', name: '京都')],
-          currentTripIdInitial: 't1',
-        );
+    testWidgets('given a current trip is set, when the shelf loads, '
+        'then the current-trip banner is shown above the shelf', (
+      tester,
+    ) async {
+      await _givenJourneyScreen(
+        tester,
+        seededTrips: [buildTrip(id: 't1', name: '京都')],
+        currentTripIdInitial: 't1',
+      );
 
-        expect(find.text('trip.current_badge'), findsOneWidget);
-      },
-    );
+      expect(find.text('trip.current_badge'), findsOneWidget);
+    });
+
+    testWidgets('given the journey screen pushed from home, '
+        'when the user taps the back button, '
+        'then it returns to the previous screen', (tester) async {
+      final overrides = await _buildJourneyOverrides();
+
+      await pumpRouterApp(
+        tester,
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, __) => const Scaffold(key: Key('home-screen')),
+          ),
+          GoRoute(path: '/journey', builder: (_, __) => const JourneyScreen()),
+        ],
+        overrides: overrides,
+      );
+      final context = tester.element(find.byKey(const Key('home-screen')));
+      GoRouter.of(context).push('/journey');
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('home-screen')), findsNothing);
+      expect(find.byType(JourneyScreen), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('floating-back')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('home-screen')), findsOneWidget);
+      expect(find.byType(JourneyScreen), findsNothing);
+    });
   });
 }
 
@@ -133,11 +158,7 @@ Future<void> _givenJourneyScreen(
     currentTripIdInitial: currentTripIdInitial,
   );
 
-  await pumpScreen(
-    tester,
-    child: const JourneyScreen(),
-    overrides: overrides,
-  );
+  await pumpScreen(tester, child: const JourneyScreen(), overrides: overrides);
   await tester.pump(const Duration(milliseconds: 20));
   await tester.pump(const Duration(milliseconds: 20));
 }
@@ -159,10 +180,8 @@ Future<void> _givenJourneyScreenWithRouter(
       GoRoute(path: '/', builder: (_, __) => const JourneyScreen()),
       GoRoute(
         path: '/trip/edit',
-        builder: (_, __) => const Scaffold(
-          key: ValueKey('edit-screen'),
-          body: Text('edit'),
-        ),
+        builder: (_, __) =>
+            const Scaffold(key: ValueKey('edit-screen'), body: Text('edit')),
       ),
       GoRoute(
         path: '/trip/:id',
@@ -213,7 +232,6 @@ class _StaticCurrentTripIdNotifier extends CurrentTripIdNotifier {
   @override
   String? build() => _initial;
 }
-
 
 /// 書架上的一本「真書」（旅程），不含末端那本虛線佔位書。
 ///

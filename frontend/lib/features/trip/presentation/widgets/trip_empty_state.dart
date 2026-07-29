@@ -63,7 +63,7 @@ class TripEmptyState extends StatelessWidget {
             const SizedBox(height: 24),
             AdaptiveButton(
               // go 而非 push：使用者按下引導後不該還能退回這本空旅程。
-              onPressed: () => context.go('/?tab=explore'),
+              onPressed: () => context.go('/map'),
               child: Text('trip.empty_cta'.tr()),
             ),
           ],
