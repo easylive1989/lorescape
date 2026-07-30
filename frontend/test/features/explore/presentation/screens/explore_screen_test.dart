@@ -71,6 +71,33 @@ void main() {
       );
     });
 
+    testWidgets('given place cards are shown, '
+        'when the attribution badge is rendered, '
+        'then the badge sits below the card rail and clear of the cards', (
+      tester,
+    ) async {
+      await _givenExploreScreen(
+        tester,
+        places: [buildPlace(id: 'p1', name: 'Senso-ji')],
+      );
+
+      // 角標放卡片列下方的縫隙（見 explore_screen.dart 的幾何註解）。這裡
+      // 驗實際幾何：卡片的下緣必須在角標上緣之上——署名被蓋掉等同沒有署名
+      // （見 ADR 0005）。
+      final badgeTop = tester
+          .getRect(
+            find.text('OpenFreeMap © OpenMapTiles Data from OpenStreetMap'),
+          )
+          .top;
+      final card = find
+          .ancestor(
+            of: find.text('Senso-ji'),
+            matching: find.byType(Container),
+          )
+          .first;
+      expect(badgeTop, greaterThanOrEqualTo(tester.getRect(card).bottom));
+    });
+
     testWidgets('given nearby places are returned, when the screen loads, '
         'then a place card is rendered for each place', (tester) async {
       final places = [

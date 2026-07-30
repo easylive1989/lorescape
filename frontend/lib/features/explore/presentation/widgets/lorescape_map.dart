@@ -45,9 +45,11 @@ class LorescapeMap extends ConsumerStatefulWidget {
   final List<Widget> children;
   final List<LatLng> fitToPoints;
 
-  /// 出處角標距離底緣的距離。呼叫端若在地圖上疊了貼底的浮層（探索頁的地點
-  /// 卡片列就是），要把這個值設成那層的高度，否則角標會被蓋掉——而署名被蓋
-  /// 掉等同沒有署名，是授權違規。見 `docs/adr/0005-map-tile-provider.md`。
+  /// 出處角標距離底緣的距離。角標不得被任何浮層蓋掉——署名被蓋掉等同沒有
+  /// 署名，是授權違規。呼叫端若在地圖上疊了貼底的浮層，要嘛用這個值把角標
+  /// 推到浮層上方，要嘛確保浮層下方留有角標放得下的透空縫隙（探索頁的地點
+  /// 卡片列走後者，幾何依據見 explore_screen.dart 傳這個參數處的註解）。
+  /// 見 `docs/adr/0005-map-tile-provider.md`。
   final double attributionBottomInset;
 
   @override

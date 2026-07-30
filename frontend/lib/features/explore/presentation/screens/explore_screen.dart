@@ -141,12 +141,13 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         children: [
           LorescapeMap(
             mapController: _mapController,
-            // 出處角標要落在卡片列上方，否則會被整個蓋住——署名被蓋掉等同
-            // 沒有署名。
-            attributionBottomInset:
-                MediaQuery.paddingOf(context).bottom +
-                _MapCardsRail.railBottomGap +
-                _MapCardsRail.railHeight,
+            // 出處角標放在卡片列「下方」的縫隙（卡片列與 body 底緣之間），
+            // 只墊安全區。幾何依據：角標高 16（字 12 ＋ 上下內距各 2），比
+            // railBottomGap 的 12 高 4px，多出的部分伸進卡片列的範圍——但
+            // 卡片列的 ListView 自帶 8 的底部內距，卡片實際下緣仍在角標上緣
+            // 之上 4px，署名不會被卡片蓋到。署名被蓋掉等同沒有署名，是授權
+            // 違規（見 ADR 0005）。
+            attributionBottomInset: MediaQuery.paddingOf(context).bottom,
             fitToPoints: [
               for (final place in places)
                 LatLng(place.location.latitude, place.location.longitude),

@@ -100,9 +100,11 @@ Geoapify Free + raster（見「未採納但保留的選項」），但那將是�
   - **地圖右下角的文字角標**（`LorescapeMap._AttributionBadge`）——OSM
     attribution guideline 要求署名要能從地圖上直接可及，這一份就是那個義務。
     角標畫在 `LorescapeMap` 內而非呼叫端，任何用到這張底圖的畫面都會自動帶
-    著署名。呼叫端若在地圖上疊了貼底的浮層，**必須**用
-    `attributionBottomInset` 把角標推到浮層上方（探索頁的地點卡片列就是這種
-    情況）——署名被蓋掉等同沒有署名。
+    著署名。呼叫端若在地圖上疊了貼底的浮層，**必須**確保角標不被蓋掉——用
+    `attributionBottomInset` 把角標推到浮層上方，或確保浮層下方留有角標放
+    得下的透空縫隙（2026-07-30 起探索頁走後者：角標在地點卡片列下方的縫隙，
+    卡片列 ListView 的底部內距保證卡片不會壓到它）——署名被蓋掉等同沒有
+    署名。
   - **設定頁的「地圖資料來源」**（`_MapSourceGroup`）——完整出處與
     openstreetmap.org/copyright 連結。
 
