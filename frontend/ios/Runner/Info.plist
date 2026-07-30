@@ -53,6 +53,8 @@
 		<false/>
 		<key>LSRequiresIPhoneOS</key>
 		<true/>
+		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+		<string>此應用程式需要存取您的位置來顯示附近的地點</string>
 		<key>NSLocationWhenInUseUsageDescription</key>
 		<string>此應用程式需要存取您的位置來顯示附近的地點</string>
 		<key>NSPhotoLibraryAddUsageDescription</key>
