@@ -33,16 +33,26 @@
   "config_screen": {
     "title": "選擇解說深度",
     "start_button": "開始導覽",
-    "generating": "正在生成導覽內容...",
     "generation_error_title": "生成失敗",
     "generation_error_message": "導覽內容生成失敗，請稍後再試。",
     "generation_insufficient_source_title": "找不到歷史故事",
     "generation_insufficient_source_message": "我們在維基百科上找不到這個景點的歷史人物或事件，沒辦法為您講一段真實故事。請選擇其他景點試試。",
     "generation_error_ok": "確定"
   },
+  "story_generating": {
+    "scan_title": "正在挖掘「{}」的故事",
+    "scan_sub": "從地方志、老照片與檔案中找出可講的線索",
+    "scan_step_1": "翻查 Wikipedia 與史料",
+    "scan_step_2": "比對這個地點的人物與事件",
+    "scan_step_3": "整理出可講的故事線",
+    "write_title": "正在寫下《{}》",
+    "write_sub": "Lorescape 正把史料寫成一段可以聽的敘事",
+    "write_step_1": "梳理史料與時間軸",
+    "write_step_2": "撰寫可朗讀的敘事",
+    "write_step_3": "潤飾語氣與節奏"
+  },
   "story_hook": {
     "title": "想聽哪段故事？",
-    "loading": "正在挖掘這裡的歷史故事...",
     "fallback_title": "歷史故事",
     "fallback_body": "暫時找不到特定的故事線索，仍然可以直接聽一段這個地方的歷史。",
     "listen_default_button": "直接聽故事",
@@ -144,6 +154,8 @@
     "back_to_globe": "回到地球儀",
     "refresh": "重新整理",
     "search_hint": "搜尋地點、城市或地標……",
+    "searching": "搜尋地點中",
+    "locating": "定位中",
     "empty": "找不到符合的地點",
     "filter": {
       "title": "篩選條件",

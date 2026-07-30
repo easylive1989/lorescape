@@ -33,16 +33,26 @@
   "config_screen": {
     "title": "Select Narration Depth",
     "start_button": "Start Guide",
-    "generating": "Generating narration...",
     "generation_error_title": "Generation Failed",
     "generation_error_message": "Failed to generate narration. Please try again later.",
     "generation_insufficient_source_title": "No story to tell",
     "generation_insufficient_source_message": "Wikipedia has no historical figures or events recorded for this place, so we can't tell you a real story here. Try another spot.",
     "generation_error_ok": "OK"
   },
+  "story_generating": {
+    "scan_title": "Unearthing the story of {}",
+    "scan_sub": "Sifting local records, old photos and archives for threads worth telling",
+    "scan_step_1": "Searching Wikipedia and archives",
+    "scan_step_2": "Matching people and events to this place",
+    "scan_step_3": "Curating story angles worth hearing",
+    "write_title": "Writing \"{}\"",
+    "write_sub": "Lorescape is turning the sources into a story you can listen to",
+    "write_step_1": "Organizing sources and timeline",
+    "write_step_2": "Drafting the narration",
+    "write_step_3": "Polishing tone and pacing"
+  },
   "story_hook": {
     "title": "Which story do you want to hear?",
-    "loading": "Digging up this place's history...",
     "fallback_title": "A historical story",
     "fallback_body": "No specific story threads found right now, but we can still share a historical story about this place.",
     "listen_default_button": "Just play a story",
@@ -143,6 +153,8 @@
     "back_to_globe": "Back to globe",
     "refresh": "Refresh",
     "search_hint": "Search for places, cities, or landmarks…",
+    "searching": "Searching places",
+    "locating": "Locating",
     "empty": "No places found",
     "filter": {
       "title": "Filters",

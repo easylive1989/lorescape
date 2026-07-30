@@ -9,6 +9,7 @@ import 'package:context_app/features/narration/domain/models/story_hook.dart';
 import 'package:context_app/features/narration/presentation/controllers/narration_generation_controller.dart';
 import 'package:context_app/features/narration/presentation/controllers/story_hook_controller.dart';
 import 'package:context_app/features/narration/presentation/widgets/editorial_hero.dart';
+import 'package:context_app/features/narration/presentation/widgets/story_generating.dart';
 import 'package:context_app/features/narration/providers.dart';
 import 'package:context_app/features/settings/domain/models/language.dart';
 import 'package:context_app/shared/widgets/adaptive/adaptive_widgets.dart';
@@ -160,6 +161,69 @@ class _SelectStoryHookScreenState extends ConsumerState<SelectStoryHookScreen> {
 
     final tokens = Theme.of(context).extension<LorescapeTokens>();
     final isGenerating = generationState.isGenerating;
+    final isHookLoading = hookState.status == StoryHookStatus.loading;
+
+    // 生成中（挖掘故事線或寫完整故事）走設計稿的 `.genscr` 版面：210px
+    // 標頭壓縮到上緣，其餘空間交給 StoryGenerating 的整頁動畫。其他狀態
+    // 維持原本的 editorial 版面（大 hero ＋ 內容往下捲）。
+    if (isGenerating || isHookLoading) {
+      return Scaffold(
+        backgroundColor: tokens?.paper ?? Theme.of(context).colorScheme.surface,
+        body: Stack(
+          children: [
+            Positioned.fill(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _HeroSection(
+                    place: widget.place,
+                    capturedImageBytes: widget.capturedImageBytes,
+                    compact: true,
+                  ),
+                  Expanded(
+                    child: isGenerating
+                        ? StoryGenerating(
+                            key: const ValueKey('gen-write'),
+                            title: 'story_generating.write_title'.tr(
+                              args: [_selectedStoryTitle ?? widget.place.name],
+                            ),
+                            subtitle: 'story_generating.write_sub'.tr(),
+                            steps: [
+                              'story_generating.write_step_1'.tr(),
+                              'story_generating.write_step_2'.tr(),
+                              'story_generating.write_step_3'.tr(),
+                            ],
+                            icon: Icons.edit_outlined,
+                          )
+                        : StoryGenerating(
+                            key: const ValueKey('gen-scan'),
+                            title: 'story_generating.scan_title'.tr(
+                              args: [widget.place.name],
+                            ),
+                            subtitle: 'story_generating.scan_sub'.tr(),
+                            steps: [
+                              'story_generating.scan_step_1'.tr(),
+                              'story_generating.scan_step_2'.tr(),
+                              'story_generating.scan_step_3'.tr(),
+                            ],
+                            icon: Icons.menu_book_outlined,
+                          ),
+                  ),
+                ],
+              ),
+            ),
+            // 挖掘中仍可退出；寫作中維持原本「不可中途離開」的行為（生成
+            // 完成會直接導去播放器，中途離開會讓導頁落在錯的畫面上）。
+            if (!isGenerating)
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 6,
+                left: 14,
+                child: _OnPhotoBackButton(onPressed: () => context.pop()),
+              ),
+          ],
+        ),
+      );
+    }
 
     // Editorial layout (design: `PlaceScreen` in screens_story.jsx): a
     // bounded hero on top, with the generation copy flowing below it on the
@@ -179,25 +243,22 @@ class _SelectStoryHookScreenState extends ConsumerState<SelectStoryHookScreen> {
                   ),
                   Padding(
                     padding: const EdgeInsets.all(22),
-                    child: isGenerating
-                        ? _GenState(message: 'config_screen.generating'.tr())
-                        : _HookContent(
-                            state: hookState,
-                            onHookTap: _onHookSelected,
-                            onListenDefault: () => _onHookSelected(null),
-                            onExplore: () => context.pop(),
-                          ),
+                    child: _HookContent(
+                      state: hookState,
+                      onHookTap: _onHookSelected,
+                      onListenDefault: () => _onHookSelected(null),
+                      onExplore: () => context.pop(),
+                    ),
                   ),
                 ],
               ),
             ),
           ),
-          if (!isGenerating)
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 6,
-              left: 14,
-              child: _OnPhotoBackButton(onPressed: () => context.pop()),
-            ),
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 6,
+            left: 14,
+            child: _OnPhotoBackButton(onPressed: () => context.pop()),
+          ),
         ],
       ),
     );
@@ -211,14 +272,21 @@ class _HeroSection extends StatelessWidget {
   final Place place;
   final Uint8List? capturedImageBytes;
 
-  const _HeroSection({required this.place, this.capturedImageBytes});
+  /// 生成中的壓縮標頭（設計稿 `.genscr__hd`）：固定 210 高、字級縮小、
+  /// 不放分類標籤，把版面讓給底下的生成動畫。
+  final bool compact;
+
+  const _HeroSection({
+    required this.place,
+    this.capturedImageBytes,
+    this.compact = false,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final height = (MediaQuery.of(context).size.height * 0.5).clamp(
-      320.0,
-      440.0,
-    );
+    final height = compact
+        ? 210.0
+        : (MediaQuery.of(context).size.height * 0.5).clamp(320.0, 440.0);
     return SizedBox(
       height: height,
       child: Stack(
@@ -234,7 +302,7 @@ class _HeroSection extends StatelessWidget {
           Positioned(
             left: 22,
             right: 22,
-            bottom: 22,
+            bottom: compact ? 18 : 22,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -242,7 +310,7 @@ class _HeroSection extends StatelessWidget {
                 Text(
                   place.name,
                   style: GoogleFonts.notoSerifTc(
-                    fontSize: 32,
+                    fontSize: compact ? 27 : 32,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
                     height: 1.12,
@@ -255,11 +323,13 @@ class _HeroSection extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 10),
-                CategoryTag(
-                  category: place.category.journalCategory,
-                  onPhoto: true,
-                ),
+                if (!compact) ...[
+                  const SizedBox(height: 10),
+                  CategoryTag(
+                    category: place.category.journalCategory,
+                    onPhoto: true,
+                  ),
+                ],
               ],
             ),
           ),
@@ -314,7 +384,8 @@ class _HookContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (state.status) {
-      StoryHookStatus.loading => _GenState(message: 'story_hook.loading'.tr()),
+      // 載入中由外層的 StoryGenerating 整頁動畫接手，這裡不會被 render 到。
+      StoryHookStatus.loading => const SizedBox.shrink(),
       StoryHookStatus.success => _HookListState(
         hooks: state.hooks,
         onTap: onHookTap,
@@ -325,83 +396,6 @@ class _HookContent extends StatelessWidget {
       StoryHookStatus.empty ||
       StoryHookStatus.error => _HookFallbackState(onListen: onListenDefault),
     };
-  }
-}
-
-/// The "digging up history" loading state (design: `.gen-state`): a clay
-/// spinner with a status line, followed by shimmer placeholder lines on the
-/// warm paper surface.
-class _GenState extends StatelessWidget {
-  const _GenState({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final tokens = Theme.of(context).extension<LorescapeTokens>();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          children: [
-            SizedBox(
-              width: 22,
-              height: 22,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.4,
-                color: tokens?.clay ?? cs.primary,
-                backgroundColor: tokens?.claySoft ?? cs.primaryContainer,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                message,
-                style: TextStyle(
-                  fontSize: 15,
-                  height: 1.4,
-                  color: tokens?.ink2 ?? cs.onSurfaceVariant,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 18),
-        const _ShimmerLine(widthFactor: 0.92),
-        const SizedBox(height: 18),
-        const _ShimmerLine(widthFactor: 0.78),
-        const SizedBox(height: 18),
-        const _ShimmerLine(widthFactor: 0.85),
-      ],
-    );
-  }
-}
-
-class _ShimmerLine extends StatelessWidget {
-  const _ShimmerLine({required this.widthFactor});
-
-  final double widthFactor;
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = Theme.of(context).extension<LorescapeTokens>();
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: FractionallySizedBox(
-        widthFactor: widthFactor,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color:
-                tokens?.paperSunk ??
-                Theme.of(context).colorScheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: const SizedBox(height: 14),
-        ),
-      ),
-    );
   }
 }
 
