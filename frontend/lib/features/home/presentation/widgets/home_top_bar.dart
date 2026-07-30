@@ -112,8 +112,17 @@ class HomeTopBar extends ConsumerWidget {
                     key: const Key('home-search'),
                     controller: controller,
                     onChanged: onQueryChanged,
+                    // The field carries its own pill container, so it must
+                    // fully opt out of the global outlined+filled
+                    // inputDecorationTheme — setting only `border` still
+                    // inherits enabledBorder/focusedBorder/fill.
                     decoration: InputDecoration(
+                      isCollapsed: true,
+                      filled: false,
                       border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
                       hintText: 'home.search_hint'.tr(),
                     ),
                   ),
