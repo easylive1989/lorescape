@@ -7,6 +7,7 @@ import 'package:context_app/features/explore/presentation/widgets/place_map_pin.
 import 'package:context_app/features/explore/providers.dart';
 import 'package:context_app/features/saved_locations/providers.dart';
 import 'package:context_app/shared/widgets/journal/masthead.dart';
+import 'package:context_app/shared/widgets/journal/search_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -456,6 +457,107 @@ void main() {
 
         expect(repo.lastSearchQuery, '京都');
       });
+    });
+
+    group('search loader', () {
+      testWidgets(
+        'given a slow search, when the user submits a query, '
+        'then the centred loader shows the searching copy with the query, '
+        'and disappears once results arrive',
+        (tester) async {
+          final repo = FakePlacesRepository(
+            nearbyPlaces: [buildPlace(id: 'p1', name: 'Nearby Place')],
+            searchResults: [buildPlace(id: 's1', name: 'Searched Place')],
+          );
+          await _givenExploreScreen(tester, repo: repo);
+          repo.delay = const Duration(milliseconds: 400);
+
+          await tester.enterText(find.byType(TextField), '京都');
+          await tester.testTextInput.receiveAction(TextInputAction.done);
+          await tester.pump(const Duration(milliseconds: 20));
+
+          expect(find.byType(SearchLoader), findsOneWidget);
+          expect(find.text('explore.searching'), findsOneWidget);
+          expect(
+            tester
+                .widget<Text>(find.byKey(const Key('search-loader-name')))
+                .data,
+            '京都',
+          );
+
+          await tester.pump(const Duration(milliseconds: 500));
+          expect(find.byType(SearchLoader), findsNothing);
+          expect(find.text('Searched Place'), findsOneWidget);
+        },
+      );
+
+      testWidgets(
+        'given a slow nearby lookup, when the screen is still loading, '
+        'then the loader shows the locating copy without a place name',
+        (tester) async {
+          final repo = FakePlacesRepository(
+            nearbyPlaces: [buildPlace(id: 'p1', name: 'Nearby Place')],
+          )..delay = const Duration(milliseconds: 400);
+
+          // 不走 _givenExploreScreen：它會把載入整段 pump 完，看不到
+          // 載入中的畫面。
+          await pumpScreen(
+            tester,
+            child: const ExploreScreen(),
+            overrides: [
+              locationServiceProvider.overrideWithValue(
+                FakeLocationService(
+                  location: const PlaceLocation(
+                    latitude: 25.0,
+                    longitude: 121.0,
+                  ),
+                ),
+              ),
+              placesRepositoryProvider.overrideWithValue(repo),
+              savedLocationsRepositoryProvider.overrideWithValue(
+                InMemorySavedLocationsRepository(),
+              ),
+              dailyStoryRepositoryProvider.overrideWithValue(
+                InMemoryDailyStoryRepository(),
+              ),
+              ...fakeMapStyleOverrides(),
+            ],
+          );
+          await tester.pump(const Duration(milliseconds: 20));
+
+          expect(find.byType(SearchLoader), findsOneWidget);
+          expect(find.textContaining('explore.locating'), findsOneWidget);
+          expect(find.byKey(const Key('search-loader-name')), findsNothing);
+
+          // 把延遲與地圖排程的 timer 跑完，避免 tear-down 抱怨 Timer 未結束。
+          await tester.pump(const Duration(milliseconds: 500));
+          await settleMapTimers(tester);
+        },
+      );
+
+      testWidgets(
+        'given places on screen, when the user taps refresh, '
+        'then the loader shows the searching copy while the area search runs',
+        (tester) async {
+          final repo = FakePlacesRepository(
+            nearbyPlaces: [buildPlace(id: 'p1', name: 'Nearby')],
+          );
+          await _givenExploreScreen(tester, repo: repo);
+          repo.delay = const Duration(milliseconds: 400);
+
+          await tester.tap(find.byIcon(Icons.refresh));
+          await tester.pump(const Duration(milliseconds: 20));
+
+          // 以可視範圍重搜不是定位，所以是「搜尋地點中」而不是「定位中」，
+          // 而且沒有關鍵字可以顯示。
+          expect(find.byType(SearchLoader), findsOneWidget);
+          expect(find.textContaining('explore.searching'), findsOneWidget);
+          expect(find.byKey(const Key('search-loader-name')), findsNothing);
+
+          await tester.pump(const Duration(milliseconds: 500));
+          expect(find.byType(SearchLoader), findsNothing);
+        },
+      );
     });
 
     group('globe back button', () {

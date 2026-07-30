@@ -13,6 +13,7 @@ import 'package:context_app/features/settings/providers.dart';
 import 'package:context_app/shared/widgets/journal/category_tag.dart';
 import 'package:context_app/shared/widgets/journal/glyph_thumb.dart';
 import 'package:context_app/shared/widgets/journal/masthead.dart';
+import 'package:context_app/shared/widgets/journal/search_loader.dart';
 import 'package:context_app/shared/widgets/midnight/_press_scale.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -38,6 +39,14 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   /// 設計稿：點卡片時 `flyTo(coord, 14)`。
   static const double _kFocusZoom = 14;
 
+  /// 載入遮罩（設計稿 `.search-loader`）的文案模式：定位（附近地點）用
+  /// 「定位中」，其餘搜尋用「搜尋地點中」。在每個觸發點更新，因為
+  /// AsyncValue.loading 本身分不出這次是哪種操作。
+  bool _loadingIsLocate = true;
+
+  /// 關鍵字搜尋時顯示在遮罩上的搜尋詞；定位與可視範圍重搜沒有關鍵字。
+  String? _loadingName;
+
   void _focusOn(Place place) {
     _mapController.move(
       LatLng(place.location.latitude, place.location.longitude),
@@ -51,6 +60,10 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     final query = widget.initialQuery;
     if (query == null || query.isEmpty) return;
     _searchController.text = query;
+    // 首次載入的 nearby search 也還在跑，但使用者是為了這個關鍵字進來的，
+    // 遮罩從頭到尾都顯示這個搜尋詞。
+    _loadingIsLocate = false;
+    _loadingName = query;
     // build 期間不能改 provider，等第一幀畫完再送出搜尋。
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -93,6 +106,11 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   void _searchVisibleArea() {
     _searchController.clear();
     ref.read(searchQueryProvider.notifier).state = '';
+    setState(() {
+      // 可視範圍重搜不問定位，遮罩用「搜尋地點中」但沒有關鍵字可顯示。
+      _loadingIsLocate = false;
+      _loadingName = null;
+    });
 
     final camera = _mapController.camera;
     final bounds = camera.visibleBounds;
@@ -128,7 +146,11 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     _searchController.clear();
     ref.read(searchQueryProvider.notifier).state = '';
     ref.read(placesControllerProvider.notifier).search('');
-    setState(() {});
+    setState(() {
+      // 清除搜尋回到附近地點模式，走定位。
+      _loadingIsLocate = true;
+      _loadingName = null;
+    });
   }
 
   @override
@@ -181,6 +203,11 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             onSearchChanged: (_) => setState(() {}),
             onSearchSubmitted: (value) {
               ref.read(searchQueryProvider.notifier).state = value;
+              setState(() {
+                // 空字串 search() 會退回附近地點模式（走定位）。
+                _loadingIsLocate = value.isEmpty;
+                _loadingName = value.isEmpty ? null : value;
+              });
               ref.read(placesControllerProvider.notifier).search(value);
             },
             onSearchClear: _searchController.text.isNotEmpty
@@ -224,6 +251,15 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                   context.canPop() ? context.pop() : context.go('/'),
             ),
           ),
+          // 設計稿的 `.search-loader`：搜尋／定位進行中蓋住整頁的置中載入
+          // 卡。放在 Stack 最上層（z-index 120 的等價位置），連 FAB 一起蓋。
+          if (placesState.isLoading)
+            SearchLoader(
+              label:
+                  (_loadingIsLocate ? 'explore.locating' : 'explore.searching')
+                      .tr(),
+              name: _loadingName,
+            ),
         ],
       ),
     );

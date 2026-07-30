@@ -144,6 +144,8 @@
     "back_to_globe": "回到地球儀",
     "refresh": "重新整理",
     "search_hint": "搜尋地點、城市或地標……",
+    "searching": "搜尋地點中",
+    "locating": "定位中",
     "empty": "找不到符合的地點",
     "filter": {
       "title": "篩選條件",

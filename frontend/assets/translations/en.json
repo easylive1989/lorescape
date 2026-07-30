@@ -143,6 +143,8 @@
     "back_to_globe": "Back to globe",
     "refresh": "Refresh",
     "search_hint": "Search for places, cities, or landmarks…",
+    "searching": "Searching places",
+    "locating": "Locating",
     "empty": "No places found",
     "filter": {
       "title": "Filters",

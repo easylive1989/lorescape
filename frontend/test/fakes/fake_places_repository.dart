@@ -30,6 +30,10 @@ class FakePlacesRepository implements PlacesRepository {
   /// 是哪一套語言判定。
   Language? lastSuggestLanguage;
 
+  /// 模擬網路延遲。預設零；要在測試裡觀察「載入中」的畫面時設成非零值，
+  /// 記得在斷言後把延遲 pump 完，否則 tear-down 會抱怨 Timer 未結束。
+  Duration delay = Duration.zero;
+
   FakePlacesRepository({
     this.nearbyPlaces = const [],
     this.searchResults = const [],
@@ -44,6 +48,7 @@ class FakePlacesRepository implements PlacesRepository {
     nearbyCallCount += 1;
     lastNearbyCenter = location;
     lastNearbyRadius = radius;
+    if (delay != Duration.zero) await Future<void>.delayed(delay);
     return nearbyPlaces;
   }
 
@@ -54,6 +59,7 @@ class FakePlacesRepository implements PlacesRepository {
   }) async {
     searchCallCount += 1;
     lastSearchQuery = query;
+    if (delay != Duration.zero) await Future<void>.delayed(delay);
     return searchResults;
   }
 
