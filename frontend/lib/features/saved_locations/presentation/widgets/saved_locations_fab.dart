@@ -48,18 +48,20 @@ class SavedLocationsButton extends ConsumerWidget {
       key: const Key('explore-saved-locations'),
       button: true,
       label: 'saved_locations.title'.tr(),
-      child: Material(
-        color: tokens?.paperSunk ?? colorScheme.surfaceContainerHighest,
-        shape: const CircleBorder(),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: () => showSavedLocationsSheet(context),
-          child: SizedBox(
-            width: 40,
-            height: 40,
-            child: Badge(
-              isLabelVisible: count > 0,
-              label: Text('$count', style: const TextStyle(fontSize: 10)),
+      // Badge 要包在 Material 外層：Material 以 CircleBorder 裁切，放在裡面
+      // 會把 badge 一起塞進圓鈕還裁掉邊，這裡讓它浮在按鈕右上角。
+      child: Badge(
+        isLabelVisible: count > 0,
+        label: Text('$count', style: const TextStyle(fontSize: 10)),
+        child: Material(
+          color: tokens?.paperSunk ?? colorScheme.surfaceContainerHighest,
+          shape: const CircleBorder(),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: () => showSavedLocationsSheet(context),
+            child: SizedBox(
+              width: 40,
+              height: 40,
               child: Icon(
                 Icons.bookmark,
                 size: 21,
