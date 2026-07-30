@@ -106,4 +106,28 @@ void main() {
       );
     },
   );
+
+  testWidgets(
+    'given the story rail at the first card, '
+    'when the user flicks quickly but drags less than half a card, '
+    'then it still advances to the next card instead of springing back',
+    (tester) async {
+      await _givenRail(tester, count: 8);
+
+      // 拖動距離只有 80px（遠小於半張卡的 162px），靠甩動速度換卡。
+      await tester.fling(find.byType(ListView), const Offset(-80, 0), 1200);
+      await tester.pumpAndSettle();
+
+      final offset = tester
+          .widget<ListView>(find.byType(ListView))
+          .controller!
+          .offset;
+
+      expect(
+        offset,
+        closeTo(StoryRail.stride, 1.0),
+        reason: '輕甩就該前進一張卡，不必實際拖超過半張卡的距離',
+      );
+    },
+  );
 }

@@ -158,8 +158,20 @@ class _SnapScrollPhysics extends ScrollPhysics {
     );
   }
 
-  double _targetPixels(ScrollMetrics position) {
-    final page = position.pixels / itemExtent;
+  /// 跟 [PageScrollPhysics] 一樣把甩動速度算進去：只要甩動快過
+  /// [Tolerance.velocity]，就往甩動方向偏半張卡再取整——輕甩即可換到
+  /// 下一張，不必實際拖超過半張卡的距離。
+  double _targetPixels(
+    ScrollMetrics position,
+    Tolerance tolerance,
+    double velocity,
+  ) {
+    var page = position.pixels / itemExtent;
+    if (velocity < -tolerance.velocity) {
+      page -= 0.5;
+    } else if (velocity > tolerance.velocity) {
+      page += 0.5;
+    }
     return page.roundToDouble() * itemExtent;
   }
 
@@ -177,6 +189,8 @@ class _SnapScrollPhysics extends ScrollPhysics {
     final tolerance = toleranceFor(position);
     final target = _targetPixels(
       position,
+      tolerance,
+      velocity,
     ).clamp(position.minScrollExtent, position.maxScrollExtent);
     if ((target - position.pixels).abs() < tolerance.distance) return null;
     return ScrollSpringSimulation(

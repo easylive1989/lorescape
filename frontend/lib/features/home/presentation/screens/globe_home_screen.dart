@@ -207,27 +207,14 @@ class _LocateButton extends StatelessWidget {
         onTap: onPressed,
         child: Container(
           width: 56,
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          height: 56,
+          alignment: Alignment.center,
           decoration: BoxDecoration(
             color: tokens.clay,
-            borderRadius: BorderRadius.circular(999),
+            shape: BoxShape.circle,
             boxShadow: tokens.e2,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.my_location, size: 22, color: tokens.paperRaised),
-              const SizedBox(height: 3),
-              Text(
-                'home.locate'.tr(),
-                style: TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w700,
-                  color: tokens.paperRaised,
-                ),
-              ),
-            ],
-          ),
+          child: Icon(Icons.my_location, size: 22, color: tokens.paperRaised),
         ),
       ),
     );
