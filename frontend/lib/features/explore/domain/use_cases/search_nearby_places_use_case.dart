@@ -29,24 +29,28 @@ class SearchNearbyPlacesUseCase {
     );
 
     return (
-      places: _sortByDistance(places, userLocation),
+      places: sortPlacesByDistanceFrom(places, userLocation),
       userLocation: userLocation,
     );
   }
+}
 
-  List<Place> _sortByDistance(List<Place> places, PlaceLocation userLocation) {
-    final withDistance = places.map((place) {
-      final distance = calculateHaversineDistance(
-        fromLatitude: userLocation.latitude,
-        fromLongitude: userLocation.longitude,
-        toLatitude: place.location.latitude,
-        toLongitude: place.location.longitude,
-      );
-      return _PlaceWithDistance(place: place, distance: distance);
-    }).toList()..sort((a, b) => a.distance.compareTo(b.distance));
+/// 依離 [origin] 的距離由近到遠排序。
+///
+/// 公開給 `PlacesController.searchArea` 共用：它以地圖中心而非使用者位置為
+/// 基準搜尋，排序基準也要跟著換成同一個中心。
+List<Place> sortPlacesByDistanceFrom(List<Place> places, PlaceLocation origin) {
+  final withDistance = places.map((place) {
+    final distance = calculateHaversineDistance(
+      fromLatitude: origin.latitude,
+      fromLongitude: origin.longitude,
+      toLatitude: place.location.latitude,
+      toLongitude: place.location.longitude,
+    );
+    return _PlaceWithDistance(place: place, distance: distance);
+  }).toList()..sort((a, b) => a.distance.compareTo(b.distance));
 
-    return withDistance.map((p) => p.place).toList();
-  }
+  return withDistance.map((p) => p.place).toList();
 }
 
 class _PlaceWithDistance {

@@ -166,6 +166,15 @@ class _GlobeViewState extends State<GlobeView>
 
 /// 選中地點的水滴 pin 與其上方的紙卡 chip。用 widget 而非 canvas，字體與
 /// 陰影才會跟 App 其他地方一致。
+/// 水滴 pin 的邊長，取自 ls3.css 的 `.gpin .map-pin`。
+const double _pinSize = 36;
+
+/// 旋轉 45 度後對角線會撐到 `_pinSize * √2`，外框要留這麼大尖端才不被裁掉。
+const double _pinBox = _pinSize * 1.4142135624;
+
+/// 設計稿 `.map-pin` 的描邊與內圈色（乳白，不隨 accent 變動）。
+const Color _pinBorder = Color(0xFFFBF1E9);
+
 class _FocusMarker extends StatelessWidget {
   const _FocusMarker({required this.label});
 
@@ -214,27 +223,47 @@ class _FocusMarker extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          Transform.rotate(
-            angle: -0.7853981634, // -45 度，讓方角朝下當作水滴尖端
-            child: Container(
-              width: 26,
-              height: 26,
-              decoration: BoxDecoration(
-                color: tokens.clay,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(13),
-                  topRight: Radius.circular(13),
-                  bottomLeft: Radius.circular(13),
-                ),
-                boxShadow: tokens.e1,
-              ),
-              child: Center(
+          // 水滴 pin：設計稿的 `.map-pin` 是 `border-radius: 50% 50% 50% 0`
+          // 搭配 `rotate(-45deg)`——方角開在**左下**，逆時針轉 45 度後才會落
+          // 到正下方當尖端。方角開在右下的話會轉到正右方（曾經如此）。
+          //
+          // 尺寸取 ls3.css 的 `.gpin .map-pin`：36×36、內圈 11、2.5px 乳白
+          // 描邊。旋轉後對角線比邊長多出 (√2-1)×36/2 ≈ 7.5px，所以外層要留
+          // 這段空間，尖端才不會被 Column 的邊界裁掉。
+          SizedBox(
+            width: _pinBox,
+            height: _pinBox,
+            child: Center(
+              child: Transform.rotate(
+                angle: -math.pi / 4,
                 child: Container(
-                  width: 9,
-                  height: 9,
+                  width: _pinSize,
+                  height: _pinSize,
                   decoration: BoxDecoration(
-                    color: tokens.paperRaised,
-                    shape: BoxShape.circle,
+                    color: tokens.clay,
+                    border: Border.all(color: _pinBorder, width: 2.5),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(_pinSize / 2),
+                      topRight: Radius.circular(_pinSize / 2),
+                      bottomRight: Radius.circular(_pinSize / 2),
+                    ),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color.fromRGBO(28, 20, 10, 0.4),
+                        offset: Offset(0, 4),
+                        blurRadius: 9,
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Container(
+                      width: 11,
+                      height: 11,
+                      decoration: const BoxDecoration(
+                        color: _pinBorder,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
                   ),
                 ),
               ),

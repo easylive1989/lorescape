@@ -112,7 +112,7 @@ class _StoryRailState extends State<StoryRail> {
         SizedBox(
           // 116：扣掉卡片內距後留給內容的高度要夠放「最新」徽章那一行
           // （比其他卡片的日期文字高），量測下來 108 會讓那張卡溢位。
-          height: 116,
+          height: 96,
           child: NotificationListener<ScrollNotification>(
             onNotification: _onScroll,
             child: ListView.separated(
@@ -249,7 +249,7 @@ class _StoryCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: 312,
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: tokens.paperRaised,
           border: Border.all(color: isActive ? tokens.clay : tokens.line),
@@ -261,8 +261,8 @@ class _StoryCard extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(tokens.rMd),
               child: SizedBox(
-                width: 78,
-                height: 78,
+                width: 60,
+                height: 60,
                 child: story.imageUrl == null
                     ? ColoredBox(color: tokens.paperSunk)
                     : CachedNetworkImage(
@@ -271,7 +271,7 @@ class _StoryCard extends StatelessWidget {
                       ),
               ),
             ),
-            const SizedBox(width: 13),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -281,7 +281,7 @@ class _StoryCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 9,
-                        vertical: 2,
+                        vertical: 1,
                       ),
                       decoration: BoxDecoration(
                         color: tokens.clay,
@@ -302,14 +302,21 @@ class _StoryCard extends StatelessWidget {
                       _dateKey,
                       style: TextStyle(fontSize: 11, color: tokens.ink3),
                     ),
-                  const SizedBox(height: 7),
+                  const SizedBox(height: 3),
                   Text(
                     story.placeName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium,
+                    // 設計稿 `.hm-card__t` 是 serif 17.5 / line-height 1.25。
+                    // titleLarge 已是 serif；壓緊行高後三行才塞得進 96 的卡。
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontSize: 16.5,
+                      height: 1.2,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0,
+                    ),
                   ),
-                  const SizedBox(height: 5),
+                  const SizedBox(height: 3),
                   Text(
                     story.placeLocation,
                     maxLines: 1,

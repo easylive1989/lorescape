@@ -94,12 +94,15 @@ class HomeTopBar extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           Container(
+            // 設計稿 `.search`：高 48、左右 16、藥丸形。`.hm-search` 再覆寫成
+            // 浮起紙色加 e2 陰影。探索頁的搜尋列也統一用這一組。
+            height: 48,
             decoration: BoxDecoration(
               color: tokens.paperRaised,
-              borderRadius: BorderRadius.circular(tokens.rLg),
+              borderRadius: BorderRadius.circular(999),
               boxShadow: tokens.e2,
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
                 Icon(Icons.search, size: 20, color: tokens.ink3),

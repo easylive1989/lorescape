@@ -83,35 +83,6 @@ void main() {
       _thenPlaceNamesAreVisible(['Senso-ji', 'Meiji Shrine']);
     });
 
-    testWidgets('given a distance filter of 500 m, when the list is filtered, '
-        'then only places within range are shown', (tester) async {
-      // Place near origin (lat 0, lon 0), one within 500 m, one outside.
-      final places = [
-        buildPlace(
-          id: 'p1',
-          name: 'Near',
-          latitude: 0.001, // ~111 m
-          longitude: 0.0,
-        ),
-        buildPlace(
-          id: 'p2',
-          name: 'Far',
-          latitude: 0.01, // ~1111 m
-          longitude: 0.0,
-        ),
-      ];
-
-      await _givenExploreScreen(
-        tester,
-        places: places,
-        maxDistance: 500.0,
-        userLocation: const PlaceLocation(latitude: 0.0, longitude: 0.0),
-      );
-
-      _thenPlaceNamesAreVisible(['Near']);
-      _thenPlaceNamesAreHidden(['Far']);
-    });
-
     testWidgets('given the user types in the search box and submits, '
         'when the repository returns search results, '
         'then the result list replaces the nearby places', (tester) async {
@@ -175,35 +146,78 @@ void main() {
       expect(repo.nearbyCallCount, greaterThan(before));
     });
 
-    testWidgets(
-      'given the filter is at its default value (10000 m), when the screen '
-      'renders, then no active dot is shown',
-      (tester) async {
-        await _givenExploreScreen(tester, maxDistance: 10000.0);
+    testWidgets('given the map is showing an area, '
+        'when the user taps refresh, '
+        'then the search is centred on the map and its radius is clamped into '
+        'the allowed band', (tester) async {
+      final repo = FakePlacesRepository(
+        nearbyPlaces: [buildPlace(id: 'p1', name: 'Nearby')],
+      );
 
-        // The active dot is an 8x8 BoxDecoration in the filter-button stack.
-        // It is hidden whenever maxDistance == kDefaultMaxDistanceMeters.
-        expect(_activeDotFinder(), findsNothing);
+      await _givenExploreScreen(tester, repo: repo);
+
+      await tester.tap(find.byIcon(Icons.refresh));
+      await tester.pump(const Duration(milliseconds: 20));
+      await tester.pump(const Duration(milliseconds: 20));
+
+      // 距離篩選已移除：改成以地圖中心 ＋ 可視範圍搜尋。半徑一定落在
+      // [下限, Wikipedia geosearch 的 API 上限] 之間。
+      expect(repo.lastNearbyCenter, isNotNull);
+      expect(
+        repo.lastNearbyRadius,
+        inInclusiveRange(kMinSearchRadiusMeters, kMaxSearchRadiusMeters),
+      );
+    });
+
+    testWidgets(
+      'given the top icon row, '
+      'when the screen renders, '
+      'then saved locations sits there and the globe is the bottom-right FAB',
+      (tester) async {
+        await _givenExploreScreen(tester);
+
+        // 儲存與地球對調：地球是這頁的主要出口，佔右下角 FAB；儲存收進頂部。
+        expect(
+          find.byKey(const Key('explore-saved-locations')),
+          findsOneWidget,
+        );
+        expect(find.byType(FloatingActionButton), findsOneWidget);
+        expect(
+          tester
+              .widget<FloatingActionButton>(find.byType(FloatingActionButton))
+              .child,
+          isA<Icon>().having((i) => i.icon, 'icon', Icons.public),
+        );
       },
     );
 
-    testWidgets('given a non-default maxDistance, when the screen renders, '
-        'then the active dot is shown', (tester) async {
-      await _givenExploreScreen(tester, maxDistance: 500.0);
+    testWidgets('given location permission is denied, '
+        'when the user taps refresh, '
+        'then the area search still runs so the gate card is not a dead end', (
+      tester,
+    ) async {
+      final repo = FakePlacesRepository(
+        nearbyPlaces: [buildPlace(id: 'p1', name: 'Nearby')],
+      );
 
-      expect(_activeDotFinder(), findsOneWidget);
-    });
+      await _givenExploreScreen(
+        tester,
+        repo: repo,
+        locationService: FakeLocationService(
+          location: const PlaceLocation(latitude: 25.0, longitude: 121.0),
+          error: LocationError.permissionDenied,
+        ),
+      );
+      final before = repo.nearbyCallCount;
 
-    testWidgets('given the filter button is present, when the user taps it, '
-        'then the filter panel bottom sheet is shown', (tester) async {
-      await _givenExploreScreen(tester);
+      await tester.tap(find.byIcon(Icons.refresh));
+      await tester.pump(const Duration(milliseconds: 20));
+      await tester.pump(const Duration(milliseconds: 20));
 
-      await tester.tap(find.byIcon(Icons.tune));
-      await tester.pumpAndSettle();
-
-      expect(find.text('explore.filter.title'), findsOneWidget);
-      expect(find.text('explore.filter.max_distance'), findsOneWidget);
-      expect(find.text('explore.filter.reset'), findsOneWidget);
+      // searchArea 用地圖中心、不問 LocationService，所以沒有定位權限也
+      // 走得下去——location gate 因此只是提示，不是死路。
+      expect(repo.nearbyCallCount, greaterThan(before));
+      expect(repo.lastNearbyCenter, isNotNull);
     });
 
     testWidgets(
@@ -461,7 +475,6 @@ Future<void> _givenExploreScreen(
   List<Place> places = const [],
   FakePlacesRepository? repo,
   InMemorySavedLocationsRepository? savedRepo,
-  double maxDistance = 10000.0,
   PlaceLocation? userLocation,
   FakeLocationService? locationService,
   String? initialQuery,
@@ -484,14 +497,13 @@ Future<void> _givenExploreScreen(
       savedLocationsRepositoryProvider.overrideWithValue(
         savedRepo ?? InMemorySavedLocationsRepository(),
       ),
-      maxDistanceProvider.overrideWith((ref) => maxDistance),
       dailyStoryRepositoryProvider.overrideWithValue(
         InMemoryDailyStoryRepository(),
       ),
       ...fakeMapStyleOverrides(),
     ],
   );
-  // Let async searchNearby + filtered places provider resolve.
+  // Let the async nearby search resolve.
   await tester.pump(const Duration(milliseconds: 20));
   await tester.pump(const Duration(milliseconds: 20));
   await tester.pump(const Duration(milliseconds: 20));
@@ -615,14 +627,7 @@ void _thenPlaceNamesAreVisible(List<String> names) {
   }
 }
 
-void _thenPlaceNamesAreHidden(List<String> names) {
-  for (final name in names) {
-    expect(find.text(name), findsNothing);
-  }
-}
-
 /// 用 Key 找篩選鈕上的小圓點。
 ///
 /// 不要用「畫面上任何有顏色的圓形 Container」當條件——地圖 pin 與卡片上的
 /// 前往鈕都符合，會讓「沒有小圓點」的測試假性通過。
-Finder _activeDotFinder() => find.byKey(const Key('explore-filter-active-dot'));

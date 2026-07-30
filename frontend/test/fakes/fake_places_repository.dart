@@ -11,6 +11,11 @@ class FakePlacesRepository implements PlacesRepository {
   /// Number of [getNearbyPlaces] invocations — useful for asserting refresh.
   int nearbyCallCount = 0;
 
+  /// 最後一次 [getNearbyPlaces] 收到的中心與半徑。探索頁改成以地圖可視範圍
+  /// 搜尋後，這兩個值就是「搜對地方、搜對範圍」的唯一觀察點。
+  PlaceLocation? lastNearbyCenter;
+  double? lastNearbyRadius;
+
   /// Number of [searchPlaces] invocations and the last query received.
   int searchCallCount = 0;
   String? lastSearchQuery;
@@ -37,6 +42,8 @@ class FakePlacesRepository implements PlacesRepository {
     required double radius,
   }) async {
     nearbyCallCount += 1;
+    lastNearbyCenter = location;
+    lastNearbyRadius = radius;
     return nearbyPlaces;
   }
 

@@ -1,13 +1,15 @@
+import 'dart:math' as math;
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:context_app/app/config/lorescape_tokens.dart';
 import 'package:context_app/features/explore/domain/errors/location_error.dart';
 import 'package:context_app/features/explore/domain/models/place.dart';
+import 'package:context_app/features/explore/domain/models/place_location.dart';
 import 'package:context_app/features/explore/presentation/widgets/lorescape_map.dart';
 import 'package:context_app/features/explore/presentation/widgets/place_map_pin.dart';
 import 'package:context_app/features/explore/providers.dart';
 import 'package:context_app/features/saved_locations/providers.dart';
 import 'package:context_app/features/settings/providers.dart';
-import 'package:context_app/shared/widgets/adaptive/adaptive_widgets.dart';
 import 'package:context_app/shared/widgets/journal/category_tag.dart';
 import 'package:context_app/shared/widgets/journal/glyph_thumb.dart';
 import 'package:context_app/shared/widgets/journal/masthead.dart';
@@ -81,11 +83,45 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     super.dispose();
   }
 
-  void _showFilterPanel() {
-    showAdaptiveModalBottomSheet(
-      context: context,
-      builder: (context) => const _FilterPanel(),
-    );
+  /// 以地圖目前的可視範圍重新搜尋。
+  ///
+  /// 取代原本的固定半徑距離篩選：中心用地圖中心（不是使用者位置，所以沒有
+  /// 定位權限也能用），半徑用可視範圍的內接圓——取寬高較短的一邊，這樣搜出
+  /// 來的東西才保證都在畫面內。半徑會被 clamp 到
+  /// [kMinSearchRadiusMeters, kMaxSearchRadiusMeters]；上限是 Wikipedia
+  /// geosearch 的 API 硬限制，下限是避免放到街區級時一個景點都搜不到。
+  void _searchVisibleArea() {
+    _searchController.clear();
+    ref.read(searchQueryProvider.notifier).state = '';
+
+    final camera = _mapController.camera;
+    final bounds = camera.visibleBounds;
+    final center = camera.center;
+    const distance = Distance();
+    final halfHeight =
+        distance.as(
+          LengthUnit.Meter,
+          LatLng(bounds.south, center.longitude),
+          LatLng(bounds.north, center.longitude),
+        ) /
+        2;
+    final halfWidth =
+        distance.as(
+          LengthUnit.Meter,
+          LatLng(center.latitude, bounds.west),
+          LatLng(center.latitude, bounds.east),
+        ) /
+        2;
+
+    ref
+        .read(placesControllerProvider.notifier)
+        .searchArea(
+          center: PlaceLocation(
+            latitude: center.latitude,
+            longitude: center.longitude,
+          ),
+          radius: math.min(halfWidth, halfHeight),
+        );
   }
 
   void _clearSearch() {
@@ -97,9 +133,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final placesState = ref.watch(filteredPlacesProvider);
-    final maxDistance = ref.watch(maxDistanceProvider);
-    final isFilterActive = maxDistance != kDefaultMaxDistanceMeters;
+    final placesState = ref.watch(placesControllerProvider);
     final places = placesState.valueOrNull ?? const <Place>[];
 
     return Scaffold(
@@ -142,16 +176,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
           _MapTopOverlay(
             placeCount: places.length,
             searchController: _searchController,
-            isFilterActive: isFilterActive,
-            // trip_empty_state 的「去探索」CTA 用 context.go('/map')（見該檔
-            // 註解），此時整個路由堆疊只剩 `/map` 一頁，context.pop() 會丟
-            // GoError。沒有可 pop 的頁面時退回首頁而不是硬 pop。
-            onBack: () => context.canPop() ? context.pop() : context.go('/'),
-            onFilter: _showFilterPanel,
-            onRefresh: () {
-              _searchController.clear();
-              ref.read(placesControllerProvider.notifier).refresh();
-            },
+            onRefresh: _searchVisibleArea,
             onSearchChanged: (_) => setState(() {}),
             onSearchSubmitted: (value) {
               ref.read(searchQueryProvider.notifier).state = value;
@@ -164,16 +189,28 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
           _MapCardsRail(state: placesState, onFocus: _focusOn),
           // 型別化 object pattern：僅在 error 為 LocationError 時比對成功，
           // 並把 error 綁成 LocationError（`when ... is` guard 不會提升型別）。
+          // 定位引導卡刻意**不**用 Positioned.fill 罩住整頁——沒有定位權限
+          // 也能拖地圖、按重新整理以可視範圍搜尋，所以不該擋住底圖。這也是
+          // location gate spec 原本就寫的「地圖底圖照常顯示（不遮全螢幕）」。
           if (placesState case AsyncError(error: final LocationError error))
-            Positioned.fill(
-              child: Center(
-                child: SingleChildScrollView(
+            Positioned(
+              left: 24,
+              right: 24,
+              top: 0,
+              bottom: 0,
+              child: IgnorePointer(
+                ignoring: false,
+                child: Align(
+                  alignment: Alignment.center,
                   child: _LocationGateCard(error: error),
                 ),
               ),
             ),
           // FAB 疊在卡片列上方。設計稿把 FAB 放在 bottom:96，但那個位置正好
           // 被卡片列蓋住（實機上直接壓在卡片上），所以改成貼著卡片列往上放。
+          //
+          // 回地球儀是這一頁最主要的出口，所以佔這個最順手的位置；儲存清單
+          // 改收進頂部 icon 列。
           Positioned(
             right: 18,
             bottom:
@@ -181,37 +218,13 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                 _MapCardsRail.railBottomGap +
                 _MapCardsRail.railHeight +
                 12,
-            child: const SavedLocationsFab(),
+            child: _GlobeFab(
+              onPressed: () =>
+                  context.canPop() ? context.pop() : context.go('/'),
+            ),
           ),
         ],
       ),
-    );
-  }
-}
-
-/// Circular 40×40 icon button on a sunken-paper surface, matching the
-/// design's `.iconbtn` on `--paper-sunk`.
-class _FilterButton extends StatelessWidget {
-  final bool isActive;
-  final VoidCallback onPressed;
-
-  const _FilterButton({required this.isActive, required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        _CircleButton(
-          icon: Icons.tune,
-          iconColor: colorScheme.onSurface,
-          background: colorScheme.surfaceContainerHighest,
-          iconSize: 22,
-          onPressed: onPressed,
-        ),
-        if (isActive) const Positioned(top: 2, right: 2, child: _ActiveDot()),
-      ],
     );
   }
 }
@@ -239,24 +252,24 @@ class _RefreshButton extends StatelessWidget {
 ///
 /// `_CircleButton` 沒有 `tooltip` 參數，所以用 `Semantics` 包一層來承載無障礙
 /// 標籤——順便把 [Key] 放在這層，測試才點得到。
-class _GlobeBackButton extends StatelessWidget {
-  const _GlobeBackButton({required this.onPressed});
+class _GlobeFab extends StatelessWidget {
+  const _GlobeFab({required this.onPressed});
 
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     return Semantics(
       key: const Key('explore-globe-back'),
       button: true,
       label: 'explore.back_to_globe'.tr(),
-      child: _CircleButton(
-        icon: Icons.public,
-        iconColor: colorScheme.onSurface,
-        background: colorScheme.surfaceContainerHighest,
-        iconSize: 22,
+      child: FloatingActionButton(
+        shape: const CircleBorder(),
         onPressed: onPressed,
+        child: Icon(
+          Icons.public,
+          color: Theme.of(context).colorScheme.onPrimary,
+        ),
       ),
     );
   }
@@ -298,26 +311,6 @@ class _CircleButton extends StatelessWidget {
   }
 }
 
-class _ActiveDot extends StatelessWidget {
-  const _ActiveDot();
-
-  /// 測試用：畫面上有多個有顏色的小圓（地圖 pin、卡片前往鈕），靠造型找不準。
-  static const Key testKey = Key('explore-filter-active-dot');
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      key: testKey,
-      width: 8,
-      height: 8,
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primary,
-        shape: BoxShape.circle,
-      ),
-    );
-  }
-}
-
 /// Pill-shaped search field on a sunken-paper surface, matching `.search`.
 class _SearchField extends StatelessWidget {
   const _SearchField({
@@ -341,9 +334,13 @@ class _SearchField extends StatelessWidget {
     return Container(
       height: 48,
       padding: const EdgeInsets.symmetric(horizontal: 16),
+      // 與首頁搜尋列統一成同一組樣式：浮起紙色 ＋ e2 陰影 ＋ 藥丸形。
+      // 設計稿的 `.search` 基底其實是下沉紙色無陰影，這裡刻意採用首頁那版
+      // （`.hm-search`），讓兩頁的搜尋列看起來是同一個東西。
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest,
+        color: tokens?.paperRaised ?? colorScheme.surface,
         borderRadius: BorderRadius.circular(999),
+        boxShadow: tokens?.e2,
       ),
       child: Row(
         children: [
@@ -383,165 +380,6 @@ class _SearchField extends StatelessWidget {
                 child: Icon(Icons.clear, size: 20, color: hintColor),
               ),
             ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FilterPanel extends ConsumerStatefulWidget {
-  const _FilterPanel();
-
-  @override
-  ConsumerState<_FilterPanel> createState() => _FilterPanelState();
-}
-
-class _FilterPanelState extends ConsumerState<_FilterPanel> {
-  late double _sliderValue;
-
-  /// 滑桿的刻度值（公尺）：500, 1000, 2000, 5000, 10000, 20000, 30000
-  static const List<double> _steps = [
-    500,
-    1000,
-    2000,
-    5000,
-    10000,
-    20000,
-    30000,
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    final current = ref.read(maxDistanceProvider);
-    _sliderValue = _valueToSlider(current);
-  }
-
-  /// 將距離值對應到滑桿位置（0.0 ~ 1.0）
-  double _valueToSlider(double value) {
-    for (int i = 0; i < _steps.length; i++) {
-      if (value <= _steps[i]) return i / (_steps.length - 1);
-    }
-    return 1.0;
-  }
-
-  /// 將滑桿位置轉換為距離值
-  double _sliderToValue(double slider) {
-    final index = (slider * (_steps.length - 1)).round().clamp(
-      0,
-      _steps.length - 1,
-    );
-    return _steps[index];
-  }
-
-  String _formatDistance(double meters) {
-    if (meters >= 1000) {
-      final km = meters / 1000;
-      return km == km.roundToDouble() ? '${km.toInt()} km' : '$km km';
-    }
-    return '${meters.toInt()} m';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final currentValue = _sliderToValue(_sliderValue);
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 5,
-              decoration: BoxDecoration(
-                color: colorScheme.outline,
-                borderRadius: BorderRadius.circular(3),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'explore.filter.title'.tr(),
-            style: Theme.of(context).textTheme.headlineMedium,
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'explore.filter.max_distance'.tr(),
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: AdaptiveSlider(
-                  value: _sliderValue,
-                  onChanged: (value) {
-                    setState(() {
-                      _sliderValue = value;
-                    });
-                  },
-                  onChangeEnd: (value) {
-                    final newDistance = _sliderToValue(value);
-                    ref.read(maxDistanceProvider.notifier).state = newDistance;
-                    if (ref.read(searchQueryProvider).isEmpty) {
-                      ref
-                          .read(placesControllerProvider.notifier)
-                          .refresh(radius: newDistance);
-                    }
-                  },
-                ),
-              ),
-              SizedBox(
-                width: 72,
-                child: Text(
-                  _formatDistance(currentValue),
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                    color: colorScheme.primary,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('500 m', style: Theme.of(context).textTheme.bodySmall),
-                Text('30 km', style: Theme.of(context).textTheme.bodySmall),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            'explore.filter.description'.tr(),
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 12),
-          Center(
-            child: TextButton(
-              onPressed: () {
-                ref.read(maxDistanceProvider.notifier).state =
-                    kDefaultMaxDistanceMeters;
-                setState(() {
-                  _sliderValue = _valueToSlider(kDefaultMaxDistanceMeters);
-                });
-                if (ref.read(searchQueryProvider).isEmpty) {
-                  ref
-                      .read(placesControllerProvider.notifier)
-                      .refresh(radius: kDefaultMaxDistanceMeters);
-                }
-              },
-              child: Text('explore.filter.reset'.tr()),
-            ),
-          ),
         ],
       ),
     );
@@ -619,9 +457,6 @@ class _MapTopOverlay extends StatelessWidget {
   const _MapTopOverlay({
     required this.placeCount,
     required this.searchController,
-    required this.isFilterActive,
-    required this.onBack,
-    required this.onFilter,
     required this.onRefresh,
     required this.onSearchChanged,
     required this.onSearchSubmitted,
@@ -630,9 +465,6 @@ class _MapTopOverlay extends StatelessWidget {
 
   final int placeCount;
   final TextEditingController searchController;
-  final bool isFilterActive;
-  final VoidCallback onBack;
-  final VoidCallback onFilter;
   final VoidCallback onRefresh;
   final ValueChanged<String> onSearchChanged;
   final ValueChanged<String> onSearchSubmitted;
@@ -687,12 +519,7 @@ class _MapTopOverlay extends StatelessWidget {
                   actions: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _GlobeBackButton(onPressed: onBack),
-                      const SizedBox(width: 8),
-                      _FilterButton(
-                        isActive: isFilterActive,
-                        onPressed: onFilter,
-                      ),
+                      const SavedLocationsButton(),
                       const SizedBox(width: 8),
                       _RefreshButton(onPressed: onRefresh),
                     ],

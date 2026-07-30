@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:context_app/core/utils/geo_utils.dart';
 import 'package:context_app/features/explore/domain/use_cases/search_nearby_places_use_case.dart';
 import 'package:context_app/features/explore/data/services/geolocator_service.dart';
 import 'package:context_app/features/explore/data/services/wikidata_landmark_query_service.dart';
@@ -115,42 +114,15 @@ final mapStyleProvider = FutureProvider<Style>((ref) async {
 /// 使用者目前位置，由 [PlacesController] 在載入附近地點時更新
 final userLocationProvider = StateProvider<PlaceLocation?>((ref) => null);
 
-/// 探索頁面預設的距離過濾上限（公尺）。
-const double kDefaultMaxDistanceMeters = 10000.0;
+/// Wikipedia geosearch 的半徑上限（公尺）。API 硬性限制，傳更大會被拒絕。
+const double kMaxSearchRadiusMeters = 10000.0;
 
-/// 距離過濾上限（公尺），預設 [kDefaultMaxDistanceMeters]
-final maxDistanceProvider = StateProvider<double>(
-  (ref) => kDefaultMaxDistanceMeters,
-);
+/// 搜尋半徑下限（公尺）。地圖放到街區級時可視半徑只剩一兩百公尺，照實傳會
+/// 一個景點都搜不到，看起來像壞掉；給一個保底範圍。
+const double kMinSearchRadiusMeters = 500.0;
 
 /// 目前的搜尋關鍵字；空字串表示顯示附近地點模式
 final searchQueryProvider = StateProvider<String>((ref) => '');
-
-/// 根據最大距離過濾後的地點列表
-///
-/// 監聽 [placesControllerProvider]、[maxDistanceProvider] 與
-/// [userLocationProvider]，當任一改變時自動重新過濾。
-/// 在搜尋模式（[searchQueryProvider] 非空）下跳過距離過濾。
-final filteredPlacesProvider = Provider<AsyncValue<List<Place>>>((ref) {
-  final placesAsync = ref.watch(placesControllerProvider);
-  final maxDistance = ref.watch(maxDistanceProvider);
-  final userLocation = ref.watch(userLocationProvider);
-  final searchQuery = ref.watch(searchQueryProvider);
-
-  return placesAsync.whenData((places) {
-    if (searchQuery.isNotEmpty) return places;
-    if (userLocation == null) return places;
-    return places.where((p) {
-      final distance = calculateHaversineDistance(
-        fromLatitude: userLocation.latitude,
-        fromLongitude: userLocation.longitude,
-        toLatitude: p.location.latitude,
-        toLongitude: p.location.longitude,
-      );
-      return distance <= maxDistance;
-    }).toList();
-  });
-});
 
 // Use Case Providers
 final searchNearbyPlacesUseCaseProvider = Provider<SearchNearbyPlacesUseCase>((
@@ -171,20 +143,21 @@ class PlacesController extends AsyncNotifier<List<Place>> {
   @override
   Future<List<Place>> build() async {
     final language = ref.watch(currentLanguageProvider);
-    final radius = ref.read(maxDistanceProvider);
     final useCase = ref.read(searchNearbyPlacesUseCaseProvider);
-    final result = await useCase.execute(language: language, radius: radius);
+    final result = await useCase.execute(
+      language: language,
+      radius: kMaxSearchRadiusMeters,
+    );
     ref.read(userLocationProvider.notifier).state = result.userLocation;
     return result.places;
   }
 
   Future<List<Place>> _loadNearbyPlaces({double? radius}) async {
     final language = ref.read(currentLanguageProvider);
-    final double effectiveRadius = radius ?? ref.read(maxDistanceProvider);
     final useCase = ref.read(searchNearbyPlacesUseCaseProvider);
     final result = await useCase.execute(
       language: language,
-      radius: effectiveRadius,
+      radius: radius ?? kMaxSearchRadiusMeters,
     );
     ref.read(userLocationProvider.notifier).state = result.userLocation;
     return result.places;
@@ -210,6 +183,31 @@ class PlacesController extends AsyncNotifier<List<Place>> {
   Future<void> refresh({double? radius}) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() => _loadNearbyPlaces(radius: radius));
+  }
+
+  /// 以地圖目前的可視範圍搜尋：中心取地圖中心，半徑取可視範圍換算值。
+  ///
+  /// 與 [refresh] 的差別是**不需要定位權限**——中心由呼叫端給，不去問
+  /// LocationService。使用者可以把地圖拖到任何地方再按重新整理。
+  Future<void> searchArea({
+    required PlaceLocation center,
+    required double radius,
+  }) async {
+    final language = ref.read(currentLanguageProvider);
+    final clamped = radius.clamp(
+      kMinSearchRadiusMeters,
+      kMaxSearchRadiusMeters,
+    );
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      final repository = ref.read(placesRepositoryProvider);
+      final places = await repository.getNearbyPlaces(
+        center,
+        language: language,
+        radius: clamped,
+      );
+      return sortPlacesByDistanceFrom(places, center);
+    });
   }
 }
 
