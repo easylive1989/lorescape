@@ -11,6 +11,7 @@ import 'package:context_app/features/journey/providers.dart';
 import 'package:context_app/features/narration/domain/models/story_hook.dart';
 import 'package:context_app/features/narration/domain/services/story_hook_service.dart';
 import 'package:context_app/features/narration/presentation/screens/select_story_hook_screen.dart';
+import 'package:context_app/features/narration/presentation/widgets/story_generating.dart';
 import 'package:context_app/features/narration/providers.dart';
 import 'package:context_app/features/settings/domain/models/language.dart';
 import 'package:context_app/features/usage/providers.dart';
@@ -79,7 +80,8 @@ void main() {
 
     testWidgets(
       'given the hook service is still loading, '
-      'then the loading state shows the loading copy',
+      'then the scan-phase generating animation shows the digging copy '
+      'and its step checklist',
       (tester) async {
         final gate = Completer<void>();
         await _pumpScreen(
@@ -90,13 +92,69 @@ void main() {
           ),
           settle: false,
         );
+        await tester.pump(const Duration(milliseconds: 50));
 
-        expect(find.text('story_hook.loading'), findsOneWidget);
+        expect(find.byType(StoryGenerating), findsOneWidget);
+        expect(find.text('story_generating.scan_title'), findsOneWidget);
+        expect(find.text('story_generating.scan_sub'), findsOneWidget);
+        expect(find.text('story_generating.scan_step_1'), findsOneWidget);
+        expect(find.text('story_generating.scan_step_3'), findsOneWidget);
 
         // Release the gate so autoDispose teardown doesn't leak a pending
         // future into the next test.
         gate.complete();
         await tester.pumpAndSettle();
+      },
+    );
+
+    testWidgets(
+      'given the generating animation runs, when the step interval elapses, '
+      'then the first step is marked done with a check',
+      (tester) async {
+        final gate = Completer<void>();
+        await _pumpScreen(
+          tester,
+          hookService: _FakeStoryHookService(gate: gate),
+          settle: false,
+        );
+        await tester.pump(const Duration(milliseconds: 50));
+
+        expect(find.byIcon(Icons.check), findsNothing);
+
+        await tester.pump(const Duration(seconds: 3));
+
+        expect(find.byIcon(Icons.check), findsOneWidget);
+
+        gate.complete();
+        await tester.pumpAndSettle();
+      },
+    );
+
+    testWidgets(
+      'given a hook is tapped and generation is in flight, '
+      'then the write-phase animation shows the writing copy, '
+      'and the player opens once generation completes',
+      (tester) async {
+        final narrationService = FakeNarrationService()
+          ..gate = Completer<void>();
+
+        await _pumpScreenWithRouter(
+          tester,
+          hookService: _FakeStoryHookService(hooks: const [_hook1]),
+          narrationService: narrationService,
+        );
+
+        await tester.tap(find.text(_hook1.title));
+        await tester.pump(const Duration(milliseconds: 50));
+
+        expect(find.byType(StoryGenerating), findsOneWidget);
+        expect(find.text('story_generating.write_title'), findsOneWidget);
+        expect(find.text('story_generating.write_step_1'), findsOneWidget);
+
+        narrationService.gate!.complete();
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('player-screen')), findsOneWidget);
       },
     );
 
