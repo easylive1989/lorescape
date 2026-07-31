@@ -183,11 +183,12 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                         place.location.latitude,
                         place.location.longitude,
                       ),
-                      width: PlaceMapPin.markerSize,
-                      height: PlaceMapPin.markerSize,
+                      width: LabeledPlaceMapPin.markerWidth,
+                      height: LabeledPlaceMapPin.markerHeight,
                       // 尖端落在座標上：把標記整個往上推一個身高。
                       alignment: Alignment.topCenter,
-                      child: PlaceMapPin(
+                      child: LabeledPlaceMapPin(
+                        label: place.name,
                         category: place.category.journalCategory,
                         onTap: () => context.pushNamed('config', extra: place),
                       ),

@@ -4,6 +4,81 @@ import 'package:context_app/app/config/lorescape_tokens.dart';
 import 'package:context_app/shared/widgets/journal/journal_category.dart';
 import 'package:flutter/material.dart';
 
+/// 地圖上的地點標記＋上方的地名 chip，樣式對齊首頁地球儀選中地點的紙卡
+/// chip（紙色圓角膠囊、陶土色小圓點、粗體地名），但每個標記都常駐顯示，
+/// 沒有「選中」狀態。
+class LabeledPlaceMapPin extends StatelessWidget {
+  const LabeledPlaceMapPin({
+    super.key,
+    required this.label,
+    required this.category,
+    this.onTap,
+  });
+
+  final String label;
+  final JournalCategory category;
+
+  /// 點 chip 或水滴 pin 都觸發同一個動作。
+  final VoidCallback? onTap;
+
+  /// `Marker` 的尺寸：寬要放得下地名 chip（超過就省略號），高是
+  /// chip＋間距＋pin；多出來的空間靠 [MainAxisAlignment.end] 留在上方，
+  /// 讓 pin 的底邊貼齊 Marker 底邊（尖端錨在座標上的邏輯不變）。
+  static const double markerWidth = 168;
+  static const double markerHeight = 64;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        GestureDetector(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: tokens.paperRaised,
+              border: Border.all(color: tokens.line),
+              borderRadius: BorderRadius.circular(999),
+              boxShadow: tokens.e1,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: tokens.clay,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.4,
+                      color: tokens.ink,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        PlaceMapPin(category: category, onTap: onTap),
+      ],
+    );
+  }
+}
+
 /// 地圖上的地點標記，對應設計稿的 `.map-pin`：水滴造型、紙色描邊與內點。
 ///
 /// 造型做法與設計稿一致——圓角 `50% 50% 50% 0` 的方塊旋轉 -45°，讓左下角
