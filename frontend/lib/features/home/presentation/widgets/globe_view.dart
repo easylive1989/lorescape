@@ -19,6 +19,8 @@ class GlobeView extends StatefulWidget {
     required this.outline,
     required this.pins,
     required this.focus,
+    this.onPinTap,
+    this.onFocusTap,
     this.size = 344,
   });
 
@@ -30,10 +32,24 @@ class GlobeView extends StatefulWidget {
   /// 目前選中的故事地點。可能不在 [pins] 內（捲到更舊的卡片時）。
   final GlobePin? focus;
 
+  /// 點到非選中的釘點時回呼，首頁拿它把該篇故事切成選中（地球飛過去）。
+  final ValueChanged<GlobePin>? onPinTap;
+
+  /// 點選中地點的紙卡 chip（地名）時回呼，首頁拿它開那篇每日故事。
+  final VoidCallback? onFocusTap;
+
   final double size;
 
   /// 測試用來抓畫布與拖曳目標。
   static const Key canvasKey = Key('globe-canvas');
+
+  /// focus marker 的固定外框（Positioned 的尺寸）。不能用
+  /// FractionalTranslation 把內容平移出外框——畫得出來（Stack 不裁切）但
+  /// hit test 過不了 RenderBox 的 bounds 檢查，chip 會點不到。改成外框直接
+  /// 罩住內容的實際位置，內容靠 [Alignment.bottomCenter] 貼底，pin 尖端
+  /// 仍然錨在投影點上。寬高留給大字級的餘裕（chip 一行、最長地名省略）。
+  static const double focusMarkerWidth = 280;
+  static const double focusMarkerHeight = 132;
 
   @override
   State<GlobeView> createState() => _GlobeViewState();
@@ -82,9 +98,52 @@ class _GlobeViewState extends State<GlobeView>
     super.dispose();
   }
 
-  void _onDragStart(DragStartDetails _) => _controller.stop();
+  /// 釘點只是 4.5px 的小圓，命中判定放寬到這個半徑才點得到。
+  static const double _pinTapRadius = 24;
+
+  /// pan 累積位移小於這個值就當成點擊。不另掛 TapGestureRecognizer——它會
+  /// 跟 pan 搶 gesture arena，pan 得先吃掉 touch slop 才啟動，拖曳的前
+  /// ~20px 會不轉（drag gain 測試抓得到這個回歸）。
+  static const double _tapSlop = 12;
+
+  Offset _panStart = Offset.zero;
+  double _panDistance = 0;
+
+  void _onDragStart(DragStartDetails details) {
+    _controller.stop();
+    _panStart = details.localPosition;
+    _panDistance = 0;
+  }
+
+  /// pan 放開時若幾乎沒有位移，視為點擊：找出最近且在命中半徑內的非選中
+  /// 釘點。
+  void _onDragEnd(OrthographicProjection projection) {
+    if (_panDistance > _tapSlop) return;
+    final onPinTap = widget.onPinTap;
+    if (onPinTap == null) return;
+
+    GlobePin? nearest;
+    var nearestDistance = _pinTapRadius;
+    for (final pin in widget.pins) {
+      if (pin.id == widget.focus?.id) continue;
+      // 跟 GlobePainter 同一套可見性判斷：畫不出來的點也不該點得到。
+      if (projection.angularDistanceTo(pin.coordinate) >
+          GlobePainter.maxPinAngularDistance) {
+        continue;
+      }
+      final offset = projection.project(pin.coordinate);
+      if (offset == null) continue;
+      final distance = (offset - _panStart).distance;
+      if (distance < nearestDistance) {
+        nearest = pin;
+        nearestDistance = distance;
+      }
+    }
+    if (nearest != null) onPinTap(nearest);
+  }
 
   void _onDragUpdate(DragUpdateDetails details) {
+    _panDistance += details.delta.distance;
     setState(() {
       _rotation = GlobeRotation(
         _rotation.lambda + details.delta.dx * _dragGain,
@@ -130,6 +189,7 @@ class _GlobeViewState extends State<GlobeView>
               GestureDetector(
                 onPanStart: _onDragStart,
                 onPanUpdate: _onDragUpdate,
+                onPanEnd: (_) => _onDragEnd(projection),
                 child: CustomPaint(
                   key: GlobeView.canvasKey,
                   size: Size.square(effectiveSize),
@@ -146,13 +206,22 @@ class _GlobeViewState extends State<GlobeView>
               // 等飛行動畫轉過去再顯示。
               if (focus != null && focusOffset != null)
                 Positioned(
-                  left: focusOffset.dx,
-                  top: focusOffset.dy,
+                  // 外框的底邊中點對齊投影點，水滴 pin 的尖端剛好落在座標
+                  // 上（外框尺寸的取捨見 focusMarkerWidth 的註解）。
+                  left: focusOffset.dx - GlobeView.focusMarkerWidth / 2,
+                  top: focusOffset.dy - GlobeView.focusMarkerHeight,
+                  width: GlobeView.focusMarkerWidth,
+                  height: GlobeView.focusMarkerHeight,
+                  // 淡出（轉到背面）期間整組不可點，避免點到看不見的 chip。
                   child: IgnorePointer(
+                    ignoring: !focusVisible,
                     child: AnimatedOpacity(
                       opacity: focusVisible ? 1 : 0,
                       duration: const Duration(milliseconds: 250),
-                      child: _FocusMarker(label: focus.label),
+                      child: _FocusMarker(
+                        label: focus.label,
+                        onTap: widget.onFocusTap,
+                      ),
                     ),
                   ),
                 ),
@@ -176,50 +245,59 @@ const double _pinBox = _pinSize * 1.4142135624;
 const Color _pinBorder = Color(0xFFFBF1E9);
 
 class _FocusMarker extends StatelessWidget {
-  const _FocusMarker({required this.label});
+  const _FocusMarker({required this.label, this.onTap});
 
   final String label;
+
+  /// 點地名 chip 時回呼；水滴 pin 本身不可點（讓點擊穿透到底下的地球）。
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    // 外層 Positioned 把左上角放在投影點上。這裡水平往左推半個自身寬度做
-    // 置中、垂直往上推一整個高度，讓水滴 pin 的尖端剛好落在座標上。寬度
-    // 隨地名長短變動，所以用比例位移而不是寫死的 Offset。
-    return FractionalTranslation(
-      translation: const Offset(-0.5, -1),
+    // 外層 Positioned 給的是比內容大的固定外框；貼底置中讓 pin 尖端錨在
+    // 投影點上，多出來的空間留在上方（Align 本身不擋點擊）。
+    return Align(
+      alignment: Alignment.bottomCenter,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: tokens.paperRaised,
-              border: Border.all(color: tokens.line),
-              borderRadius: BorderRadius.circular(999),
-              boxShadow: tokens.e2,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: tokens.clay,
-                    shape: BoxShape.circle,
+          GestureDetector(
+            onTap: onTap,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: tokens.paperRaised,
+                border: Border.all(color: tokens.line),
+                borderRadius: BorderRadius.circular(999),
+                boxShadow: tokens.e2,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: tokens.clay,
+                      shape: BoxShape.circle,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.96,
-                    color: tokens.ink,
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.96,
+                        color: tokens.ink,
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 6),
@@ -230,38 +308,40 @@ class _FocusMarker extends StatelessWidget {
           // 尺寸取 ls3.css 的 `.gpin .map-pin`：36×36、內圈 11、2.5px 乳白
           // 描邊。旋轉後對角線比邊長多出 (√2-1)×36/2 ≈ 7.5px，所以外層要留
           // 這段空間，尖端才不會被 Column 的邊界裁掉。
-          SizedBox(
-            width: _pinBox,
-            height: _pinBox,
-            child: Center(
-              child: Transform.rotate(
-                angle: -math.pi / 4,
-                child: Container(
-                  width: _pinSize,
-                  height: _pinSize,
-                  decoration: BoxDecoration(
-                    color: tokens.clay,
-                    border: Border.all(color: _pinBorder, width: 2.5),
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(_pinSize / 2),
-                      topRight: Radius.circular(_pinSize / 2),
-                      bottomRight: Radius.circular(_pinSize / 2),
-                    ),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color.fromRGBO(28, 20, 10, 0.4),
-                        offset: Offset(0, 4),
-                        blurRadius: 9,
+          IgnorePointer(
+            child: SizedBox(
+              width: _pinBox,
+              height: _pinBox,
+              child: Center(
+                child: Transform.rotate(
+                  angle: -math.pi / 4,
+                  child: Container(
+                    width: _pinSize,
+                    height: _pinSize,
+                    decoration: BoxDecoration(
+                      color: tokens.clay,
+                      border: Border.all(color: _pinBorder, width: 2.5),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(_pinSize / 2),
+                        topRight: Radius.circular(_pinSize / 2),
+                        bottomRight: Radius.circular(_pinSize / 2),
                       ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Container(
-                      width: 11,
-                      height: 11,
-                      decoration: const BoxDecoration(
-                        color: _pinBorder,
-                        shape: BoxShape.circle,
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color.fromRGBO(28, 20, 10, 0.4),
+                          offset: Offset(0, 4),
+                          blurRadius: 9,
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Container(
+                        width: 11,
+                        height: 11,
+                        decoration: const BoxDecoration(
+                          color: _pinBorder,
+                          shape: BoxShape.circle,
+                        ),
                       ),
                     ),
                   ),

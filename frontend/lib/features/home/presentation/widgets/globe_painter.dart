@@ -31,6 +31,10 @@ class GlobePainter extends CustomPainter {
   /// 網格線的間隔（度）。
   static const double _graticuleStep = 10;
 
+  /// 釘點可見的角距上限（弧度）。太靠近球緣的點視覺上已貼在邊上，標籤會
+  /// 壓到球外，不畫也不參與點擊命中（GlobeView 的 tap 判定共用這個值）。
+  static const double maxPinAngularDistance = 1.4;
+
   @override
   void paint(Canvas canvas, Size size) {
     final radius = size.width / 2 - 3;
@@ -154,8 +158,10 @@ class GlobePainter extends CustomPainter {
 
     for (final pin in pins) {
       if (pin.id == focusId) continue;
-      // 太靠近球緣的點在視覺上已經貼在邊上，標籤會壓到球外，直接不畫。
-      if (projection.angularDistanceTo(pin.coordinate) > 1.4) continue;
+      if (projection.angularDistanceTo(pin.coordinate) >
+          maxPinAngularDistance) {
+        continue;
+      }
       final offset = projection.project(pin.coordinate);
       if (offset == null) continue;
 

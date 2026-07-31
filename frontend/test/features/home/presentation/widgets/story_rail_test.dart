@@ -108,6 +108,24 @@ void main() {
   );
 
   testWidgets(
+    'given the rail resting on the first card, '
+    'when activeIndex changes from outside (a globe pin tap), '
+    'then the rail scrolls that card to its boundary',
+    (tester) async {
+      await _givenRail(tester, count: 8);
+
+      await _givenRail(tester, count: 8, activeIndex: 3);
+      await tester.pumpAndSettle();
+
+      final offset = tester
+          .widget<ListView>(find.byType(ListView))
+          .controller!
+          .offset;
+      expect(offset, closeTo(3 * StoryRail.stride, 1.0));
+    },
+  );
+
+  testWidgets(
     'given the story rail at the first card, '
     'when the user flicks quickly but drags less than half a card, '
     'then it still advances to the next card instead of springing back',

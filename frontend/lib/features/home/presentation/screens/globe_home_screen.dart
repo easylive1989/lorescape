@@ -129,6 +129,23 @@ class _GlobeHomeScreenState extends ConsumerState<GlobeHomeScreen> {
                           outline: outline,
                           pins: pins,
                           focus: active,
+                          // 點非選中的釘點：把那篇故事切成選中，地球飛過
+                          // 去、卡片列也捲到那張卡（StoryRail 會跟上）。
+                          onPinTap: (pin) {
+                            final index = stories.indexWhere(
+                              (story) =>
+                                  story.publishDate.toIso8601String() == pin.id,
+                            );
+                            if (index < 0 || index == _activeIndex) return;
+                            setState(() => _activeIndex = index);
+                          },
+                          // 點選中地點的地名 chip：直接進那篇每日故事。
+                          onFocusTap: _activeIndex < stories.length
+                              ? () => context.push(
+                                  '/daily-story/detail',
+                                  extra: stories[_activeIndex],
+                                )
+                              : null,
                         ),
                       ),
                     ),

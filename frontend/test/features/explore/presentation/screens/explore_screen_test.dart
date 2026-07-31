@@ -92,7 +92,7 @@ void main() {
           .top;
       final card = find
           .ancestor(
-            of: find.text('Senso-ji'),
+            of: _cardText('Senso-ji'),
             matching: find.byType(Container),
           )
           .first;
@@ -126,7 +126,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 20));
       await tester.pump(const Duration(milliseconds: 20));
 
-      expect(find.text('Searched Place'), findsOneWidget);
+      expect(_cardText('Searched Place'), findsOneWidget);
       expect(find.text('Nearby Place'), findsNothing);
     });
 
@@ -154,7 +154,7 @@ void main() {
 
         final textField = tester.widget<TextField>(find.byType(TextField));
         expect(textField.controller?.text, isEmpty);
-        expect(find.text('Nearby Place'), findsOneWidget);
+        expect(_cardText('Nearby Place'), findsOneWidget);
       },
     );
 
@@ -302,7 +302,7 @@ void main() {
           onConfigPush: extras.add,
         );
 
-        await tester.tap(find.text('Senso-ji'));
+        await tester.tap(_cardText('Senso-ji'));
         await tester.pumpAndSettle();
 
         // 點卡片本體是「把地圖飛到該地點」，不該離開探索頁——導頁只在
@@ -312,7 +312,8 @@ void main() {
     );
 
     testWidgets('given nearby places, when the screen loads, '
-        'then one map pin is rendered per place', (tester) async {
+        'then one map pin is rendered per place, '
+        'each with its name chip shown without needing focus', (tester) async {
       await _givenExploreScreen(
         tester,
         places: [
@@ -322,7 +323,29 @@ void main() {
       );
 
       expect(find.byType(PlaceMapPin), findsNWidgets(2));
+      expect(_markerLabel('Senso-ji'), findsOneWidget);
+      expect(_markerLabel('Meiji Shrine'), findsOneWidget);
     });
+
+    testWidgets(
+      'given a map pin under a router, when its name chip is tapped, '
+      'then the config route is pushed with the place as extra',
+      (tester) async {
+        final extras = <Object?>[];
+
+        await _givenExploreScreenWithRouter(
+          tester,
+          places: [buildPlace(id: 'p1', name: 'Senso-ji')],
+          onConfigPush: extras.add,
+        );
+
+        await tester.tap(_markerLabel('Senso-ji'));
+        await tester.pumpAndSettle();
+
+        expect(extras.single, isA<Place>());
+        expect((extras.single as Place).id, equals('p1'));
+      },
+    );
 
     group('location gate', () {
       testWidgets(
@@ -487,7 +510,7 @@ void main() {
 
           await tester.pump(const Duration(milliseconds: 500));
           expect(find.byType(SearchLoader), findsNothing);
-          expect(find.text('Searched Place'), findsOneWidget);
+          expect(_cardText('Searched Place'), findsOneWidget);
         },
       );
 
@@ -750,9 +773,20 @@ void _thenEmptyStateIsVisible() {
   expect(find.text('explore.empty'), findsOneWidget);
 }
 
+/// 地名同時出現在底部卡片與地圖 marker 的地名 chip 上；這裡限定在卡片列
+/// （唯一的 ListView）底下找，才不會誤數到 marker 的標籤。
+Finder _cardText(String name) =>
+    find.descendant(of: find.byType(ListView), matching: find.text(name));
+
+/// 地圖 marker 地名 chip 上的文字。
+Finder _markerLabel(String name) => find.descendant(
+  of: find.byType(LabeledPlaceMapPin),
+  matching: find.text(name),
+);
+
 void _thenPlaceNamesAreVisible(List<String> names) {
   for (final name in names) {
-    expect(find.text(name), findsOneWidget);
+    expect(_cardText(name), findsOneWidget);
   }
 }
 

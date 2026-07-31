@@ -44,6 +44,34 @@ class StoryRail extends StatefulWidget {
 class _StoryRailState extends State<StoryRail> {
   final ScrollController _controller = ScrollController();
 
+  /// didUpdateWidget 觸發的程式化捲動進行中。這段期間 [_onScroll] 要閉嘴：
+  /// activeIndex 已經是目的地了，中途經過的卡再回報 onActiveChanged 只會把
+  /// 它改回中間值；而且 animateTo 是在 build 中被呼叫的，它同步發出的
+  /// ScrollStart 若一路傳回 setState 會直接炸 setState-during-build。
+  bool _autoScrolling = false;
+
+  @override
+  void didUpdateWidget(StoryRail oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // activeIndex 從外部改變時（點地球儀上的釘點）把那張卡捲到中間。
+    // 捲動自己觸發的變更（_onScroll 回報上來的）此時捲動位置已經在該卡
+    // 附近，round 出來就是新 index，直接略過，才不會跟使用者的手指打架。
+    if (widget.activeIndex == oldWidget.activeIndex) return;
+    if (!_controller.hasClients) return;
+    final scrollIndex = (_controller.position.pixels / StoryRail.stride)
+        .round();
+    if (scrollIndex == widget.activeIndex) return;
+    _autoScrolling = true;
+    _controller
+        .animateTo(
+          widget.activeIndex * StoryRail.stride,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        )
+        // 使用者中途伸手打斷也會 complete，flag 一定會被清掉。
+        .whenComplete(() => _autoScrolling = false);
+  }
+
   @override
   void dispose() {
     _controller.dispose();
@@ -51,6 +79,7 @@ class _StoryRailState extends State<StoryRail> {
   }
 
   bool _onScroll(ScrollNotification notification) {
+    if (_autoScrolling) return false;
     final index = (notification.metrics.pixels / StoryRail.stride)
         .round()
         .clamp(0, widget.stories.length - 1);
