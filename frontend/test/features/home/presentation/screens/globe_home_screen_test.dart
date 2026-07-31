@@ -1,14 +1,18 @@
 import 'package:context_app/features/daily_story/domain/models/daily_story.dart';
 import 'package:context_app/features/daily_story/providers.dart';
 import 'package:context_app/features/explore/providers.dart';
+import 'package:context_app/features/home/domain/globe/globe_rotation.dart';
+import 'package:context_app/features/home/domain/globe/orthographic_projection.dart';
 import 'package:context_app/features/home/domain/globe/world_outline.dart';
 import 'package:context_app/features/home/presentation/screens/globe_home_screen.dart';
 import 'package:context_app/features/home/presentation/widgets/globe_view.dart';
+import 'package:context_app/features/home/presentation/widgets/story_rail.dart';
 import 'package:context_app/features/home/providers.dart';
 import 'package:context_app/features/settings/domain/models/language.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../../../fakes/fake_places_repository.dart';
 import '../../../../fakes/in_memory_daily_story_repository.dart';
@@ -148,6 +152,71 @@ void main() {
     await _givenHome(tester, pushed: pushed);
 
     await tester.tap(find.byKey(const Key('story-card-2026-07-28')));
+    await tester.pumpAndSettle();
+
+    expect(pushed.single, isA<DailyStory>());
+    expect((pushed.single as DailyStory).placeName, '聖伯多祿大殿');
+  });
+
+  testWidgets('given the globe home, '
+      'when the user taps a non-focused pin on the globe, '
+      'then that story becomes the selected one (globe focus + rail scroll) '
+      'without opening the story', (tester) async {
+    // 地點放得近，選中第 0 篇時其他釘點也在球的正面、點得到；6 篇讓卡片
+    // 列的內容超出視窗寬度，捲到第 1 張卡的斷言才有捲動距離可用。
+    _stories.seed([
+      for (var i = 0; i < 6; i++)
+        _story(
+          date: _dateAt(i),
+          place: '地點$i',
+          latitude: 30 + i.toDouble(),
+          longitude: 100 + i.toDouble(),
+        ),
+    ]);
+    final pushed = <Object?>[];
+    await _givenHome(tester, pushed: pushed);
+
+    // 用跟 GlobeView 相同的投影參數（預設尺寸 344）算出第 1 篇釘點的
+    // 畫布座標，直接點在它上面。
+    const size = 344.0;
+    final projection = OrthographicProjection(
+      rotation: GlobeRotation.facing(const LatLng(30, 100)),
+      center: const Offset(size / 2, size / 2),
+      radius: size / 2 - 3,
+    );
+    final target =
+        tester.getTopLeft(find.byKey(GlobeView.canvasKey)) +
+        projection.project(const LatLng(31, 101))!;
+    await tester.tapAt(target);
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<GlobeView>(find.byType(GlobeView)).focus?.label,
+      '地點1',
+      reason: '點非選中的釘點要直接把 focus 換成那個地點',
+    );
+    expect(
+      tester.widget<ListView>(find.byType(ListView)).controller!.offset,
+      closeTo(StoryRail.stride, 1.0),
+      reason: '卡片列要跟著捲到那篇故事',
+    );
+    expect(pushed, isEmpty, reason: '點非選中的釘點只切換選中，不該開故事');
+  });
+
+  testWidgets('given the globe home, '
+      'when the user taps the focused pin’s label chip on the globe, '
+      'then the daily story detail is pushed with that story', (tester) async {
+    final pushed = <Object?>[];
+    await _givenHome(tester, pushed: pushed);
+
+    // 選中地點的地名同時出現在地球 chip 與底部卡片上，限定在 GlobeView
+    // 底下找才點得到 chip。
+    await tester.tap(
+      find.descendant(
+        of: find.byType(GlobeView),
+        matching: find.text('聖伯多祿大殿'),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(pushed.single, isA<DailyStory>());

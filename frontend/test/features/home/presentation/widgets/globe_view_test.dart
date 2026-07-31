@@ -23,19 +23,46 @@ const _taichung = GlobePin(
   label: '四面佛寺',
 );
 
-Future<void> _givenGlobe(WidgetTester tester, {GlobePin? focus}) async {
+/// 跟羅馬同一面（角距遠小於可見上限）的釘點，點擊測試用。
+const _paris = GlobePin(
+  id: 'louvre',
+  coordinate: LatLng(48.86, 2.35),
+  label: '羅浮宮',
+);
+
+Future<void> _givenGlobe(
+  WidgetTester tester, {
+  GlobePin? focus,
+  List<GlobePin> pins = const [_rome, _taichung],
+  ValueChanged<GlobePin>? onPinTap,
+  VoidCallback? onFocusTap,
+}) async {
   await pumpScreen(
     tester,
     child: Scaffold(
       body: Center(
         child: GlobeView(
           outline: _outline,
-          pins: const [_rome, _taichung],
+          pins: pins,
           focus: focus ?? _rome,
+          onPinTap: onPinTap,
+          onFocusTap: onFocusTap,
         ),
       ),
     ),
   );
+}
+
+/// 以預設尺寸（344）的投影換算 [coordinate] 在畫布上的位置。
+Offset _canvasOffsetOf(WidgetTester tester, LatLng focus, LatLng coordinate) {
+  const size = 344.0;
+  final projection = OrthographicProjection(
+    rotation: GlobeRotation.facing(focus),
+    center: const Offset(size / 2, size / 2),
+    radius: size / 2 - 3,
+  );
+  return tester.getTopLeft(find.byKey(GlobeView.canvasKey)) +
+      projection.project(coordinate)!;
 }
 
 void main() {
@@ -73,6 +100,51 @@ void main() {
     final expected = GlobeRotation.facing(_taichung.coordinate);
     expect(rotation.lambda, closeTo(expected.lambda, 0.01));
     expect(rotation.phi, closeTo(expected.phi, 0.01));
+  });
+
+  testWidgets('given a globe focused on one pin, '
+      'when the user taps another visible pin on the canvas, '
+      'then onPinTap fires with that pin', (tester) async {
+    GlobePin? tapped;
+    await _givenGlobe(
+      tester,
+      pins: const [_rome, _paris],
+      onPinTap: (pin) => tapped = pin,
+    );
+
+    await tester.tapAt(
+      _canvasOffsetOf(tester, _rome.coordinate, _paris.coordinate),
+    );
+
+    expect(tapped?.id, _paris.id);
+  });
+
+  testWidgets('given a globe focused on one pin, '
+      'when the user taps empty ocean far from any pin, '
+      'then onPinTap does not fire', (tester) async {
+    GlobePin? tapped;
+    await _givenGlobe(
+      tester,
+      pins: const [_rome, _paris],
+      onPinTap: (pin) => tapped = pin,
+    );
+
+    // 球的左下角落（離羅馬與巴黎的投影都遠超過命中半徑）。
+    final canvasTopLeft = tester.getTopLeft(find.byKey(GlobeView.canvasKey));
+    await tester.tapAt(canvasTopLeft + const Offset(80, 280));
+
+    expect(tapped, isNull);
+  });
+
+  testWidgets('given a focused pin with its label chip shown, '
+      'when the user taps the chip, '
+      'then onFocusTap fires', (tester) async {
+    var focusTapped = false;
+    await _givenGlobe(tester, onFocusTap: () => focusTapped = true);
+
+    await tester.tap(find.text(_rome.label));
+
+    expect(focusTapped, isTrue);
   });
 
   testWidgets('given a rendered globe, '
@@ -137,8 +209,15 @@ void main() {
       center: const Offset(narrowWidth / 2, narrowWidth / 2),
       radius: narrowWidth / 2 - 3,
     );
+    // 外框的底邊中點錨在投影點上（pin 尖端落在座標）。
     final expectedOffset = expectedProjection.project(_rome.coordinate)!;
-    expect(positioned.left, closeTo(expectedOffset.dx, 0.5));
-    expect(positioned.top, closeTo(expectedOffset.dy, 0.5));
+    expect(
+      positioned.left,
+      closeTo(expectedOffset.dx - GlobeView.focusMarkerWidth / 2, 0.5),
+    );
+    expect(
+      positioned.top,
+      closeTo(expectedOffset.dy - GlobeView.focusMarkerHeight, 0.5),
+    );
   });
 }
