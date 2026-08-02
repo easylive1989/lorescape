@@ -57,3 +57,55 @@ def test_publish_disabled_noops(mock_pub, fake_config):
     sb = FakeSupabase([_row()])
     scheduler.tick(config, sb, now=NOW, notify=lambda d, m: None)
     mock_pub.assert_not_called()
+
+
+@patch("lorescape_publisher.bot_flows.scheduler.executor.publish_row")
+def test_publish_failure_notifies_with_error(mock_pub, fake_config):
+    sb = FakeSupabase([_row(media_type="reel")])
+
+    def fail(config, supabase, row):
+        # 模擬 executor：記錄 failed + error 後回 False
+        sb.rows[0].update(
+            status="failed",
+            error="Reel upload failed with HTTP 400 ProcessingFailedError",
+        )
+        return False
+
+    mock_pub.side_effect = fail
+    notes = []
+    scheduler.tick(fake_config, sb, now=NOW,
+                   notify=lambda d, m: notes.append((d, m)))
+    assert len(notes) == 1
+    date, message = notes[0]
+    assert date == "2026-07-09"
+    assert "reel" in message
+    assert "Reel upload failed with HTTP 400 ProcessingFailedError" in message
+    assert "🚀" in message
+    # 失敗列已離開 scheduled，第二輪不重複通知
+    scheduler.tick(fake_config, sb, now=NOW,
+                   notify=lambda d, m: notes.append((d, m)))
+    assert len(notes) == 1
+
+
+@patch("lorescape_publisher.bot_flows.scheduler.executor.publish_row",
+       return_value=True)
+def test_publish_success_does_not_notify(mock_pub, fake_config):
+    sb = FakeSupabase([_row()])
+    notes = []
+    scheduler.tick(fake_config, sb, now=NOW,
+                   notify=lambda d, m: notes.append((d, m)))
+    assert notes == []
+
+
+@patch("lorescape_publisher.bot_flows.scheduler.executor.publish_row",
+       return_value=False)
+def test_transient_false_without_failed_status_does_not_notify(
+    mock_pub, fake_config
+):
+    # publish_row 回 False 但列仍是 scheduled（例如設定暫缺 early-return）：
+    # 下一輪會重試，不該通知
+    sb = FakeSupabase([_row()])
+    notes = []
+    scheduler.tick(fake_config, sb, now=NOW,
+                   notify=lambda d, m: notes.append((d, m)))
+    assert notes == []
