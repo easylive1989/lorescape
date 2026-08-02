@@ -6,6 +6,41 @@
 
 ---
 
+## ISSUE-002 — Reel 自動發布間歇性 ProcessingFailedError（IG 端處理失敗）
+
+- **發生日**：2026-08-02（前例：2026-07-27）
+- **影響**：每日 reel 自動發布；carousel 不受影響
+
+### 現象
+
+2026-08-02（巨石陣）reel 自動發布失敗，`social_posts`（media_type=reel）
+status=`failed`，error：
+
+```
+Reel upload failed with HTTP 400 for container 18550664059077089:
+{"debug_info":{"retriable":false,"type":"ProcessingFailedError",
+ "message":"Request processing failed"}}
+```
+
+2026-07-27 也發生過一次一模一樣的錯誤（container 18549141970077089）。
+其餘日期（7/20–8/1）皆正常發布。
+
+### 原因
+
+IG 端 media container 處理失敗（`ProcessingFailedError`），非本地影片
+規格問題——`final.mp4` 為 h264 1080×1920 30fps yuv420p、34.2s、
+~2.9 Mbps，與正常發布日相同 pipeline 產出。判定為 Meta 端間歇性處理
+故障，與 ISSUE-001 同屬 Meta 側不穩定，但發生在 container 處理階段而
+非素材抓取階段。
+
+### 當下處理
+
+用 publish-reel skill 本機補發同一支 `final.mp4`，一次成功
+（ig_post_id 18098005030992498）。`social_posts` 該列維持 `failed`
+（本機補發不回寫），無重複發布風險。
+
+---
+
 ## ISSUE-001 — Wander 圖組發布間歇性 400（Meta 抓 Supabase 圖失敗）
 
 - **發生日**：2026-07-24
