@@ -3,7 +3,6 @@ import 'package:context_app/features/auth/domain/services/auth_service.dart';
 import 'package:context_app/features/auth/providers.dart';
 import 'package:context_app/features/onboarding/providers.dart';
 import 'package:context_app/features/settings/providers.dart';
-import 'package:context_app/features/subscription/providers.dart';
 import 'package:context_app/features/sync/providers.dart';
 import 'package:context_app/shared/widgets/adaptive/adaptive_widgets.dart';
 import 'package:context_app/shared/widgets/journal/floating_back_button.dart';
@@ -34,8 +33,6 @@ class SettingsScreen extends ConsumerWidget {
                     style: Theme.of(context).textTheme.displayLarge,
                   ),
                 ),
-                const _UpgradeBanner(),
-                const SizedBox(height: 26),
                 const _PreferencesGroup(),
                 const SizedBox(height: 26),
                 const _AccountGroup(),
@@ -52,100 +49,6 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const FloatingBackButton(),
         ],
-      ),
-    );
-  }
-}
-
-// ============================================================================
-// Upgrade banner (dark gradient card at the top)
-// ============================================================================
-
-class _UpgradeBanner extends ConsumerWidget {
-  const _UpgradeBanner();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isPremium = ref.watch(isPremiumProvider);
-    final statusAsync = ref.watch(subscriptionStatusProvider);
-    final colorScheme = Theme.of(context).colorScheme;
-    final tokens = context.tokens;
-    final radius = tokens.rLg;
-    final onDark = tokens.onDark;
-    final onDark2 = tokens.onDark2;
-
-    String title;
-    String subtitle;
-    VoidCallback? onTap;
-    if (isPremium) {
-      final expirationDate = statusAsync.valueOrNull?.expirationDate;
-      title = 'subscription.premium_banner_title'.tr();
-      subtitle = expirationDate != null
-          ? 'subscription.expires'.tr(
-              namedArgs: {'date': DateFormat.yMMMd().format(expirationDate)},
-            )
-          : 'subscription.unlimited_access'.tr();
-    } else {
-      title = 'subscription.upgrade_banner_title'.tr();
-      subtitle = 'subscription.upgrade_banner_subtitle'.tr();
-      onTap = () => context.pushNamed('subscription');
-    }
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [tokens.inkBg2, tokens.inkBg],
-        ),
-        borderRadius: BorderRadius.circular(radius),
-        boxShadow: tokens.e2,
-      ),
-      child: Material(
-        type: MaterialType.transparency,
-        borderRadius: BorderRadius.circular(radius),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(18),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.diamond_outlined,
-                  size: 30,
-                  color: colorScheme.primary,
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: onDark,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodySmall?.copyWith(color: onDark2),
-                      ),
-                    ],
-                  ),
-                ),
-                if (onTap != null) ...[
-                  const SizedBox(width: 8),
-                  Icon(Icons.chevron_right, color: onDark2, size: 22),
-                ],
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }

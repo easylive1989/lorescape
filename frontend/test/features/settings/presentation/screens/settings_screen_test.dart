@@ -3,9 +3,6 @@ import 'package:context_app/features/auth/providers.dart';
 import 'package:context_app/features/onboarding/providers.dart';
 import 'package:context_app/features/settings/presentation/screens/settings_screen.dart';
 import 'package:context_app/features/settings/providers.dart';
-import 'package:context_app/features/subscription/domain/models/subscription_status.dart';
-import 'package:context_app/features/subscription/providers.dart';
-import 'package:context_app/features/usage/providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,7 +11,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../fakes/fake_auth_service.dart';
 import '../../../../fakes/in_memory_onboarding_repository.dart';
-import '../../../../fakes/in_memory_usage_repository.dart';
 import '../../../../helpers/pump_app.dart';
 
 const _fakeVersionLabel = 'Version 9.9.9 (Build 42)';
@@ -29,27 +25,16 @@ void main() {
   });
 
   group('SettingsScreen', () {
-    testWidgets('given a free user, when the screen loads, '
-        'then preferences and the upgrade CTA are visible and there is no '
+    testWidgets('given the screen loads, '
+        'then preferences are visible and there is no upgrade banner or '
         'daily-usage section', (tester) async {
-      await _givenSettingsScreen(tester, status: SubscriptionStatus.free);
+      await _givenSettingsScreen(tester);
 
       _thenPreferencesSectionIsVisible();
       _thenUsageSectionIsHidden();
-      _thenUpgradeCtaIsVisible();
-    });
-
-    testWidgets('given a premium user, when the screen loads, '
-        'then the premium-active tile is shown instead of the upgrade CTA', (
-      tester,
-    ) async {
-      await _givenSettingsScreen(
-        tester,
-        status: const SubscriptionStatus(isPremium: true),
-      );
-
-      _thenPremiumTileIsVisible();
-      _thenUpgradeCtaIsHidden();
+      // 付費牆已暫時移除（ADR 0006）：設定頁不再有任何訂閱入口。
+      expect(find.text('subscription.upgrade_banner_title'), findsNothing);
+      expect(find.text('subscription.premium_banner_title'), findsNothing);
     });
 
     testWidgets('given the settings screen, '
@@ -184,21 +169,11 @@ void main() {
   });
 }
 
-List<Override> _settingsOverrides({
-  InMemoryUsageRepository? usage,
-  SubscriptionStatus status = SubscriptionStatus.free,
-  FakeAuthService? authService,
-}) {
-  final usageRepo = usage ?? InMemoryUsageRepository(usedToday: 0);
+List<Override> _settingsOverrides({FakeAuthService? authService}) {
   final auth = authService ?? FakeAuthService();
 
   return [
     authServiceProvider.overrideWithValue(auth),
-    usageRepositoryProvider.overrideWithValue(usageRepo),
-    usageStatusProvider.overrideWith((ref) async => usageRepo.getUsageStatus()),
-    subscriptionStatusProvider.overrideWith(
-      (ref) => Stream<SubscriptionStatus>.value(status),
-    ),
     appVersionStringProvider.overrideWith((ref) async => _fakeVersionLabel),
     onboardingRepositoryProvider.overrideWithValue(
       InMemoryOnboardingRepository(welcomeDone: true),
@@ -208,24 +183,15 @@ List<Override> _settingsOverrides({
 
 Future<void> _givenSettingsScreen(
   WidgetTester tester, {
-  InMemoryUsageRepository? usage,
-  SubscriptionStatus status = SubscriptionStatus.free,
   FakeAuthService? authService,
 }) async {
-  // The settings screen is taller than the default 800x600 test surface
-  // after the onboarding section was added. Enlarging the surface lets
-  // `find.text` locate tiles below the fold without having to scroll.
   await tester.binding.setSurfaceSize(const Size(800, 2000));
   addTearDown(() => tester.binding.setSurfaceSize(null));
 
   await pumpScreen(
     tester,
     child: const SettingsScreen(),
-    overrides: _settingsOverrides(
-      usage: usage,
-      status: status,
-      authService: authService,
-    ),
+    overrides: _settingsOverrides(authService: authService),
   );
   await tester.pump(const Duration(milliseconds: 20));
 }
@@ -241,22 +207,10 @@ void _thenPreferencesSectionIsVisible() {
 }
 
 void _thenUsageSectionIsHidden() {
-  // The free tier has no daily on-demand quota (full story is subscriber-only,
-  // enforced on the backend), so the misleading "daily usage" row was removed.
+  // The paywall is temporarily removed (ADR 0006) and generation is no
+  // longer gated at all, so the misleading "daily usage" row was removed.
   expect(find.text('SETTINGS.DAILY_USAGE'), findsNothing);
   expect(find.text('settings.daily_usage'), findsNothing);
-}
-
-void _thenUpgradeCtaIsVisible() {
-  expect(find.text('subscription.upgrade_banner_title'), findsOneWidget);
-}
-
-void _thenPremiumTileIsVisible() {
-  expect(find.text('subscription.premium_banner_title'), findsOneWidget);
-}
-
-void _thenUpgradeCtaIsHidden() {
-  expect(find.text('subscription.upgrade_banner_title'), findsNothing);
 }
 
 void _thenVersionLabelIsVisible() {

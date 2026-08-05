@@ -1,0 +1,54 @@
+# ADR 0006：暫時移除付費牆，App 全面免費
+
+- 狀態：Accepted
+- 日期：2026-08-05
+- 影響範圍：backend `narration` route、frontend settings + narration + router、
+  landing 首頁
+
+## 背景
+
+Lorescape 原為 freemium + 訂閱制（RevenueCat）：`POST /narration` 對未訂閱
+者回 402，App 收到後導向 paywall——這是全產品唯一的實際擋點。現決定暫時全
+面免費開放。未來功能會全面調整，付費模式不一定續走訂閱制，因此不做可一鍵
+恢復的 feature flag，直接移除擋點、其餘程式碼原地保留。決策當下沒有任何現
+有訂閱者。
+
+## 決策
+
+- backend `narration/routes.py`：移除 `POST /narration` 的 402 訂閱檢查與
+  該 route 對 subscriptions 模組的依賴。
+- frontend：移除設定頁升級 banner、quotaExceeded → paywall 導向、
+  `/subscription` 路由。
+- landing：移除 Pricing 區塊掛載。
+
+## 刻意保留的死碼（未來調整付費模式時的盤點起點）
+
+- frontend `lib/features/subscription/`：paywall UI 與購買畫面已無人引用
+  （路由已移除）；但其 RevenueCat service 與 providers 仍被 `main.dart` /
+  `app.dart` 引用於 SDK 初始化與 logIn（見下一項），整包並非完全孤立，不能
+  直接刪除整包。
+- frontend `lib/features/usage/`：仍被 narration feature 實際使用——
+  `narration/providers.dart` 引用其 providers、`create_narration_use_case.dart`
+  呼叫 `consumeUsage()`、`narration_generation_controller.dart` 映射
+  `UsageError`。要移除需同步改動 narration 的 use case、controller 與相關
+  測試，不是可獨立刪除的孤立模組。
+- frontend `main.dart` / `app.dart` 的 RevenueCat SDK 初始化與 logIn 仍每次
+  啟動照常執行；`purchases_flutter` 依賴與翻譯檔 `subscription.*` key 保留。
+- backend `subscriptions/` 模組照常運作（RevenueCat webhook、每日 03:00
+  reconcile job），只是查詢結果不再被任何 route 使用。
+- Supabase `subscriptions` / `daily_usage` 表與 RPC 原封不動。
+- landing `src/components/Pricing.tsx` 與 `dictionaries.ts` 的 pricing 文案
+  保留，只拿掉掛載。
+- App Store / Play 商店端訂閱商品仍上架、RevenueCat offering 未動——App 內
+  已無購買入口，實際上買不到。
+- frontend `narration_api_client.dart` 仍保留 HTTP 402 →
+  `NarrationError.freeQuotaExceeded` → `NarrationGenerationErrorType.quotaExceeded`
+  的映射，即使現在已沒有任何 route 會回 402。日後若重啟付費牆並重用 402，
+  會先接到這份半保留的舊契約，需一併檢視。
+
+## 影響與注意事項
+
+- 重新收費時不必然恢復上述清單：付費模式可能整個改變，屆時以本清單為盤點
+  起點，決定各項是恢復、改寫還是刪除。
+- 商店描述與 `MARKETING.md` 仍描述訂閱制，行銷文案調整另案處理。
+- 相關 spec：`docs/superpowers/specs/2026-08-05-remove-paywall-design.md`。

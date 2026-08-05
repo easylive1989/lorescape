@@ -342,8 +342,8 @@ void main() {
     );
 
     testWidgets(
-      'given the backend reports quota exhausted (402), when a hook is '
-      'tapped, then the subscription screen is shown',
+      'given the backend reports quota exhausted, when a hook is tapped, '
+      'then the generic error dialog is shown',
       (tester) async {
         await pumpRouterApp(
           tester,
@@ -351,14 +351,6 @@ void main() {
             GoRoute(
               path: '/',
               builder: (_, __) => SelectStoryHookScreen(place: buildPlace()),
-            ),
-            GoRoute(
-              name: 'subscription',
-              path: '/subscription',
-              builder: (_, __) => const Scaffold(
-                key: Key('subscription-screen'),
-                body: SizedBox.shrink(),
-              ),
             ),
           ],
           overrides: _overrides(
@@ -373,7 +365,10 @@ void main() {
         await tester.tap(find.text(_hook1.title));
         await tester.pumpAndSettle();
 
-        expect(find.byKey(const Key('subscription-screen')), findsOneWidget);
+        expect(
+          find.text('config_screen.generation_error_title'),
+          findsOneWidget,
+        );
       },
     );
 

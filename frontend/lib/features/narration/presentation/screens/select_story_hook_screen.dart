@@ -54,9 +54,8 @@ class _SelectStoryHookScreenState extends ConsumerState<SelectStoryHookScreen> {
   void _onHookSelected(StoryHook? hook) {
     _selectedStoryTitle = hook?.title;
     _emitHookSelected(hook);
-    // The backend is the source of truth for quota: just generate, and route
-    // to the paywall if it responds with a quota-exhausted error (handled in
-    // the generation-state listener below).
+    // The backend is the source of truth for generation errors; failures
+    // surface via the generation-state listener below.
     ref
         .read(narrationGenerationControllerProvider.notifier)
         .generate(
@@ -92,11 +91,6 @@ class _SelectStoryHookScreenState extends ConsumerState<SelectStoryHookScreen> {
             hookCount: hooks.length,
           ),
         );
-  }
-
-  void _navigateToPaywall() {
-    ref.read(narrationGenerationControllerProvider.notifier).reset();
-    context.pushNamed('subscription');
   }
 
   void _navigateToPlayer(NarrationGenerationState genState) {
@@ -150,11 +144,7 @@ class _SelectStoryHookScreenState extends ConsumerState<SelectStoryHookScreen> {
           _navigateToPlayer(current);
         }
         if (previous?.hasError != true && current.hasError) {
-          if (current.errorType == NarrationGenerationErrorType.quotaExceeded) {
-            _navigateToPaywall();
-          } else {
-            _showErrorDialog(current);
-          }
+          _showErrorDialog(current);
         }
       },
     );

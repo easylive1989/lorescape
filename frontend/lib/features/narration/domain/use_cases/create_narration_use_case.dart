@@ -20,13 +20,13 @@ class CreateNarrationUseCase {
   /// [hook] 使用者挑選的故事鉤子（可為 null，由模型自行挑選一條線索）
   /// [language] 語言
   ///
-  /// The daily free-quota gate now lives on the backend, which returns 402
-  /// (surfaced as [NarrationError.freeQuotaExceeded]) when exhausted. The
-  /// local [UsageRepository] is only an optimistic display counter, updated
-  /// after a successful generation.
+  /// The paywall is temporarily removed (ADR 0006): the backend no longer
+  /// gates narration generation, and nothing returns 402. The local
+  /// [UsageRepository] call below is now a vestigial local counter — it
+  /// only increments a SharedPreferences value for display and never
+  /// throws, so it cannot block generation.
   ///
   /// 可能拋出 AppError：
-  /// - NarrationError.freeQuotaExceeded: 後端回報每日額度已用完
   /// - NarrationError.*: AI 服務相關錯誤（透傳）
   /// - NarrationError.contentGenerationFailed: 內容驗證失敗
   Future<NarrationContent> execute({
