@@ -39,6 +39,8 @@ epic 承接自原公司層 backlog；目前只有 E1（見下方「Epic」）。
 - [x] **Backend**（`backend/`）：已部署到 VPS（2026-07-09，Deploy Backend workflow `git reset --hard origin/master` + `docker compose up -d --build`）。含 F1 T1 的 Reel caption CTA 文案（已改為固定常數、不吃 CTA_TEXT env）＋ F8 發布 bot
 - [x] **Publisher**（`publisher/`）：F11 T2 的 reel video_url fallback 於 2026-07-13 完成，2026-07-20 使用者手動觸發 Deploy Publisher workflow 上 VPS 生效
 - [x] **App**（`frontend/`）：新版本已上架商店並顯示「7 天免費試用」字樣（2026-07-20 使用者確認），F6 T4 生效
+- [ ] **Backend**（`backend/`）：F31 T1 付費牆移除（2026-08-05），需手動觸發 Deploy Backend workflow 才生效
+- [ ] **落地頁**（`landing/`）：F31 T3 移除定價區塊（2026-08-05），需 Deploy Landing workflow 才生效
 - [ ] **App**（`frontend/`，下一輪）：待下次 build 送審才生效的累積改動——
   - F10 的 `Info.plist` 相簿權限鍵（2026-07-20 完成）
   - F13 T1a narration 埋點修復（2026-07-21）：**在此之前上架的所有版本，
@@ -50,6 +52,7 @@ epic 承接自原公司層 backlog；目前只有 E1（見下方「Epic」）。
   - F17 T8 地圖出處改頂部 ⓘ 按鈕（2026-07-24，PR #96）
   - 移除用不到的 iOS `NSLocationAlwaysAndWhenInUseUsageDescription`
     （2026-07-24，PR #95）——App 只用前景定位，Always key 從未被用到
+  - F31 T2：移除升級 banner、paywall 導向與 /subscription 路由（2026-08-05）
 - 已是生產狀態、不需部署：App Store / Google Play 的試用設定、RevenueCat offering
 
 ## F1: IG 導流 CTA (epic: E1)
@@ -815,3 +818,16 @@ epic 承接自原公司層 backlog；目前只有 E1（見下方「Epic」）。
 - [ ] T3: 依 T2 結論調整內容生成 skills（lorescape-manual-daily-story、
   lorescape-daily-reel、lorescape-wander-carousel、story_prompt 等），
   讓各素材的生成指引明確對齊自己的定位，而非共用同一套文案邏輯
+
+## F31: 暫時移除付費牆（App 全面免費）
+
+2026-08-05 決策：暫時全面免費，訂閱不再擋任何功能。詳見
+`docs/adr/0006-temporarily-remove-paywall.md`——含刻意保留的死碼清單
+（subscription / usage feature、RevenueCat 整合、Supabase 表、商店端商品），
+**之後調整付費模式時要先讀該 ADR 盤點現狀**。
+
+- [x] T1: backend 移除 /narration 402 訂閱檢查（2026-08-05）
+- [x] T2: App 移除升級 banner、paywall 導向與 /subscription 路由（2026-08-05）
+- [x] T3: 落地頁移除定價區塊（2026-08-05）
+- [ ] T4: 部署後才對使用者生效——backend（Deploy Backend workflow）、落地頁
+  （Deploy Landing workflow）、App 需出新版送審（見「待部署」段）
