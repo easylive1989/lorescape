@@ -15,7 +15,6 @@ import 'package:context_app/features/onboarding/presentation/controllers/onboard
 import 'package:context_app/features/onboarding/presentation/screens/onboarding_welcome_screen.dart';
 import 'package:context_app/features/settings/presentation/screens/settings_screen.dart';
 import 'package:context_app/features/splash/presentation/splash_screen.dart';
-import 'package:context_app/features/subscription/presentation/screens/subscription_screen.dart';
 import 'package:context_app/features/trip/presentation/screens/trip_detail_screen.dart';
 import 'package:context_app/features/trip/presentation/screens/trip_edit_screen.dart';
 import 'package:context_app/features/trip/presentation/screens/trip_list_screen.dart';
@@ -176,11 +175,6 @@ class RouterConfig {
             locale: state.pathParameters['locale']!,
             date: state.pathParameters['date']!,
           ),
-        ),
-        GoRoute(
-          path: '/subscription',
-          name: 'subscription',
-          builder: (context, state) => const SubscriptionScreen(),
         ),
         GoRoute(
           path: '/trips',
