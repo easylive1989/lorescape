@@ -33,10 +33,10 @@
 
 <script type="text/babel" data-presets="react">
   const Icon = window.Icon;
-  const { STPETERS_STORY } = window.LS_DATA;
+  const { STPETERS_STORY, PLACES } = window.LS_DATA;
   const {
     StoriesScreen, ExploreScreen, HistoryScreen, SettingsScreen,
-    PaywallScreen, ReaderView,
+    PaywallScreen, ReaderView, PlaceScreen,
   } = window;
   const noop = () => {};
 
@@ -71,6 +71,8 @@
       case "settings": return { node: <SettingsScreen go={noop} />, tab: "settings" };
       case "reader":   return { node: <ReaderView story={STPETERS_STORY} onBack={noop} onExplore={null} /> };
       case "paywall":  return { node: <PaywallScreen back={noop} /> };
+      // 故事角度選擇（想聽哪段故事?）：PlaceScreen 的 options 階段，由 state:"options" 的景點觸發
+      case "hooks":    return { node: <PlaceScreen params={{ place: PLACES.find((p) => p.state === "options") }} back={noop} /> };
       default:         return { node: <StoriesScreen go={noop} />, tab: "stories" };
     }
   }

@@ -8,7 +8,7 @@
     "en"
   ],
   "locale": "zh-Hant",
-  "device": "feature-graphic",
+  "device": "iphone",
   "orientation": "portrait",
   "appIcon": "/app-icon.png",
   "slidesByDevice": {
@@ -40,19 +40,19 @@
         }
       },
       {
-        "id": "ls_explore_more",
+        "id": "ls_story_angles",
         "style": "retro",
         "layout": "device-bottom",
         "label": {},
         "headline": {
-          "zh-Hant": "解鎖之後",
-          "en": "Unlock and"
+          "zh-Hant": "同一個地方",
+          "en": "One place,"
         },
         "scriptPhrase": {
-          "zh-Hant": "探索更多故事",
-          "en": "explore more"
+          "zh-Hant": "不只一個故事",
+          "en": "many stories"
         },
-        "screenshot": "/screenshots/lorescape/settings.png",
+        "screenshot": "/screenshots/lorescape/hooks.png",
         "bgColor": "#F2BB46",
         "onDark": false,
         "scriptColor": "#E45A4A",
@@ -174,19 +174,19 @@
         }
       },
       {
-        "id": "ls_a_explore_more",
+        "id": "ls_story_angles",
         "style": "retro",
         "layout": "device-bottom",
         "label": {},
         "headline": {
-          "zh-Hant": "解鎖之後",
-          "en": "Unlock and"
+          "zh-Hant": "同一個地方",
+          "en": "One place,"
         },
         "scriptPhrase": {
-          "zh-Hant": "探索更多故事",
-          "en": "explore more"
+          "zh-Hant": "不只一個故事",
+          "en": "many stories"
         },
-        "screenshot": "/screenshots/lorescape/settings.png",
+        "screenshot": "/screenshots/lorescape/hooks.png",
         "bgColor": "#F2BB46",
         "onDark": false,
         "scriptColor": "#E45A4A",
@@ -313,7 +313,7 @@
         "headlineScale": 1.18
       },
       {
-        "id": "ls_t7_explore_more",
+        "id": "ls_story_angles",
         "style": "retro",
         "layout": "device-bottom",
         "label": {
@@ -321,14 +321,14 @@
           "en": "GO PREMIUM"
         },
         "headline": {
-          "zh-Hant": "解鎖完整版",
-          "en": "Unlock to"
+          "zh-Hant": "同一個地方",
+          "en": "One place,"
         },
         "scriptPhrase": {
-          "zh-Hant": "故事不設限",
-          "en": "explore more"
+          "zh-Hant": "不只一個故事可聽",
+          "en": "many stories to hear"
         },
-        "screenshot": "/screenshots/lorescape/settings.png",
+        "screenshot": "/screenshots/lorescape/hooks.png",
         "bgColor": "#F2BB46",
         "onDark": false,
         "scriptColor": "#E45A4A",

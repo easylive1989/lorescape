@@ -39,9 +39,12 @@ epic 承接自原公司層 backlog；目前只有 E1（見下方「Epic」）。
 - [x] **Backend**（`backend/`）：已部署到 VPS（2026-07-09，Deploy Backend workflow `git reset --hard origin/master` + `docker compose up -d --build`）。含 F1 T1 的 Reel caption CTA 文案（已改為固定常數、不吃 CTA_TEXT env）＋ F8 發布 bot
 - [x] **Publisher**（`publisher/`）：F11 T2 的 reel video_url fallback 於 2026-07-13 完成，2026-07-20 使用者手動觸發 Deploy Publisher workflow 上 VPS 生效
 - [x] **App**（`frontend/`）：新版本已上架商店並顯示「7 天免費試用」字樣（2026-07-20 使用者確認），F6 T4 生效
-- [ ] **Backend**（`backend/`）：F31 T1 付費牆移除（2026-08-05），需手動觸發 Deploy Backend workflow 才生效
-- [ ] **落地頁**（`landing/`）：F31 T3 移除定價區塊（2026-08-05），需 Deploy Landing workflow 才生效
+- [x] **Backend**（`backend/`）：F31 T1 付費牆移除已部署到 VPS（2026-08-05，run 31014476643，VPS 確認 `bafcf830`、健康檢查通過）。402 訂閱檢查正式下線
+- [x] **落地頁**（`landing/`）：F31 T3 移除定價區塊已部署（2026-08-05，run 31014612859，正式站已無 `id="pricing"` 區塊）。註：HTML payload 仍含 pricing 字串，那是 Next.js 打包整份 i18n 字典所致，元件未渲染
 - [ ] **App**（`frontend/`，下一輪）：待下次 build 送審才生效的累積改動——
+  ⚠️ 2026-08-03 順檢：自 07-24 上架後已累積近兩週未送審；其中 narration /
+  screen_view 埋點修復不上架，GA4 App 數據就一直缺——愈晚送審缺口愈長，
+  建議儘快排一次 build 送審。
   - F10 的 `Info.plist` 相簿權限鍵（2026-07-20 完成）
   - F13 T1a narration 埋點修復（2026-07-21）：**在此之前上架的所有版本，
     narration 事件都收不到**，所以 GA4 要等新版本有安裝量後才會開始有資料
@@ -347,6 +350,16 @@ epic 承接自原公司層 backlog；目前只有 E1（見下方「Epic」）。
     但那等於換掉本週唯一有實證的版本，且與本 task 的方向相反，**已 revert**
     （e811abc4）。片尾維持 7/13 上線的版本。單獨保留的是字型 subset 缺字
     修復（b6e8598a），與文案無關。
+- [ ] T4（2026-08-01 新增，來源 monthly-2026-07 P0）: 8 月每週檢核
+  `ig.csv` 的 profile_views / reach；**連兩週 < 1.5%** 就迭代 bio 與
+  Reel 片尾 CTA（對應 reels calendar 期末檢核判準 3——屆時停止調整選點，
+  問題在帳號定位不在選點）。7 月全月 0.77%、7/27 週 1.0%，尚未達標。
+  - **2026-08-03 條件成立**：7/20 週 1.0% → 7/27 週 0.75%，連兩週 < 1.5%
+    （見 marketing/audits/weekly-2026-08-03.md）。依判準 3 已停止調整選點
+    （calendar Week 2 配比原封不動），本週執行：
+    (a) 迭代 IG bio——把「下載」動線寫明（bio link 直達商店，而非只有官網）；
+    (b) Reel 片尾 CTA 迭代——以 T2 唯一有實證的聖家堂片尾結構為基底改版，
+    不另起爐灶。
 
 ## F19: publisher/.env 是佔位值（維運風險）
 
@@ -829,9 +842,12 @@ epic 承接自原公司層 backlog；目前只有 E1（見下方「Epic」）。
 - [x] T1: backend 移除 /narration 402 訂閱檢查（2026-08-05）
 - [x] T2: App 移除升級 banner、paywall 導向與 /subscription 路由（2026-08-05）
 - [x] T3: 落地頁移除定價區塊（2026-08-05）
-- [ ] T4: 部署後才對使用者生效——backend（Deploy Backend workflow）、落地頁
-  （Deploy Landing workflow）、App 需出新版送審（見「待部署」段）
-  - ⚠️ **backend 必須先於新版 App 上線部署**：新版 App 已移除 paywall 導向，
+- [ ] T4: 部署後才對使用者生效——backend ✅ 已部署、落地頁 ✅ 已部署
+  （皆 2026-08-05，見「待部署」段）；**剩 App 需出新版送審**
+  - 現況：backend 已不回 402，所以舊版 App 的使用者實際上已能免費暢用；但
+    設定頁的升級 banner 仍在舊版畫面上，要等新版上架才會消失
+  - ⚠️ **backend 必須先於新版 App 上線部署**（已滿足：backend 先上）：
+    新版 App 已移除 paywall 導向，
     若在 backend 仍回 402 時先讓使用者用到新版 App，未訂閱者會直接看到一個
     沒有任何升級路徑的「產生失敗」錯誤，比改動前的體驗更差。落地頁部署順序
     無此限制。

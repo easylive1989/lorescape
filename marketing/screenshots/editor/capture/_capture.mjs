@@ -6,7 +6,7 @@ const BASE = process.env.CAPTURE_BASE || "http://localhost:8899";
 const OUT = process.env.CAPTURE_OUT ||
   "/Users/paulwu/lorescape-screenshots-editor/public/screenshots/lorescape";
 const SCALE = 4;
-const SCREENS = (process.env.CAPTURE_SCREENS || "stories,reader,explore,history,paywall,settings").split(",");
+const SCREENS = (process.env.CAPTURE_SCREENS || "stories,reader,explore,history,paywall,settings,hooks").split(",");
 
 const browser = await chromium.launch();
 const context = await browser.newContext({
