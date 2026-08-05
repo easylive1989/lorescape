@@ -21,8 +21,15 @@ Lorescape 原為 freemium + 訂閱制（RevenueCat）：`POST /narration` 對未
 
 ## 刻意保留的死碼（未來調整付費模式時的盤點起點）
 
-- frontend `lib/features/subscription/` 整包（paywall UI、RevenueCat
-  service、providers）與 `lib/features/usage/` 整包：仍在編譯，無人引用。
+- frontend `lib/features/subscription/`：paywall UI 與購買畫面已無人引用
+  （路由已移除）；但其 RevenueCat service 與 providers 仍被 `main.dart` /
+  `app.dart` 引用於 SDK 初始化與 logIn（見下一項），整包並非完全孤立，不能
+  直接刪除整包。
+- frontend `lib/features/usage/`：仍被 narration feature 實際使用——
+  `narration/providers.dart` 引用其 providers、`create_narration_use_case.dart`
+  呼叫 `consumeUsage()`、`narration_generation_controller.dart` 映射
+  `UsageError`。要移除需同步改動 narration 的 use case、controller 與相關
+  測試，不是可獨立刪除的孤立模組。
 - frontend `main.dart` / `app.dart` 的 RevenueCat SDK 初始化與 logIn 仍每次
   啟動照常執行；`purchases_flutter` 依賴與翻譯檔 `subscription.*` key 保留。
 - backend `subscriptions/` 模組照常運作（RevenueCat webhook、每日 03:00
