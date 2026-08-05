@@ -65,7 +65,7 @@ daily quota 程式碼。
 
 ### 紀錄
 
-- 新增 `docs/adr/0005-temporarily-remove-paywall.md`：記錄決策、動過的檔案、
+- 新增 `docs/adr/0006-temporarily-remove-paywall.md`：記錄決策、動過的檔案、
   刻意保留的死碼清單（subscription / usage feature、backend subscriptions
   模組、RC 整合、landing Pricing、商店端商品仍上架）、未來調整付費模式時的
   盤點清單。
@@ -92,5 +92,5 @@ daily quota 程式碼。
 2. App 內不存在任何訂閱購買入口（設定頁無升級 banner、無 `/subscription`
    路由）。
 3. 官網不顯示定價區塊。
-4. ADR 0005 與 BACKLOG task 已建立。
+4. ADR 0006 與 BACKLOG task 已建立。
 5. 前後端測試與 analyze 全綠。
