@@ -831,3 +831,7 @@ epic 承接自原公司層 backlog；目前只有 E1（見下方「Epic」）。
 - [x] T3: 落地頁移除定價區塊（2026-08-05）
 - [ ] T4: 部署後才對使用者生效——backend（Deploy Backend workflow）、落地頁
   （Deploy Landing workflow）、App 需出新版送審（見「待部署」段）
+  - ⚠️ **backend 必須先於新版 App 上線部署**：新版 App 已移除 paywall 導向，
+    若在 backend 仍回 402 時先讓使用者用到新版 App，未訂閱者會直接看到一個
+    沒有任何升級路徑的「產生失敗」錯誤，比改動前的體驗更差。落地頁部署順序
+    無此限制。

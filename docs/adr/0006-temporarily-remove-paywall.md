@@ -1,7 +1,9 @@
-# 0006. 暫時移除付費牆，App 全面免費
+# ADR 0006：暫時移除付費牆，App 全面免費
 
-日期：2026-08-05
-狀態：已採納
+- 狀態：Accepted
+- 日期：2026-08-05
+- 影響範圍：backend `narration` route、frontend settings + narration + router、
+  landing 首頁
 
 ## 背景
 
@@ -39,6 +41,10 @@ Lorescape 原為 freemium + 訂閱制（RevenueCat）：`POST /narration` 對未
   保留，只拿掉掛載。
 - App Store / Play 商店端訂閱商品仍上架、RevenueCat offering 未動——App 內
   已無購買入口，實際上買不到。
+- frontend `narration_api_client.dart` 仍保留 HTTP 402 →
+  `NarrationError.freeQuotaExceeded` → `NarrationGenerationErrorType.quotaExceeded`
+  的映射，即使現在已沒有任何 route 會回 402。日後若重啟付費牆並重用 402，
+  會先接到這份半保留的舊契約，需一併檢視。
 
 ## 影響與注意事項
 

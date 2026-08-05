@@ -60,8 +60,9 @@ enum NarrationGenerationErrorType {
   /// historical content to tell a story about. Not retryable.
   insufficientSource,
 
-  /// Backend returned 402 — the free daily quota is exhausted. The UI routes
-  /// the user to the paywall rather than showing a retry dialog.
+  /// Backend returned 402 — the free daily quota is exhausted. The paywall
+  /// is temporarily removed (ADR 0006) and the backend no longer returns
+  /// 402, but this type is kept in case a future paywall reuses it.
   quotaExceeded,
   unknown;
 

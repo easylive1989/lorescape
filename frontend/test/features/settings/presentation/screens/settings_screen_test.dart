@@ -207,8 +207,8 @@ void _thenPreferencesSectionIsVisible() {
 }
 
 void _thenUsageSectionIsHidden() {
-  // The free tier has no daily on-demand quota (full story is subscriber-only,
-  // enforced on the backend), so the misleading "daily usage" row was removed.
+  // The paywall is temporarily removed (ADR 0006) and generation is no
+  // longer gated at all, so the misleading "daily usage" row was removed.
   expect(find.text('SETTINGS.DAILY_USAGE'), findsNothing);
   expect(find.text('settings.daily_usage'), findsNothing);
 }
