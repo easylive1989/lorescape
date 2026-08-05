@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 
 from lorescape_backend.auth import AuthedUser, require_user
 from lorescape_backend.config import Config
@@ -22,10 +22,6 @@ from lorescape_backend.narration.models import (
     NarrationRequest,
     NarrationResponse,
 )
-from lorescape_backend.subscriptions.dependencies import (
-    get_subscription_checker,
-)
-from lorescape_backend.subscriptions.service import SubscriptionChecker
 
 logger = logging.getLogger(__name__)
 
@@ -69,20 +65,12 @@ def post_narration(
     request: NarrationRequest,
     config: Config = Depends(get_config),
     user: AuthedUser = Depends(require_user),
-    subscriptions: SubscriptionChecker = Depends(get_subscription_checker),
 ) -> NarrationResponse:
     """Return the long-form 3-paragraph story for the given place.
 
-    Subscribers only. Hooks stay free for everyone (the upsell funnel:
-    browse angles freely, subscribe to read the full story). 402 is the
-    signal the App already routes to the paywall.
+    Free for every signed-in user: the subscription gate was
+    temporarily removed (ADR 0006).
     """
-    if not subscriptions.is_subscribed(user.user_id):
-        raise HTTPException(
-            status_code=status.HTTP_402_PAYMENT_REQUIRED,
-            detail="Subscription required",
-        )
-
     try:
         return service.generate_narration(
             settings=config.genai_settings,

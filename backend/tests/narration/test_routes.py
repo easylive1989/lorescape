@@ -14,9 +14,6 @@ from lorescape_backend.narration.dependencies import (
     get_hooks_cache_repository,
 )
 from lorescape_backend.narration.routes import get_config, router
-from lorescape_backend.subscriptions.dependencies import (
-    get_subscription_checker,
-)
 
 
 def _fake_config() -> Config:
@@ -27,16 +24,6 @@ def _fake_config() -> Config:
         revenuecat_webhook_auth_token=None,
         revenuecat_api_key=None,
     )
-
-
-class _FakeSubscriptions:
-    """Stand-in for the SubscriptionChecker gate the route depends on."""
-
-    def __init__(self, subscribed: bool = False) -> None:
-        self._subscribed = subscribed
-
-    def is_subscribed(self, _user_id: str) -> bool:
-        return self._subscribed
 
 
 class _FakeHooksCache:
@@ -57,7 +44,6 @@ class _FakeHooksCache:
 
 
 def _make_app(
-    subscriptions: _FakeSubscriptions | None = None,
     hooks_cache: _FakeHooksCache | None = None,
 ) -> FastAPI:
     app = FastAPI()
@@ -66,18 +52,11 @@ def _make_app(
     app.dependency_overrides[require_user] = lambda: AuthedUser(
         user_id="user-1", is_anonymous=False
     )
-    app.dependency_overrides[get_subscription_checker] = (
-        lambda: subscriptions or _FakeSubscriptions()
-    )
     app.dependency_overrides[get_hooks_cache_repository] = (
         lambda: hooks_cache if hooks_cache is not None else _FakeHooksCache()
     )
     return app
 
-
-def _subscriber_app() -> FastAPI:
-    """App where the authed user has an active subscription."""
-    return _make_app(subscriptions=_FakeSubscriptions(subscribed=True))
 
 
 @patch("lorescape_backend.narration.routes.service.generate_hooks")
@@ -116,7 +95,7 @@ def test_post_narration_returns_payload(gen_narration):
         pull_quote="",
         insufficient_source=False,
     )
-    client = TestClient(_subscriber_app())
+    client = TestClient(_make_app())
 
     response = client.post(
         "/narration",
@@ -150,7 +129,7 @@ def test_post_hooks_rejects_unsupported_language():
 
 
 def test_post_narration_rejects_unsupported_language():
-    client = TestClient(_subscriber_app())
+    client = TestClient(_make_app())
     response = client.post(
         "/narration",
         json={
@@ -172,7 +151,7 @@ def test_narration_route_accepts_wikidata_id(gen_narration):
         pull_quote="x",
         insufficient_source=False,
     )
-    client = TestClient(_subscriber_app())
+    client = TestClient(_make_app())
 
     res = client.post(
         "/narration",
@@ -196,7 +175,7 @@ def test_narration_route_accepts_legacy_wikipedia_title(gen_narration):
         pull_quote="x",
         insufficient_source=False,
     )
-    client = TestClient(_subscriber_app())
+    client = TestClient(_make_app())
 
     res = client.post(
         "/narration",
@@ -238,7 +217,6 @@ def test_narration_route_401_without_bearer_token():
     app.include_router(router)
     app.dependency_overrides[get_config] = _fake_config
     app.dependency_overrides[get_token_verifier] = lambda: _NeverVerifier()
-    app.dependency_overrides[get_subscription_checker] = _FakeSubscriptions
     client = TestClient(app)
 
     res = client.post(
@@ -254,22 +232,8 @@ def test_narration_route_401_without_bearer_token():
 
 
 @patch("lorescape_backend.narration.routes.service.generate_narration")
-def test_narration_returns_402_for_free_user(gen_narration):
-    """/narration is subscribers-only: free users get 402 (paywall signal)
-    and Gemini must NOT be called."""
-    client = TestClient(_make_app())  # default: not subscribed
-
-    res = client.post(
-        "/narration",
-        json={"wikidata_id": "Q1", "place_name": "P", "language": "en"},
-    )
-
-    assert res.status_code == 402
-    gen_narration.assert_not_called()
-
-
-@patch("lorescape_backend.narration.routes.service.generate_narration")
-def test_premium_user_can_generate(gen_narration):
+def test_narration_succeeds_without_subscription(gen_narration):
+    """付費牆已暫時移除（ADR 0006）：未訂閱者也能生成完整故事。"""
     gen_narration.return_value = NarrationResponse(
         place_name="P",
         location="L",
@@ -278,7 +242,7 @@ def test_premium_user_can_generate(gen_narration):
         pull_quote="q",
         insufficient_source=False,
     )
-    client = TestClient(_subscriber_app())
+    client = TestClient(_make_app())  # default: not subscribed
 
     res = client.post(
         "/narration",
@@ -286,11 +250,12 @@ def test_premium_user_can_generate(gen_narration):
     )
 
     assert res.status_code == 200
+    gen_narration.assert_called_once()
 
 
 @patch("lorescape_backend.narration.routes.service.generate_hooks")
 def test_hooks_stay_free_for_unsubscribed_users(gen_hooks):
-    """/narration/hooks has no subscription gate — the upsell funnel."""
+    """/narration/hooks 一直都免費，付費牆移除後行為不變。"""
     gen_hooks.return_value = HooksResponse(
         hooks=[HookItem(id="h1", title="T", teaser="t")],
         insufficient_source=False,
