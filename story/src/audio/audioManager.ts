@@ -14,6 +14,8 @@ export class AudioManager {
   private unlocked = false
   private current: HTMLAudioElement | null = null
   private currentSrc: string | null = null
+  // 目前正在淡出、尚未 pause 完成的舊曲（fade 進行中才有值）
+  private outgoing: HTMLAudioElement | null = null
   private fadeInterval: ReturnType<typeof setInterval> | null = null
 
   unlock(): void {
@@ -24,6 +26,17 @@ export class AudioManager {
     if (!this.unlocked) return
     if (this.currentSrc === src) return
 
+    // 上一次的 crossfade 還沒跑完就再換曲：那首還在淡出中的舊曲即將失去參照，
+    // 先立刻 pause 掉，避免它變成背景孤兒曲目繼續播放。
+    if (this.fadeInterval) {
+      clearInterval(this.fadeInterval)
+      this.fadeInterval = null
+      if (this.outgoing) {
+        this.outgoing.pause()
+        this.outgoing = null
+      }
+    }
+
     const prev = this.current
     const next = new Audio(src)
     next.loop = true
@@ -33,12 +46,9 @@ export class AudioManager {
     this.current = next
     this.currentSrc = src
 
-    if (this.fadeInterval) {
-      clearInterval(this.fadeInterval)
-      this.fadeInterval = null
-    }
     if (!prev) return
 
+    this.outgoing = prev
     let step = 0
     this.fadeInterval = setInterval(() => {
       step += 1
@@ -48,6 +58,7 @@ export class AudioManager {
         if (this.fadeInterval) clearInterval(this.fadeInterval)
         this.fadeInterval = null
         prev.pause()
+        this.outgoing = null
       }
     }, CROSSFADE_STEP_MS)
   }
@@ -62,6 +73,10 @@ export class AudioManager {
     if (this.fadeInterval) {
       clearInterval(this.fadeInterval)
       this.fadeInterval = null
+    }
+    if (this.outgoing) {
+      this.outgoing.pause()
+      this.outgoing = null
     }
     if (this.current) {
       this.current.pause()

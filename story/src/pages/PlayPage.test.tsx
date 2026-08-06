@@ -5,8 +5,18 @@ import { vi, beforeEach } from 'vitest'
 import { PlayPage } from './PlayPage'
 import { demoScript } from '../test/fixtures'
 
+// n1 節點掛了 bgm，PlayPage 開始體驗後會走到 audioManager.playBgm() -> new Audio().play()。
+// jsdom 沒有實作 HTMLMediaElement.play()，不 stub 掉會印出 "Not implemented" 的 console 雜訊。
+class FakeAudio {
+  src: string; volume = 1; loop = false; paused = true
+  play = vi.fn(async () => { this.paused = false })
+  pause = vi.fn(() => { this.paused = true })
+  constructor(src: string) { this.src = src }
+}
+
 beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(demoScript))))
+  vi.stubGlobal('Audio', FakeAudio)
 })
 
 function renderPlay() {

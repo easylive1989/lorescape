@@ -41,3 +41,17 @@ test('換曲 crossfade 後舊曲 pause', () => {
   expect(FakeAudio.instances[0].pause).toHaveBeenCalled()
   expect(FakeAudio.instances[1].play).toHaveBeenCalled()
 })
+
+test('fade 進行中再換曲，不留下未 pause 的孤兒曲目', () => {
+  const am = new AudioManager()
+  am.unlock()
+  am.playBgm('/a.mp3')
+  am.playBgm('/b.mp3') // 開始 a -> b 的 1s crossfade
+  vi.advanceTimersByTime(300) // crossfade 進行到一半，b 尚未淡入完成
+  am.playBgm('/c.mp3') // 中途再換曲：a 應立刻被 pause，不再是無參照的孤兒
+  expect(FakeAudio.instances[0].pause).toHaveBeenCalled()
+
+  vi.advanceTimersByTime(1100) // b -> c 的 crossfade 跑完
+  expect(FakeAudio.instances[1].pause).toHaveBeenCalled()
+  expect(FakeAudio.instances[2].play).toHaveBeenCalled()
+})
