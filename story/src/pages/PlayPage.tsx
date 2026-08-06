@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { loadScript } from '../data/loadScript'
+import { loadScript, assetUrl } from '../data/loadScript'
 import { initState, advance, choose, currentNode, type PlayState } from '../engine/player'
 import type { Script } from '../engine/schema'
 import { SceneView } from '../components/SceneView'
+import { audioManager } from '../audio/audioManager'
 
 export function PlayPage() {
   const { slug = '' } = useParams()
@@ -16,6 +17,12 @@ export function PlayPage() {
     loadScript(slug).then(setScript).catch((e: Error) => setError(e.message))
   }, [slug])
 
+  useEffect(() => {
+    if (!script || !state) return
+    const bgm = currentNode(script, state).bgm
+    if (bgm) audioManager.playBgm(assetUrl(slug, bgm))
+  }, [script, state, slug])
+
   if (error) return <div data-testid="play-page">{error}</div>
   if (!script) return <div data-testid="play-page">載入中…</div>
   if (!started)
@@ -25,6 +32,7 @@ export function PlayPage() {
         <p>{script.intro}</p>
         <button
           onClick={() => {
+            audioManager.unlock()
             setState(initState(script))
             setStarted(true)
           }}
