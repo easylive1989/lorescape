@@ -15,8 +15,8 @@
 <script src="https://unpkg.com/topojson-client@3.1.0/dist/topojson-client.min.js" crossorigin="anonymous"></script>
 <style>
   html, body { background:#000; height:100%; }
-  .stage { position:static; width:390px; height:844px; background:none; display:block; overflow:visible; }
-  .phone.capture { width:390px; height:844px; border-radius:0; box-shadow:none; }
+  .stage { position:static; width:var(--capw,390px); height:var(--caph,844px); background:none; display:block; overflow:visible; }
+  .phone.capture { width:var(--capw,390px); height:var(--caph,844px); border-radius:0; box-shadow:none; }
 </style>
 </head>
 <body>
@@ -46,6 +46,22 @@
     { id:"nz2027", name:"2027紐西蘭", count:"9 篇",  filled:false },
     { id:"kx2018", name:"2018京阪",  count:"16 篇", filled:true },
     { id:"oc2026", name:"2026奧捷",  count:"18 篇", filled:true },
+    { id:"is2024", name:"2024冰島",  count:"22 篇", filled:true },
+    { id:"pt2023", name:"2023葡萄牙", count:"14 篇", filled:true },
+    { id:"kr2022", name:"2022首爾",  count:"11 篇", filled:true },
+    { id:"vn2021", name:"2021越南",  count:"7 篇",  filled:false },
+    { id:"hk2019", name:"2019北海道", count:"19 篇", filled:true },
+    { id:"tr2019", name:"2019土耳其", count:"26 篇", filled:true },
+    { id:"ma2018", name:"2018摩洛哥", count:"13 篇", filled:true },
+    { id:"es2017", name:"2017西班牙", count:"21 篇", filled:true },
+    { id:"no2025", name:"2025挪威",  count:"8 篇",  filled:true },
+    { id:"pe2025", name:"2025秘魯",  count:"17 篇", filled:false },
+    { id:"gr2024", name:"2024希臘",  count:"23 篇", filled:true },
+    { id:"eg2023", name:"2023埃及",  count:"12 篇", filled:true },
+    { id:"it2022", name:"2022義大利", count:"29 篇", filled:true },
+    { id:"ch2021", name:"2021瑞士",  count:"15 篇", filled:true },
+    { id:"jp2020", name:"2020沖繩",  count:"10 篇", filled:true },
+    { id:"uk2019", name:"2019蘇格蘭", count:"18 篇", filled:true },
   ];
   function ShelfRow({ books, addSlot }){
     return (
@@ -71,10 +87,11 @@
       </div>
     );
   }
-  function HistoryShelfScreen(){
+  function HistoryShelfScreen({ perRow=4, total=6 }){
     const { StatusBar, Masthead, Icon } = window;
-    const rows = [SHELF_TRIPS.slice(0,4).map((t,i)=>({...t,i})),
-                  SHELF_TRIPS.slice(4).map((t,i)=>({...t,i:i+4}))];
+    const books = SHELF_TRIPS.slice(0, total).map((t,i)=>({...t,i}));
+    const rows = [];
+    for(let i=0;i<books.length;i+=perRow) rows.push(books.slice(i,i+perRow));
     return (
       <div className="screen fade-enter">
         <StatusBar dark time="8:00"/>
@@ -82,9 +99,10 @@
           <Masthead eyebrow="旅程紀錄 · Chronicle" title="歷程"
             actions={<button className="iconbtn" style={{background:"var(--paper-sunk)"}}><Icon name="plus" size={22}/></button>}/>
           <div className="bookshelf">
-            <div className="shelf__cap">旅程書架 · {SHELF_TRIPS.length} 本</div>
-            <ShelfRow books={rows[0]}/>
-            <ShelfRow books={rows[1]} addSlot/>
+            <div className="shelf__cap">旅程書架 · {books.length} 本</div>
+            {rows.map((r,ri)=>(
+              <ShelfRow key={ri} books={r} addSlot={ri===rows.length-1}/>
+            ))}
           </div>
         </div>
       </div>
@@ -98,12 +116,16 @@
       case "home":    return <HomeScreen go={noop}/>;
       case "hooks":   return <PlaceScreen params={{ place: PLACES.find(p=>p.id==="stpeters") }} back={noop}/>;
       case "reader":  return <ReaderView story={STPETERS_STORY} onBack={noop}/>;
-      case "history": return <HistoryShelfScreen/>;
+      case "history": return <HistoryShelfScreen perRow={+(params.get("perRow")||4)} total={+(params.get("books")||6)}/>;
       case "map":     return <MapScreen params={{mode:"locate"}} back={noop} go={noop} openSheet={noop} saved={["temple"]}/>;
       default:        return <HomeScreen go={noop}/>;
     }
   }
   const params = new URLSearchParams(window.location.search);
+  if(params.get("w")){
+    document.documentElement.style.setProperty("--capw", params.get("w")+"px");
+    document.documentElement.style.setProperty("--caph", params.get("h")+"px");
+  }
   const node = screenFor(params.get("screen") || "home");
   function Harness(){
     return (<div className="stage"><div className="phone capture">{node}</div></div>);

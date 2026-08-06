@@ -4,7 +4,7 @@
 
 - **風格**：Retro Rubberhose Mascot（1930s 卡通 / Cancoco 風）——暖色純色背景（cream / mustard / pink / sage mint）＋紙質顆粒、**奶油色手機外框＋粗黑墨描邊**、左上小寫浮雕 `lorescape` wordmark、Cooper 風 chunky 標題 + 一句珊瑚色重點字＋手繪波浪底線、橡皮管罐頭吉祥物（圓眼／白手套／揮手）、墨點塗鴉。
 - **語言**：繁體中文、English。
-- **裝置**：Apple App Store（iPhone 4 尺寸）、Google Play（手機 + Feature Graphic）。
+- **裝置**：Apple App Store（iPhone 4 尺寸、iPad 2 尺寸）、Google Play（手機 + 7" 平板 + Feature Graphic）。
 - **可切換風格**：每張 slide 的 `style` 欄位可選 `"retro"`（目前）或 `"hand-drawn"`（先前的 Superlist 深色版，程式碼仍保留）。先前的 hand-drawn 與更早的 warm-editorial 版本都在 git 歷史中。
 
 > ⚠️ **iCloud 注意**：本 repo 位於 `~/Documents`，受 iCloud Drive 同步。在這裡 `bun install`（產生數十萬個 node_modules 檔案）會觸發 iCloud 清掉本機檔案。**請勿在 repo 內安裝／執行 Next 編輯器**。可執行的編輯器放在 iCloud 外：`~/lorescape-screenshots-editor`。
@@ -14,6 +14,7 @@
 ```
 export/                         # ← 最終截圖（可直接上架）
   ios/iphone/<尺寸>/<locale>/NN-device-bottom.png
+  ios/ipad/<尺寸>/<locale>/NN-device-bottom.png
   android/android/1080x1920/<locale>/NN-...png
   android/feature-graphic/1024x500/<locale>/01-feature-graphic.png
 editor/                         # 編輯器原始碼快照（不含 node_modules，僅供版控/重生）
@@ -36,9 +37,14 @@ iPhone 尺寸：`1320x2868`=6.9"、`1284x2778`=6.5"、`1206x2622`=6.3"、`1125x2
 | 4 | sage mint | 發現方圓內 ·*身邊的風景* | 探索地圖（定位模式）| 黃罐頭 |
 | 5 | cream | 走過的地方 ·*自動成冊* | 歷程書架 | 蜜桃 |
 
-> 素材為 **Lorescape Redesign v3**（globe home + detail map）。手機內畫面由
-> `docs/design/project/` 的 v3 原型以 4× 重截，harness 見
+> 素材為 **Lorescape Redesign v3**（globe home + detail map）。裝置內畫面由
+> `docs/design/project/` 的 v3 原型重截，harness 見
 > `editor/capture/_capture_v3.html`（screen=home|hooks|reader|map|history）。
+>
+> **iPad 另有一套素材**（`ipad-*.png`）：以 834×1083（比例 0.77，對齊
+> `IPAD_RATIO`）＋ 3× 重截，手機素材塞進 iPad 外框會被裁掉大半，不能共用。
+> 擷取時加 `&w=834&h=1083`；歷程頁再加 `&perRow=10&books=20`（手機是
+> `perRow=4&books=6`），書架才會填滿寬版面。
 
 ## 重新產生
 
