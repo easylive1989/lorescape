@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"/>
+<title>Lorescape — Redesign v3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;600;700;900&family=Noto+Sans+TC:wght@400;500;600;700&family=Long+Cang&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="app2/ls2.css"/>
+<link rel="stylesheet" href="app3/ls3.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/d3@7.9.0/dist/d3.min.js" integrity="sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/topojson-client@3.1.0/dist/topojson-client.min.js" integrity="sha384-Ukv1p/xTma6P4/2bY5KzWBw+ydSpXmhCMtyciIQVDJ1RmOxtCYNMF1uXT9T63H67" crossorigin="anonymous"></script>
+<style>
+  html,body{ background:#17120d; height:100%; overflow:hidden; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<template id="__bundler_thumbnail">
+  <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="100" fill="#BC5E3E"/>
+    <g fill="none" stroke="#F7F1E6" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="50" cy="50" r="20"/>
+      <polygon points="58 42 47 47 42 58 53 53" fill="#F7F1E6" stroke="none"/>
+    </g>
+  </svg>
+</template>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="app2/icons.jsx"></script>
+<script type="text/babel" src="app3/icons3.jsx"></script>
+<script type="text/babel" src="app2/data.jsx"></script>
+<script type="text/babel" src="app3/data3.jsx"></script>
+<script type="text/babel" src="app2/ui.jsx"></script>
+<script type="text/babel" src="app2/screens_explore.jsx"></script>
+<script type="text/babel" src="app2/screens_story.jsx"></script>
+<script type="text/babel" src="app2/screens_history.jsx"></script>
+<script type="text/babel" src="app2/screens_journey.jsx"></script>
+<script type="text/babel" src="app2/screens_settings.jsx"></script>
+<script type="text/babel" src="app2/screens_paywall.jsx"></script>
+<script type="text/babel" src="app3/globe.jsx"></script>
+<script type="text/babel" src="app3/screens_home.jsx"></script>
+<script type="text/babel" src="app3/screens_map.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="app3/app.jsx"></script>
+<script type="text/babel" data-presets="react">
+  const App = window.LorescapeAppV3;
+  ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

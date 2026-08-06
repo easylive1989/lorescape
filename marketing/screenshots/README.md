@@ -28,13 +28,17 @@ iPhone 尺寸：`1320x2868`=6.9"、`1284x2778`=6.5"、`1206x2622`=6.3"、`1125x2
 
 ## 五張截圖
 
-| # | 背景 | 文案（chunky + 珊瑚重點） | 畫面 | 吉祥物 |
+| # | 背景 | 文案（chunky + 珊瑚重點） | 畫面（Redesign v3）| 吉祥物 |
 |---|---|---|---|---|
-| 1 | cream | 讓每一處風景 ·*開口說故事* | 故事牆 | 黃罐頭 |
+| 1 | cream | 讓每一處風景 ·*開口說故事* | 首頁地球儀 + 每日故事卡片 | 黃罐頭 |
 | 2 | mustard | 同一個地方 ·*不只一個故事* | 故事角度選擇（想聽哪段故事?）| 蜜桃 |
-| 3 | pink | 聽 AI 為你 ·*娓娓道來* | AI 故事 + 語音 | 赭紅 |
-| 4 | sage mint | 發現方圓內 ·*身邊的風景* | 探索附近 | 黃罐頭 |
-| 5 | cream | 走過的地方 ·*自動成冊* | 旅行歷程 | 蜜桃 |
+| 3 | pink | 聽 AI 為你 ·*娓娓道來* | 閱讀頁 + 語音播放列 | 赭紅 |
+| 4 | sage mint | 發現方圓內 ·*身邊的風景* | 探索地圖（定位模式）| 黃罐頭 |
+| 5 | cream | 走過的地方 ·*自動成冊* | 歷程書架 | 蜜桃 |
+
+> 素材為 **Lorescape Redesign v3**（globe home + detail map）。手機內畫面由
+> `docs/design/project/` 的 v3 原型以 4× 重截，harness 見
+> `editor/capture/_capture_v3.html`（screen=home|hooks|reader|map|history）。
 
 ## 重新產生
 
@@ -54,7 +58,13 @@ iPhone 尺寸：`1320x2868`=6.9"、`1284x2778`=6.5"、`1206x2622`=6.3"、`1125x2
 ### 高解析重截 app 畫面（素材）
 
 截圖素材（無外框純畫面）在 `editor/public/screenshots/lorescape/*.png`，由
-`docs/design/project/` 的 React 設計原型以 4× 重截。重截：
+`docs/design/project/` 的 React 設計原型以 4× 重截。
+
+**v3（現行）**：用 `capture/_capture_v3.html`，screen 參數為
+`home|hooks|reader|map|history`。地圖畫面需要網路（OSM 磚圖），地球儀需要
+d3 + world-atlas CDN。
+
+舊版（v1 原型）重截：
 
 ```bash
 cp marketing/screenshots/editor/capture/_capture.* /tmp/ls-proto/   # /tmp/ls-proto = docs/design/project 的複本

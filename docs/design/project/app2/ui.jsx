@@ -74,5 +74,63 @@
     );
   }
 
-  Object.assign(window, { StatusBar, TopBar, CategoryTag, GlyphThumb, Toggle, Masthead });
+  function SearchLoader({ label="搜尋地點中", name }){
+    return (
+      <div className="search-loader">
+        <div className="search-loader__card">
+          <div className="search-loader__ring"><i/><i/></div>
+          <div className="search-loader__tx">
+            <div className="search-loader__t">{label}{name ? "" : "……"}</div>
+            {name && <div className="search-loader__n">{name}</div>}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const GEN_STEPS_A = [
+    { ic:"search",    t:"掃描周圍的地景與地名" },
+    { ic:"book-open", t:"翻閱地方志與老照片" },
+    { ic:"compass",   t:"整理出可講的故事線" },
+  ];
+  const GEN_STEPS_B = [
+    { ic:"book-open", t:"蔼集人物、年代與場景" },
+    { ic:"search",    t:"交叉比對史料與引文" },
+    { ic:"pencil",    t:"逐句寫下屬於此地的敘事" },
+  ];
+  const GEN_MS = 3600;
+
+  function StoryGenerating({ title, sub, steps }){
+    const st = steps || GEN_STEPS_A;
+    const [step, setStep] = React.useState(0);
+    React.useEffect(()=>{
+      const a = setTimeout(()=>setStep(1), GEN_MS*0.32);
+      const b = setTimeout(()=>setStep(2), GEN_MS*0.64);
+      return ()=>{ clearTimeout(a); clearTimeout(b); };
+    },[]);
+    return (
+      <div className="gen">
+        <div className="gen__medal">
+          <span className="gen__ring"></span>
+          <span className="gen__ring gen__ring--in"></span>
+          <span className="gen__pulse"></span>
+          <span className="gen__pulse gen__pulse--b"></span>
+          <span className="gen__ic" key={step}><Icon name={st[step].ic} size={26} stroke={1.6}/></span>
+        </div>
+        <div className="gen__t">{title}</div>
+        {sub && <div className="gen__sub">{sub}</div>}
+        <div className="gen__steps">
+          {st.map((s,i)=>(
+            <div key={i} className={"gen__step"+(i<step?" is-done":i===step?" is-on":"")}>
+              <span className="gen__dot">{i<step ? <Icon name="check" size={12} stroke={2.6}/> : null}</span>
+              <span className="gen__steptx">{s.t}</span>
+            </div>
+          ))}
+        </div>
+        <div className="gen__bar"><i style={{animationDuration:GEN_MS+"ms"}}></i></div>
+      </div>
+    );
+  }
+
+  Object.assign(window, { StatusBar, TopBar, CategoryTag, GlyphThumb, Toggle, Masthead, SearchLoader, StoryGenerating, GEN_MS, GEN_STEPS_A, GEN_STEPS_B });
 })();

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"/>
+<title>Lorescape v3 — Capture Harness</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;600;700;900&family=Noto+Sans+TC:wght@400;500;600;700&family=Long+Cang&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="app2/ls2.css"/>
+<link rel="stylesheet" href="app3/ls3.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/d3@7.9.0/dist/d3.min.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/topojson-client@3.1.0/dist/topojson-client.min.js" crossorigin="anonymous"></script>
+<style>
+  html, body { background:#000; height:100%; }
+  .stage { position:static; width:390px; height:844px; background:none; display:block; overflow:visible; }
+  .phone.capture { width:390px; height:844px; border-radius:0; box-shadow:none; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+<script type="text/babel" src="app2/icons.jsx"></script>
+<script type="text/babel" src="app3/icons3.jsx"></script>
+<script type="text/babel" src="app2/data.jsx"></script>
+<script type="text/babel" src="app3/data3.jsx"></script>
+<script type="text/babel" src="app2/ui.jsx"></script>
+<script type="text/babel" src="app3/globe.jsx"></script>
+<script type="text/babel" src="app2/screens_story.jsx"></script>
+<script type="text/babel" src="app2/screens_history.jsx"></script>
+<script type="text/babel" src="app3/screens_home.jsx"></script>
+<script type="text/babel" src="app3/screens_map.jsx"></script>
+<script type="text/babel" data-presets="react">
+  const noop = () => {};
+  const { HomeScreen, PlaceScreen, ReaderView, HistoryScreen, MapScreen } = window;
+  const { PLACES, STPETERS_STORY } = window.LS_DATA;
+  function screenFor(name){
+    switch(name){
+      case "home":    return <HomeScreen go={noop}/>;
+      case "hooks":   return <PlaceScreen params={{ place: PLACES.find(p=>p.id==="stpeters") }} back={noop}/>;
+      case "reader":  return <ReaderView story={STPETERS_STORY} onBack={noop}/>;
+      case "history": return HistoryScreen ? <HistoryScreen go={noop}/> : <div>no HistoryScreen</div>;
+      case "map":     return <MapScreen params={{mode:"locate"}} back={noop} go={noop} openSheet={noop} saved={["temple"]}/>;
+      default:        return <HomeScreen go={noop}/>;
+    }
+  }
+  const params = new URLSearchParams(window.location.search);
+  const node = screenFor(params.get("screen") || "home");
+  function Harness(){
+    return (<div className="stage"><div className="phone capture">{node}</div></div>);
+  }
+  ReactDOM.createRoot(document.getElementById("root")).render(<Harness/>);
+</script>
+</body>
+</html>
