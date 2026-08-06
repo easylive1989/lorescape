@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { assetUrl } from '../data/loadScript'
 import { currentNode, type PlayState } from '../engine/player'
 import type { Script } from '../engine/schema'
+import { CharacterSprite } from './CharacterSprite'
 import { TextCard } from './TextCard'
 import { ChoiceList } from './ChoiceList'
 
@@ -21,8 +22,15 @@ export function SceneView({
   children?: ReactNode
 }) {
   const node = currentNode(script, state)
+  const characterById = new Map(script.characters.map((character) => [character.id, character]))
   return (
     <div className="scene" style={{ backgroundImage: `url(${assetUrl(slug, node.background)})` }}>
+      {(node.cast ?? []).map((member) => {
+        const character = characterById.get(member.character)
+        return character ? (
+          <CharacterSprite key={character.id} character={character} member={member} slug={slug} />
+        ) : null
+      })}
       {children}
       {state.status === 'choosing' && node.choices ? (
         <ChoiceList choices={node.choices} onChoose={onChoose} />

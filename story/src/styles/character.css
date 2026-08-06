@@ -1,0 +1,95 @@
+.sprite {
+  position: absolute;
+  bottom: 0;
+  width: 40vw;
+  max-width: 320px;
+  height: 60vh;
+  max-height: 480px;
+  animation: fade-slide-in 0.6s ease-out both;
+}
+
+.sprite--left {
+  left: 2vw;
+}
+
+.sprite--center {
+  left: 50%;
+  /* separate from the `transform` property so the entrance animation
+     (which animates `transform`) doesn't clobber the centering offset */
+  translate: -50% 0;
+}
+
+.sprite--right {
+  right: 2vw;
+}
+
+.sprite__part {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.sprite__torso {
+  animation: breathe 3.2s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
+.sprite__arm-left,
+.sprite__arm-right {
+  animation: sway 3.2s ease-in-out infinite;
+  transform-origin: top center;
+}
+
+.sprite__arm-right {
+  animation-delay: -1.6s;
+}
+
+.is-talking .sprite__head {
+  animation: nod 0.9s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
+@keyframes fade-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(1.015);
+  }
+}
+
+@keyframes sway {
+  0%,
+  100% {
+    transform: rotate(-2deg);
+  }
+  50% {
+    transform: rotate(2deg);
+  }
+}
+
+@keyframes nod {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(2px) rotate(1deg);
+  }
+}
