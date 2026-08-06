@@ -36,6 +36,61 @@
 <script type="text/babel" src="app3/screens_map.jsx"></script>
 <script type="text/babel" data-presets="react">
   const noop = () => {};
+
+  // 行銷截圖用的歷程書架：比照實機為多層書架（每層 4 本），
+  // 設計原型仍是單層，故在 harness 內重繪，沿用同一組 CSS class。
+  const SHELF_TRIPS = [
+    { id:"uncat",  name:"未分類",    count:"12 篇", filled:true },
+    { id:"de2020", name:"2020德瑞",  count:"31 篇", filled:true },
+    { id:"tk2016", name:"2016東京",  count:"24 篇", filled:true },
+    { id:"nz2027", name:"2027紐西蘭", count:"9 篇",  filled:false },
+    { id:"kx2018", name:"2018京阪",  count:"16 篇", filled:true },
+    { id:"oc2026", name:"2026奧捷",  count:"18 篇", filled:true },
+  ];
+  function ShelfRow({ books, addSlot }){
+    return (
+      <div className="shelf">
+        <div className="shelf__books">
+          {books.map((t, idx)=>(
+            <div key={t.id} className={"book book--"+["a","c","b","d"][t.i%4]}
+                 style={{height: 190 + (t.i%3)*14}}>
+              <div className="book__badge"><window.Icon name={t.filled?"book":"image-off"} size={13}/></div>
+              <div className="book__label"><div className="book__title">{t.name}</div></div>
+              <div className="book__count">{t.count}</div>
+            </div>
+          ))}
+          {addSlot && (
+            <div style={{width:78, height:190, borderRadius:6, alignSelf:"flex-end",
+                         border:"2px dashed var(--line)", display:"grid", placeItems:"center",
+                         color:"var(--ink-3)", opacity:.85}}>
+              <window.Icon name="plus" size={22}/>
+            </div>
+          )}
+        </div>
+        <div className="shelf__plank"/>
+      </div>
+    );
+  }
+  function HistoryShelfScreen(){
+    const { StatusBar, Masthead, Icon } = window;
+    const rows = [SHELF_TRIPS.slice(0,4).map((t,i)=>({...t,i})),
+                  SHELF_TRIPS.slice(4).map((t,i)=>({...t,i:i+4}))];
+    return (
+      <div className="screen fade-enter">
+        <StatusBar dark time="8:00"/>
+        <div className="screen__scroll">
+          <Masthead eyebrow="旅程紀錄 · Chronicle" title="歷程"
+            actions={<button className="iconbtn" style={{background:"var(--paper-sunk)"}}><Icon name="plus" size={22}/></button>}/>
+          <div className="bookshelf">
+            <div className="shelf__cap">旅程書架 · {SHELF_TRIPS.length} 本</div>
+            <ShelfRow books={rows[0]}/>
+            <ShelfRow books={rows[1]} addSlot/>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const { HomeScreen, PlaceScreen, ReaderView, HistoryScreen, MapScreen } = window;
   const { PLACES, STPETERS_STORY } = window.LS_DATA;
   function screenFor(name){
@@ -43,7 +98,7 @@
       case "home":    return <HomeScreen go={noop}/>;
       case "hooks":   return <PlaceScreen params={{ place: PLACES.find(p=>p.id==="stpeters") }} back={noop}/>;
       case "reader":  return <ReaderView story={STPETERS_STORY} onBack={noop}/>;
-      case "history": return HistoryScreen ? <HistoryScreen go={noop}/> : <div>no HistoryScreen</div>;
+      case "history": return <HistoryShelfScreen/>;
       case "map":     return <MapScreen params={{mode:"locate"}} back={noop} go={noop} openSheet={noop} saved={["temple"]}/>;
       default:        return <HomeScreen go={noop}/>;
     }
