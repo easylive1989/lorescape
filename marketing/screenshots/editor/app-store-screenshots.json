@@ -26,7 +26,7 @@
           "zh-Hant": "開口說故事",
           "en": "a story"
         },
-        "screenshot": "/screenshots/lorescape/home.png",
+        "screenshot": "/screenshots/lorescape/iphone-home.png",
         "bgColor": "#F4E6CC",
         "onDark": false,
         "scriptColor": "#E45A4A",
@@ -52,7 +52,7 @@
           "zh-Hant": "不只一個故事",
           "en": "many stories"
         },
-        "screenshot": "/screenshots/lorescape/hooks.png",
+        "screenshot": "/screenshots/lorescape/iphone-hooks.png",
         "bgColor": "#F2BB46",
         "onDark": false,
         "scriptColor": "#E45A4A",
@@ -79,7 +79,7 @@
           "zh-Hant": "娓娓道來",
           "en": "tell the tale"
         },
-        "screenshot": "/screenshots/lorescape/reader.png",
+        "screenshot": "/screenshots/lorescape/iphone-reader.png",
         "bgColor": "#F3A6B7",
         "onDark": false,
         "scriptColor": "#E45A4A",
@@ -105,7 +105,7 @@
           "zh-Hant": "身邊的風景",
           "en": "around you"
         },
-        "screenshot": "/screenshots/lorescape/map.png",
+        "screenshot": "/screenshots/lorescape/iphone-map.png",
         "bgColor": "#BFD9B6",
         "onDark": false,
         "scriptColor": "#E45A4A",
@@ -132,7 +132,7 @@
           "zh-Hant": "自動成冊",
           "en": "becomes a journal"
         },
-        "screenshot": "/screenshots/lorescape/history.png",
+        "screenshot": "/screenshots/lorescape/iphone-history.png",
         "bgColor": "#F4E6CC",
         "onDark": false,
         "scriptColor": "#E45A4A",
@@ -160,7 +160,7 @@
           "zh-Hant": "開口說故事",
           "en": "a story"
         },
-        "screenshot": "/screenshots/lorescape/home.png",
+        "screenshot": "/screenshots/lorescape/android-home.png",
         "bgColor": "#F4E6CC",
         "onDark": false,
         "scriptColor": "#E45A4A",
@@ -186,7 +186,7 @@
           "zh-Hant": "不只一個故事",
           "en": "many stories"
         },
-        "screenshot": "/screenshots/lorescape/hooks.png",
+        "screenshot": "/screenshots/lorescape/android-hooks.png",
         "bgColor": "#F2BB46",
         "onDark": false,
         "scriptColor": "#E45A4A",
@@ -213,7 +213,7 @@
           "zh-Hant": "娓娓道來",
           "en": "tell the tale"
         },
-        "screenshot": "/screenshots/lorescape/reader.png",
+        "screenshot": "/screenshots/lorescape/android-reader.png",
         "bgColor": "#F3A6B7",
         "onDark": false,
         "scriptColor": "#E45A4A",
@@ -239,7 +239,7 @@
           "zh-Hant": "身邊的風景",
           "en": "around you"
         },
-        "screenshot": "/screenshots/lorescape/map.png",
+        "screenshot": "/screenshots/lorescape/android-map.png",
         "bgColor": "#BFD9B6",
         "onDark": false,
         "scriptColor": "#E45A4A",
@@ -266,7 +266,7 @@
           "zh-Hant": "自動成冊",
           "en": "becomes a journal"
         },
-        "screenshot": "/screenshots/lorescape/history.png",
+        "screenshot": "/screenshots/lorescape/android-history.png",
         "bgColor": "#F4E6CC",
         "onDark": false,
         "scriptColor": "#E45A4A",
@@ -431,7 +431,7 @@
           "zh-Hant": "開口說它的故事",
           "en": "a story"
         },
-        "screenshot": "/screenshots/lorescape/home.png",
+        "screenshot": "/screenshots/lorescape/tab-home.png",
         "bgColor": "#F4E6CC",
         "onDark": false,
         "scriptColor": "#E45A4A",
@@ -443,7 +443,15 @@
           "y": 0.58,
           "size": 0.3
         },
-        "headlineScale": 1.18
+        "headlineScale": 1.18,
+        "transforms": {
+          "device": {
+            "x": 216,
+            "y": 700,
+            "width": 768,
+            "height": 1229
+          }
+        }
       },
       {
         "id": "ls_story_angles",
@@ -461,7 +469,7 @@
           "zh-Hant": "不只一個故事可聽",
           "en": "many stories to hear"
         },
-        "screenshot": "/screenshots/lorescape/hooks.png",
+        "screenshot": "/screenshots/lorescape/tab-hooks.png",
         "bgColor": "#F2BB46",
         "onDark": false,
         "scriptColor": "#E45A4A",
@@ -474,7 +482,15 @@
           "size": 0.3,
           "flip": true
         },
-        "headlineScale": 1.12
+        "headlineScale": 1.12,
+        "transforms": {
+          "device": {
+            "x": 216,
+            "y": 700,
+            "width": 768,
+            "height": 1229
+          }
+        }
       },
       {
         "id": "ls_t7_reader",
@@ -492,7 +508,7 @@
           "zh-Hant": "娓娓道來",
           "en": "tell the tale"
         },
-        "screenshot": "/screenshots/lorescape/reader.png",
+        "screenshot": "/screenshots/lorescape/tab-reader.png",
         "bgColor": "#F3A6B7",
         "onDark": false,
         "scriptColor": "#E45A4A",
@@ -504,7 +520,15 @@
           "y": 0.58,
           "size": 0.3
         },
-        "headlineScale": 1.12
+        "headlineScale": 1.12,
+        "transforms": {
+          "device": {
+            "x": 216,
+            "y": 700,
+            "width": 768,
+            "height": 1229
+          }
+        }
       },
       {
         "id": "ls_t7_explore",
@@ -522,7 +546,7 @@
           "zh-Hant": "身邊的好風景",
           "en": "around you"
         },
-        "screenshot": "/screenshots/lorescape/map.png",
+        "screenshot": "/screenshots/lorescape/tab-map.png",
         "bgColor": "#BFD9B6",
         "onDark": false,
         "scriptColor": "#E45A4A",
@@ -535,7 +559,15 @@
           "size": 0.3,
           "flip": true
         },
-        "headlineScale": 1.12
+        "headlineScale": 1.12,
+        "transforms": {
+          "device": {
+            "x": 216,
+            "y": 700,
+            "width": 768,
+            "height": 1229
+          }
+        }
       },
       {
         "id": "ls_t7_history",
@@ -553,7 +585,7 @@
           "zh-Hant": "自動收進旅程冊",
           "en": "becomes a journal"
         },
-        "screenshot": "/screenshots/lorescape/history.png",
+        "screenshot": "/screenshots/lorescape/tab-history.png",
         "bgColor": "#F4E6CC",
         "onDark": false,
         "scriptColor": "#E45A4A",
@@ -565,10 +597,211 @@
           "y": 0.58,
           "size": 0.3
         },
-        "headlineScale": 1.12
+        "headlineScale": 1.12,
+        "transforms": {
+          "device": {
+            "x": 216,
+            "y": 700,
+            "width": 768,
+            "height": 1229
+          }
+        }
       }
     ],
-    "android-10": [],
+    "android-10": [
+      {
+        "id": "a10_ls_t7_hero",
+        "style": "retro",
+        "layout": "hero",
+        "label": {
+          "zh-Hant": "每日故事",
+          "en": "DAILY STORIES"
+        },
+        "headline": {
+          "zh-Hant": "讓每一處風景",
+          "en": "Every place\nhas"
+        },
+        "scriptPhrase": {
+          "zh-Hant": "開口說它的故事",
+          "en": "a story"
+        },
+        "screenshot": "/screenshots/lorescape/tab-home.png",
+        "bgColor": "#F4E6CC",
+        "onDark": false,
+        "scriptColor": "#E45A4A",
+        "tilt": 0,
+        "shadowRgba": "92,58,30,0.30",
+        "mascot": {
+          "color": "#F2BB46",
+          "x": 0,
+          "y": 0.58,
+          "size": 0.3
+        },
+        "headlineScale": 1.18,
+        "transforms": {
+          "device": {
+            "x": 288,
+            "y": 930,
+            "width": 1024,
+            "height": 1638
+          }
+        }
+      },
+      {
+        "id": "a10_ls_story_angles",
+        "style": "retro",
+        "layout": "device-bottom",
+        "label": {
+          "zh-Hant": "完整版",
+          "en": "GO PREMIUM"
+        },
+        "headline": {
+          "zh-Hant": "同一個地方",
+          "en": "One place,"
+        },
+        "scriptPhrase": {
+          "zh-Hant": "不只一個故事可聽",
+          "en": "many stories to hear"
+        },
+        "screenshot": "/screenshots/lorescape/tab-hooks.png",
+        "bgColor": "#F2BB46",
+        "onDark": false,
+        "scriptColor": "#E45A4A",
+        "tilt": 2,
+        "shadowRgba": "120,80,20,0.28",
+        "mascot": {
+          "color": "#F2B07A",
+          "x": 0.7,
+          "y": 0.56,
+          "size": 0.3,
+          "flip": true
+        },
+        "headlineScale": 1.12,
+        "transforms": {
+          "device": {
+            "x": 288,
+            "y": 930,
+            "width": 1024,
+            "height": 1638
+          }
+        }
+      },
+      {
+        "id": "a10_ls_t7_reader",
+        "style": "retro",
+        "layout": "device-bottom",
+        "label": {
+          "zh-Hant": "AI 語音導覽",
+          "en": "AI NARRATION"
+        },
+        "headline": {
+          "zh-Hant": "聽 AI 為你",
+          "en": "Hear the AI"
+        },
+        "scriptPhrase": {
+          "zh-Hant": "娓娓道來",
+          "en": "tell the tale"
+        },
+        "screenshot": "/screenshots/lorescape/tab-reader.png",
+        "bgColor": "#F3A6B7",
+        "onDark": false,
+        "scriptColor": "#E45A4A",
+        "tilt": 0,
+        "shadowRgba": "120,40,60,0.28",
+        "mascot": {
+          "color": "#E08767",
+          "x": 0,
+          "y": 0.58,
+          "size": 0.3
+        },
+        "headlineScale": 1.12,
+        "transforms": {
+          "device": {
+            "x": 288,
+            "y": 930,
+            "width": 1024,
+            "height": 1638
+          }
+        }
+      },
+      {
+        "id": "a10_ls_t7_explore",
+        "style": "retro",
+        "layout": "hero",
+        "label": {
+          "zh-Hant": "在地探索",
+          "en": "NEARBY"
+        },
+        "headline": {
+          "zh-Hant": "發現方圓之內",
+          "en": "Discover what's"
+        },
+        "scriptPhrase": {
+          "zh-Hant": "身邊的好風景",
+          "en": "around you"
+        },
+        "screenshot": "/screenshots/lorescape/tab-map.png",
+        "bgColor": "#BFD9B6",
+        "onDark": false,
+        "scriptColor": "#E45A4A",
+        "tilt": -2,
+        "shadowRgba": "60,90,50,0.28",
+        "mascot": {
+          "color": "#F2BB46",
+          "x": 0.7,
+          "y": 0.56,
+          "size": 0.3,
+          "flip": true
+        },
+        "headlineScale": 1.12,
+        "transforms": {
+          "device": {
+            "x": 288,
+            "y": 930,
+            "width": 1024,
+            "height": 1638
+          }
+        }
+      },
+      {
+        "id": "a10_ls_t7_history",
+        "style": "retro",
+        "layout": "device-bottom",
+        "label": {
+          "zh-Hant": "旅程足跡",
+          "en": "YOUR JOURNAL"
+        },
+        "headline": {
+          "zh-Hant": "走過的每一步",
+          "en": "Every step"
+        },
+        "scriptPhrase": {
+          "zh-Hant": "自動收進旅程冊",
+          "en": "becomes a journal"
+        },
+        "screenshot": "/screenshots/lorescape/tab-history.png",
+        "bgColor": "#F4E6CC",
+        "onDark": false,
+        "scriptColor": "#E45A4A",
+        "tilt": 0,
+        "shadowRgba": "92,58,30,0.30",
+        "mascot": {
+          "color": "#F2B07A",
+          "x": 0,
+          "y": 0.58,
+          "size": 0.3
+        },
+        "headlineScale": 1.12,
+        "transforms": {
+          "device": {
+            "x": 288,
+            "y": 930,
+            "width": 1024,
+            "height": 1638
+          }
+        }
+      }
+    ],
     "feature-graphic": [
       {
         "id": "ls_feature_graphic",
@@ -592,9 +825,9 @@
           "size": 0.12
         },
         "featureScreenshots": [
-          "/screenshots/lorescape/explore.png",
-          "/screenshots/lorescape/stories.png",
-          "/screenshots/lorescape/reader.png"
+          "/screenshots/lorescape/iphone-map.png",
+          "/screenshots/lorescape/iphone-home.png",
+          "/screenshots/lorescape/iphone-reader.png"
         ]
       }
     ]
