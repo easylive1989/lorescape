@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from story_assets.gemini import generate_image
+from story_assets.gemini import IMAGE_MODEL, generate_image
 from story_assets.generate import run_scenes
 
 
@@ -72,6 +72,8 @@ def test_run_scenes_writes_generated_image_bytes(tmp_path):
     written = (content_dir / "assets" / "scenes" / "a.png").read_bytes()
     assert written == b"png"
     assert len(client.calls) == 1
+    assert client.calls[0]["model"] == IMAGE_MODEL
+    assert client.calls[0]["contents"] == ["style, a street"]
 
 
 def test_run_scenes_skips_existing_file_without_calling_client(tmp_path):
@@ -124,6 +126,21 @@ def test_run_scenes_only_filters_to_single_rel_path(tmp_path):
     assert not (content_dir / "assets" / "scenes" / "a.png").exists()
     assert (content_dir / "assets" / "scenes" / "b.png").read_bytes() == b"png"
     assert len(client.calls) == 1
+    assert client.calls[0]["contents"] == ["style, a wharf"]
+
+
+def test_run_scenes_only_with_no_matching_job_raises_value_error(tmp_path):
+    content_dir = _write_content_dir(
+        tmp_path,
+        [{"id": "n1", "background": "scenes/a.png"}],
+        {"scenes/a.png": "a street"},
+    )
+    client = _FakeClient(_Response([_Part(b"png")]))
+
+    with pytest.raises(ValueError, match="scenes/a.png"):
+        run_scenes(content_dir, client, only="scenes/typo.png")
+
+    assert client.calls == []
 
 
 def test_generate_image_raises_when_no_inline_data():
@@ -131,3 +148,17 @@ def test_generate_image_raises_when_no_inline_data():
 
     with pytest.raises(RuntimeError):
         generate_image(client, "prompt")
+
+
+def test_generate_image_appends_reference_part_when_given():
+    client = _FakeClient(_Response([_Part(b"png")]))
+
+    generate_image(client, "prompt", reference_png=b"refbytes")
+
+    assert client.calls[0]["model"] == IMAGE_MODEL
+    contents = client.calls[0]["contents"]
+    assert contents[0] == "prompt"
+    assert len(contents) == 2
+    reference_part = contents[1]
+    assert reference_part.inline_data.data == b"refbytes"
+    assert reference_part.inline_data.mime_type == "image/png"

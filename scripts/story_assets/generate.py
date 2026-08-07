@@ -16,11 +16,19 @@ def run_scenes(
     """Generate each scene job's background image under `content_dir/assets`.
 
     A job whose destination file already exists is skipped unless `force`
-    is set. `only` restricts the run to the job whose `rel_path` matches.
+    is set. `only` restricts the run to the job whose `rel_path` matches;
+    if nothing matches, raises ValueError listing the available paths.
     """
     jobs = load_scene_jobs(content_dir)
     if only is not None:
-        jobs = [job for job in jobs if job.rel_path == only]
+        matched = [job for job in jobs if job.rel_path == only]
+        if not matched:
+            available = ", ".join(job.rel_path for job in jobs)
+            raise ValueError(
+                f"--only {only!r} matched no scene job; "
+                f"available rel_path(s): {available}"
+            )
+        jobs = matched
 
     for job in jobs:
         dest = content_dir / "assets" / job.rel_path
