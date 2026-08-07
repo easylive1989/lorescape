@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:context_app/core/utils/share_position_origin.dart';
 import 'package:context_app/features/export/domain/models/pdf_export_result.dart';
 import 'package:context_app/features/export/domain/services/place_image_downloader.dart';
 import 'package:context_app/features/export/domain/services/trip_pdf_export_service.dart';
@@ -55,7 +56,12 @@ Future<PdfExportResult> exportTripAsPdf({
           labels: labels,
         ).build(trip: trip, entries: entries, coverPngBytes: coverPngBytes),
     writeToTemp: _writeToTemp,
-    share: _sharePdf,
+    // Resolved at share time rather than up front: the export runs for
+    // seconds and the screen may have scrolled since it started.
+    share: (filePath) => _sharePdf(
+      filePath,
+      context.mounted ? sharePositionOriginOf(context) : null,
+    ),
   );
 
   return service.export(tripId: tripId, strings: strings);
@@ -68,6 +74,8 @@ Future<String> _writeToTemp(Uint8List bytes, String fileName) async {
   return file.path;
 }
 
-Future<void> _sharePdf(String filePath) async {
-  await Share.shareXFiles([XFile(filePath, mimeType: 'application/pdf')]);
+Future<void> _sharePdf(String filePath, Rect? sharePositionOrigin) async {
+  await Share.shareXFiles([
+    XFile(filePath, mimeType: 'application/pdf'),
+  ], sharePositionOrigin: sharePositionOrigin);
 }

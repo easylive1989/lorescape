@@ -7,6 +7,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:context_app/core/services/place_image_cache_manager.dart';
+import 'package:context_app/core/utils/share_position_origin.dart';
 import 'package:context_app/features/journey/providers.dart';
 import 'package:context_app/features/journey/domain/models/journey_entry.dart';
 import 'package:context_app/features/trip/providers.dart';
@@ -33,8 +34,15 @@ class _TimelineEntryState extends ConsumerState<TimelineEntry> {
   bool _isDeleting = false;
   bool _isSharing = false;
 
+  /// Anchors the iOS share sheet to the share button. Read before the
+  /// spinner replaces the button, or the element is already gone.
+  final _shareButtonKey = GlobalKey();
+
   Future<void> _shareAsCard() async {
     if (_isSharing || _isDeleting) return;
+    final origin = sharePositionOriginOf(
+      _shareButtonKey.currentContext ?? context,
+    );
     setState(() => _isSharing = true);
 
     unawaited(
@@ -45,6 +53,7 @@ class _TimelineEntryState extends ConsumerState<TimelineEntry> {
         narrationExcerpt: widget.entry.narrationContent.text,
         visitedAt: widget.entry.createdAt,
         imageUrl: widget.entry.place.imageUrl,
+        sharePositionOrigin: origin,
         onSheetPresented: () {
           if (mounted) {
             setState(() => _isSharing = false);
@@ -312,6 +321,7 @@ class _TimelineEntryState extends ConsumerState<TimelineEntry> {
                                 )
                               else
                                 _ActionButton(
+                                  key: _shareButtonKey,
                                   icon: Icons.share_outlined,
                                   label: 'share_card.share'.tr(),
                                   onTap: _shareAsCard,
@@ -354,6 +364,7 @@ class _ActionButton extends StatelessWidget {
   final VoidCallback onTap;
 
   const _ActionButton({
+    super.key,
     required this.icon,
     required this.label,
     required this.onTap,

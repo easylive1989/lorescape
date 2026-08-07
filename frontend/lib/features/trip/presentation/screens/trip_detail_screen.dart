@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:context_app/core/utils/share_position_origin.dart';
 import 'package:context_app/features/export/domain/models/pdf_export_result.dart';
 import 'package:context_app/features/export/domain/services/trip_pdf_export_service.dart';
 import 'package:context_app/features/export/providers.dart';
@@ -473,6 +474,7 @@ class _ItemsList extends ConsumerWidget {
         narrationExcerpt: entry.narrationContent.text,
         visitedAt: entry.createdAt,
         imageUrl: entry.place.imageUrl,
+        sharePositionOrigin: sharePositionOriginOf(context),
       ),
     );
   }

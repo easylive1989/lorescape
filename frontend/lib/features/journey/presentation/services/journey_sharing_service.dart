@@ -30,6 +30,7 @@ class JourneySharingService {
     String? imageUrl,
     Uint8List? imageBytes,
     VoidCallback? onSheetPresented,
+    Rect? sharePositionOrigin,
   }) async {
     try {
       final pngBytes = await _captureCardImage(
@@ -56,9 +57,11 @@ class JourneySharingService {
       final shareText = '${'share_card.share_text'.tr()} — $placeName';
 
       onSheetPresented?.call();
-      await Share.shareXFiles([
-        XFile(file.path, mimeType: 'image/png'),
-      ], text: shareText);
+      await Share.shareXFiles(
+        [XFile(file.path, mimeType: 'image/png')],
+        text: shareText,
+        sharePositionOrigin: sharePositionOrigin,
+      );
     } catch (e, stack) {
       _log.severe('Error sharing journey card', e, stack);
       onSheetPresented?.call();
