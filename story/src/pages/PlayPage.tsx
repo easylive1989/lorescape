@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { loadScript, assetUrl } from '../data/loadScript'
+import { saveProgress, loadProgress, clearProgress } from '../data/progress'
 import { initState, advance, choose, currentNode, type PlayState } from '../engine/player'
 import type { Script } from '../engine/schema'
 import { SceneView } from '../components/SceneView'
@@ -23,9 +24,16 @@ export function PlayPage() {
     if (bgm) audioManager.playBgm(assetUrl(slug, bgm))
   }, [script, state, slug])
 
+  useEffect(() => {
+    if (!state) return
+    if (state.status === 'ended') clearProgress(slug)
+    else saveProgress(slug, state)
+  }, [state, slug])
+
   if (error) return <div data-testid="play-page">{error}</div>
   if (!script) return <div data-testid="play-page">載入中…</div>
-  if (!started)
+  if (!started) {
+    const saved = loadProgress(slug)
     return (
       <div data-testid="play-page" className="intro">
         <h1>{script.title}</h1>
@@ -33,14 +41,27 @@ export function PlayPage() {
         <button
           onClick={() => {
             audioManager.unlock()
-            setState(initState(script))
+            setState(saved ?? initState(script))
             setStarted(true)
           }}
         >
-          開始體驗
+          {saved ? '繼續上次' : '開始體驗'}
         </button>
+        {saved && (
+          <button
+            onClick={() => {
+              audioManager.unlock()
+              clearProgress(slug)
+              setState(initState(script))
+              setStarted(true)
+            }}
+          >
+            從頭開始
+          </button>
+        )}
       </div>
     )
+  }
   if (!state) return null
   return (
     <div data-testid="play-page">

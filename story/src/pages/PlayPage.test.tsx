@@ -17,6 +17,7 @@ class FakeAudio {
 beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(demoScript))))
   vi.stubGlobal('Audio', FakeAudio)
+  localStorage.clear()
 })
 
 function renderPlay() {
@@ -58,4 +59,34 @@ test('結局段落結束後顯示 ending 佔位', async () => {
   await userEvent.click(screen.getByRole('button', { name: '往左' }))
   await userEvent.click(screen.getByTestId('text-card'))
   expect(screen.getByTestId('ending')).toBeInTheDocument()
+})
+
+test('有進度時 intro 顯示「繼續上次」且從存檔恢復', async () => {
+  localStorage.setItem('story-progress:demo',
+    JSON.stringify({ nodeId: 'n1', paragraphIndex: 1, status: 'playing' }))
+  renderPlay()
+  await userEvent.click(await screen.findByRole('button', { name: '繼續上次' }))
+  expect(screen.getByText('第二段')).toBeInTheDocument()
+})
+
+test('有進度時可選「從頭開始」清存檔並重新開始', async () => {
+  localStorage.setItem('story-progress:demo',
+    JSON.stringify({ nodeId: 'n1', paragraphIndex: 1, status: 'playing' }))
+  renderPlay()
+  await userEvent.click(await screen.findByRole('button', { name: '從頭開始' }))
+  expect(screen.getByText('第一段')).toBeInTheDocument()
+  expect(localStorage.getItem('story-progress:demo')).toBe(
+    JSON.stringify({ nodeId: 'n1', paragraphIndex: 0, status: 'playing' }),
+  )
+})
+
+test('ended 時清除進度', async () => {
+  renderPlay()
+  await userEvent.click(await screen.findByRole('button', { name: '開始體驗' }))
+  await userEvent.click(screen.getByTestId('text-card'))
+  await userEvent.click(screen.getByTestId('text-card'))
+  await userEvent.click(screen.getByRole('button', { name: '往左' }))
+  await userEvent.click(screen.getByTestId('text-card'))
+  expect(screen.getByTestId('ending')).toBeInTheDocument()
+  expect(localStorage.getItem('story-progress:demo')).toBeNull()
 })
