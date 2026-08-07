@@ -44,6 +44,20 @@ def _cmd_characters(args: argparse.Namespace) -> None:
     run_characters(content_dir, client, only=args.only, force=args.force)
 
 
+def _cmd_check(args: argparse.Namespace) -> int:
+    from story_assets.check import check_content
+
+    content_dir = _content_dir(args.slug)
+    missing = check_content(content_dir)
+    if missing:
+        print(f"Missing {len(missing)} asset(s):")
+        for rel_path in missing:
+            print(f"  {rel_path}")
+        return 1
+    print("All assets present.")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Generate story image assets via Gemini")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -77,9 +91,16 @@ def main(argv: list[str] | None = None) -> int:
     )
     characters_parser.set_defaults(func=_cmd_characters)
 
+    check_parser = subparsers.add_parser(
+        "check", help="Check that all assets script.json refers to exist"
+    )
+    check_parser.add_argument(
+        "--slug", required=True, help="Story slug under story/public/content/"
+    )
+    check_parser.set_defaults(func=_cmd_check)
+
     args = parser.parse_args(argv)
-    args.func(args)
-    return 0
+    return args.func(args) or 0
 
 
 if __name__ == "__main__":
