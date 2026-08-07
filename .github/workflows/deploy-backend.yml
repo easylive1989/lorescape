@@ -3,9 +3,9 @@ name: Deploy Backend
 # 只部署 backend api + 推 Supabase migration。publisher bot 走獨立的 deploy-publisher.yml。
 # 手動觸發（App 部署走獨立的 deploy-app.yml）。
 #
-# 第一次部署仍需手動到 VPS：clone repo 到 /opt/lorescape、cp .env.example .env
-# 並填入 secrets，跑一次 `docker compose up -d --build`。之後由這個 workflow 自動
-# git pull + rebuild + 重啟。
+# 第一次部署仍需手動到 VPS：建立 /opt/lorescape/backend、放進填好 secrets 的
+# .env（見 backend/.env.example），跑一次 `docker compose up -d --build`。之後
+# 由這個 workflow 自動 rsync 推 code + rebuild + 重啟（VPS 不需要 repo 憑證）。
 on:
   workflow_dispatch:
 
@@ -50,6 +50,33 @@ jobs:
     runs-on: ubuntu-latest
     needs: [push-supabase-db]
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: master
+
+      # code 由 deploy 推上去，VPS 不再自己 git fetch：VPS 的 remote 是匿名
+      # HTTPS，repo 於 2026-08-07 轉為 private 後就再也拉不動（deploy 全掛）。
+      # 與 deploy-publisher.yml 同一做法。
+      - name: Sync backend source to VPS
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -e
+          mkdir -p ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          # .env 與 service-account.json 只存在於 VPS（不進版控），必須排除，
+          # 否則 --delete 會把它們清掉，api 起不來。
+          rsync -az --delete \
+            --exclude='.env' \
+            --exclude='service-account.json' \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            backend/ "$VPS_USER@$VPS_HOST:/opt/lorescape/backend/"
+
       - name: Deploy + health check via SSH
         uses: appleboy/ssh-action@v1
         with:
@@ -58,10 +85,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             set -e
-            cd /opt/lorescape
-            git fetch --prune origin master
-            git reset --hard origin/master
-            cd backend
+            cd /opt/lorescape/backend
             docker compose up -d --build --remove-orphans
 
             echo "=== docker compose ps ==="
