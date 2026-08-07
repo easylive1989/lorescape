@@ -54,3 +54,4 @@ jobs:
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_INSTANT_EXPLORE_7B442 }}
           channelId: live
           projectId: instant-explore-7b442
+          target: landing
