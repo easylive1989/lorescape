@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { loadScript, assetUrl } from '../data/loadScript'
 import { preloadNode } from '../data/preload'
 import { saveProgress, loadProgress, clearProgress } from '../data/progress'
-import { initState, advance, choose, currentNode, type PlayState } from '../engine/player'
+import { trackEvent } from '../data/analytics'
+import { initState, advance, choose as choosePlayer, currentNode, type PlayState } from '../engine/player'
 import type { Script } from '../engine/schema'
 import { SceneView } from '../components/SceneView'
 import { audioManager } from '../audio/audioManager'
@@ -15,6 +16,7 @@ export function PlayPage() {
   const [started, setStarted] = useState(false)
   const [state, setState] = useState<PlayState | null>(null)
   const [retryCount, setRetryCount] = useState(0)
+  const endingTracked = useRef(false)
 
   useEffect(() => {
     setError(null)
@@ -31,6 +33,7 @@ export function PlayPage() {
     const nodeId = state?.nodeId
     if (!script || !nodeId) return
     preloadNode(script, slug, nodeId)
+    trackEvent(slug, 'node_enter', { node: nodeId })
   }, [script, state?.nodeId, slug])
 
   useEffect(() => {
@@ -38,6 +41,12 @@ export function PlayPage() {
     if (state.status === 'ended') clearProgress(slug)
     else saveProgress(slug, state)
   }, [state, slug])
+
+  useEffect(() => {
+    if (!script || !state || state.status !== 'ended' || endingTracked.current) return
+    endingTracked.current = true
+    trackEvent(slug, 'ending_reached', { node: currentNode(script, state).id })
+  }, [script, state, slug])
 
   if (error) return (
     <div data-testid="play-page">
@@ -58,6 +67,7 @@ export function PlayPage() {
         <button
           onClick={() => {
             audioManager.unlock()
+            trackEvent(slug, 'start')
             setState(saved ?? initState(script))
             setStarted(true)
           }}
@@ -68,6 +78,7 @@ export function PlayPage() {
           <button
             onClick={() => {
               audioManager.unlock()
+              trackEvent(slug, 'start')
               clearProgress(slug)
               setState(initState(script))
               setStarted(true)
@@ -90,7 +101,12 @@ export function PlayPage() {
           state={state}
           slug={slug}
           onAdvance={() => setState(advance(script, state))}
-          onChoose={(i) => setState(choose(script, state, i))}
+          onChoose={(i) => {
+            const node = currentNode(script, state)
+            const text = node.choices?.[i]?.text
+            trackEvent(slug, 'choice_made', { node: node.id, index: i, text })
+            setState(choosePlayer(script, state, i))
+          }}
         />
       )}
     </div>
