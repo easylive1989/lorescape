@@ -1,7 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:context_app/features/daily_story/domain/models/daily_story.dart';
 import 'package:context_app/features/daily_story/domain/models/daily_story_card_mode.dart';
-import 'package:context_app/features/daily_story/presentation/services/daily_story_sharing_service.dart';
 import 'package:context_app/features/daily_story/presentation/utils/daily_story_config_launcher.dart';
 import 'package:context_app/features/daily_story/presentation/widgets/card_layout_body.dart';
 import 'package:context_app/features/daily_story/presentation/widgets/card_reader_theme.dart';
@@ -27,13 +26,7 @@ class DailyStoryDetailScreen extends StatelessWidget {
       backgroundColor: isCard ? CardReaderTheme.readBg : null,
       appBar: isCard
           ? _buildDarkAppBar(context)
-          : AppBar(
-              title: Text(story.placeName),
-              actions: _shareActions(
-                context,
-                Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
+          : AppBar(title: Text(story.placeName)),
       body: isCard
           ? CardLayoutBody(story: story, onExploreMore: onExploreMore)
           : _LegacyLayoutBody(story: story, onExploreMore: onExploreMore),
@@ -70,21 +63,7 @@ class DailyStoryDetailScreen extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
-      actions: _shareActions(context, CardReaderTheme.clay),
     );
-  }
-
-  List<Widget> _shareActions(BuildContext context, Color color) {
-    return [
-      IconButton(
-        key: const Key('daily_story_share_button'),
-        icon: Icon(Icons.ios_share, size: 20, color: color),
-        onPressed: () => DailyStorySharingService.shareStoryCard(
-          context: context,
-          story: story,
-        ),
-      ),
-    ];
   }
 }
 
