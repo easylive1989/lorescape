@@ -4,7 +4,7 @@ export function ChoiceList({ choices, onChoose }: { choices: Choice[]; onChoose:
   return (
     <div className="choice-list">
       {choices.map((choice, index) => (
-        <button key={choice.to} onClick={() => onChoose(index)}>
+        <button key={`${choice.to}-${index}`} onClick={() => onChoose(index)}>
           {choice.text}
         </button>
       ))}
