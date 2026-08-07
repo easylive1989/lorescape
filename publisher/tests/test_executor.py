@@ -5,6 +5,7 @@ import dataclasses
 from unittest.mock import MagicMock, patch
 
 from lorescape_publisher import executor
+from lorescape_publisher.instagram import ReelUploadGenericError
 from tests._fakes import FakeSupabase
 
 
@@ -182,3 +183,79 @@ def test_publish_reel_row_publishes_and_records(
     payload, = table.upsert.call_args.args
     assert payload["status"] == "published"
     assert payload["ig_post_id"] == "ig-reel-1"
+
+
+def _reel_video_dir(fake_config, tmp_path):
+    (tmp_path / "2026-07-09").mkdir()
+    (tmp_path / "2026-07-09" / "final.mp4").write_bytes(b"fake video")
+    return dataclasses.replace(fake_config, daily_video_dir=str(tmp_path))
+
+
+@patch("lorescape_publisher.reel_publisher.instagram.publish_reel_from_url",
+       return_value="ig-reel-url-1")
+@patch("lorescape_publisher.reel_publisher.reel_video_storage")
+@patch("lorescape_publisher.executor.instagram.publish_reel",
+       side_effect=ReelUploadGenericError(
+           "Reel upload failed with HTTP 400 for container 1: "
+           '{"debug_info":{"type":"ProcessingFailedError"}}'))
+@patch("lorescape_publisher.executor.reel_cover.build_cover_url",
+       return_value="https://x/cover.jpg")
+@patch("lorescape_publisher.executor.reel_publisher.build_reel_caption",
+       return_value="a caption")
+def test_publish_reel_row_falls_back_to_video_url_on_generic_rupload_failure(
+    mock_caption, mock_cover, mock_pub, mock_storage, mock_from_url,
+    fake_config, tmp_path,
+):
+    """F11 的 video_url 退路必須在**正式路徑**（executor）上生效。
+
+    2026-07-27 / 08-02 / 08-07 三次 reel 發布失敗都是因為 executor 直接
+    呼叫 instagram.publish_reel，繞過了 publish_reel_with_fallback。
+    """
+    client, table = _client()
+    config = _reel_video_dir(fake_config, tmp_path)
+    mock_storage.upload_reel_video.return_value = (
+        "https://x/reel-videos/2026-07-09/final.mp4"
+    )
+
+    ok = executor.publish_reel_row(config, client, _reel_row())
+
+    assert ok is True
+    assert mock_storage.upload_reel_video.call_args.kwargs["path"] == (
+        "2026-07-09/final.mp4"
+    )
+    from_url_kwargs = mock_from_url.call_args.kwargs
+    assert from_url_kwargs["video_url"] == (
+        "https://x/reel-videos/2026-07-09/final.mp4"
+    )
+    assert from_url_kwargs["caption"] == "a caption"
+    assert from_url_kwargs["cover_url"] == "https://x/cover.jpg"
+    mock_storage.delete_reel_video.assert_called_once()
+    payload, = table.upsert.call_args.args
+    assert payload["status"] == "published"
+    assert payload["ig_post_id"] == "ig-reel-url-1"
+
+
+@patch("lorescape_publisher.reel_publisher.instagram.publish_reel_from_url")
+@patch("lorescape_publisher.reel_publisher.reel_video_storage")
+@patch("lorescape_publisher.executor.instagram.publish_reel",
+       side_effect=RuntimeError("failed to transcode"))
+@patch("lorescape_publisher.executor.reel_cover.build_cover_url",
+       return_value="https://x/cover.jpg")
+@patch("lorescape_publisher.executor.reel_publisher.build_reel_caption",
+       return_value="a caption")
+def test_publish_reel_row_does_not_fall_back_on_content_failure(
+    mock_caption, mock_cover, mock_pub, mock_storage, mock_from_url,
+    fake_config, tmp_path,
+):
+    """轉碼類錯誤代表影片本身有問題，video_url 也救不了 —— 照舊 failed。"""
+    client, table = _client()
+    config = _reel_video_dir(fake_config, tmp_path)
+
+    ok = executor.publish_reel_row(config, client, _reel_row())
+
+    assert ok is False
+    mock_from_url.assert_not_called()
+    mock_storage.upload_reel_video.assert_not_called()
+    payload, = table.upsert.call_args.args
+    assert payload["status"] == "failed"
+    assert "failed to transcode" in payload["error"]

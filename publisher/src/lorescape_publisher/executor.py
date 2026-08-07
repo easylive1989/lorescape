@@ -139,12 +139,17 @@ def publish_reel_row(config: Config, supabase, row: dict) -> bool:
     except Exception as exc:  # noqa: BLE001 — cover is best-effort
         logger.warning("Reel cover build failed (%s); using frame", exc)
     try:
-        ig_post_id = instagram.publish_reel(
+        # 走 with_fallback 而非 instagram.publish_reel：rupload 偶發的泛型
+        # ProcessingFailedError 要自動改走 video_url（F11），否則每次 Meta
+        # 抽風都得人工補發。
+        ig_post_id = reel_publisher.publish_reel_with_fallback(
+            supabase,
             ig_user_id=config.ig_user_id,  # type: ignore[arg-type]
             access_token=config.meta_page_access_token,  # type: ignore[arg-type]
-            video_path=str(video_path),
-            caption=ig_caption,
+            video_path=video_path,
+            ig_caption=ig_caption,
             cover_url=cover_url,
+            date_str=date_str,
         )
     except Exception as exc:  # noqa: BLE001 — orchestrator catches all
         logger.exception("Reel publish failed for %s", date_str)
