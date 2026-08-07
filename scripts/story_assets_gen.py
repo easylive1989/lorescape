@@ -36,6 +36,14 @@ def _cmd_scenes(args: argparse.Namespace) -> None:
     run_scenes(content_dir, client, only=args.only, force=args.force)
 
 
+def _cmd_characters(args: argparse.Namespace) -> None:
+    from story_assets.characters import run_characters
+
+    content_dir = _content_dir(args.slug)
+    client = _build_client()
+    run_characters(content_dir, client, only=args.only, force=args.force)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Generate story image assets via Gemini")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -51,6 +59,23 @@ def main(argv: list[str] | None = None) -> int:
         "--force", action="store_true", help="Overwrite existing files"
     )
     scenes_parser.set_defaults(func=_cmd_scenes)
+
+    characters_parser = subparsers.add_parser(
+        "characters", help="Generate character reference + part sprite images"
+    )
+    characters_parser.add_argument(
+        "--slug", required=True, help="Story slug under story/public/content/"
+    )
+    characters_parser.add_argument(
+        "--only",
+        default=None,
+        help="Generate only this character id, or <id>:<part> "
+        "(part is head/torso/leftArm/rightArm), e.g. anne or anne:head",
+    )
+    characters_parser.add_argument(
+        "--force", action="store_true", help="Overwrite existing files"
+    )
+    characters_parser.set_defaults(func=_cmd_characters)
 
     args = parser.parse_args(argv)
     args.func(args)
