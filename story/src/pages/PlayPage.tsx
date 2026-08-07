@@ -7,6 +7,7 @@ import { trackEvent } from '../data/analytics'
 import { initState, advance, choose as choosePlayer, currentNode, type PlayState } from '../engine/player'
 import type { Script } from '../engine/schema'
 import { SceneView } from '../components/SceneView'
+import { EndingView } from '../components/EndingView'
 import { audioManager } from '../audio/audioManager'
 
 export function PlayPage() {
@@ -94,7 +95,7 @@ export function PlayPage() {
   return (
     <div data-testid="play-page">
       {state.status === 'ended' ? (
-        <div data-testid="ending">{currentNode(script, state).ending?.title}</div>
+        <EndingView endingTitle={currentNode(script, state).ending?.title} slug={slug} />
       ) : (
         <SceneView
           script={script}
