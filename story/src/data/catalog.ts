@@ -1,0 +1,8 @@
+export const catalog: { slug: string; title: string; place: string; blurb: string }[] = [
+  {
+    slug: 'tower-of-london-anne',
+    title: '千日之後',
+    place: '倫敦塔',
+    blurb: '你是安妮身邊最卑微的侍女，她只剩十七天——你，要留下嗎？',
+  },
+]

@@ -1,0 +1,53 @@
+.scene {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  height: 100dvh;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.text-card {
+  margin: 0 1rem 1.5rem;
+  padding: 1rem 1.25rem;
+  border-radius: 1rem;
+  background-color: rgba(10, 10, 10, 0.72);
+  color: #f5f5f5;
+  cursor: pointer;
+  line-height: 1.6;
+}
+
+.choice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0 1rem 1.5rem;
+}
+
+.choice-list button {
+  padding: 0.75rem 1rem;
+  border-radius: 1rem;
+  border: none;
+  background-color: rgba(10, 10, 10, 0.72);
+  color: #f5f5f5;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  height: 100dvh;
+  text-align: center;
+  padding: 0 1.5rem;
+  gap: 1rem;
+}

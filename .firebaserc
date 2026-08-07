@@ -1,5 +1,13 @@
 {
   "projects": {
     "default": "instant-explore-7b442"
+  },
+  "targets": {
+    "instant-explore-7b442": {
+      "hosting": {
+        "landing": ["instant-explore-7b442"],
+        "story": ["story-lorescape"]
+      }
+    }
   }
 }
