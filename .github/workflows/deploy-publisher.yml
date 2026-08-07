@@ -46,6 +46,33 @@ jobs:
     runs-on: ubuntu-latest
     needs: [push-supabase-db]
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: master
+
+      # code 由 deploy 推上去，VPS 不再自己 git fetch：VPS 的 remote 是匿名
+      # HTTPS，repo 於 2026-08-07 轉為 private 後就再也拉不動（deploy 全掛）。
+      # 順帶好處是只傳 publisher/，不必在 VPS 上放整個 monorepo。
+      - name: Sync publisher source to VPS
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -e
+          mkdir -p ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          # .env 與 service-account.json 只存在於 VPS（不進版控），必須排除，
+          # 否則 --delete 會把它們清掉，publisher 起不來。
+          rsync -az --delete \
+            --exclude='.env' \
+            --exclude='service-account.json' \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            publisher/ "$VPS_USER@$VPS_HOST:/opt/lorescape/publisher/"
+
       - name: Deploy + gateway check via SSH
         uses: appleboy/ssh-action@v1
         with:
@@ -54,10 +81,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             set -e
-            cd /opt/lorescape
-            git fetch --prune origin master
-            git reset --hard origin/master
-            cd publisher
+            cd /opt/lorescape/publisher
             docker compose up -d --build
 
             echo "=== docker compose ps ==="
