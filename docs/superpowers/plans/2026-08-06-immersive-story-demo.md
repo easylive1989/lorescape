@@ -853,7 +853,9 @@ test('ended 時清除進度', async () => {
 git add story && git commit -m "feat(story): 進度保存與續玩"
 ```
 
----### Task 9: 素材預載與錯誤重試
+---
+
+### Task 9: 素材預載與錯誤重試
 
 **Files:**
 - Create: `story/src/data/preload.ts`
