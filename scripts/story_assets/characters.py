@@ -50,7 +50,8 @@ def run_characters(
 
     `only` restricts the run to a single character id, optionally scoped to
     one part with `<id>:<part>` (part is one of head/torso/leftArm/rightArm).
-    Raises ValueError if `only`'s id matches no character.
+    Raises ValueError if `only`'s id matches no character, or if `only`'s
+    part is not a recognized part key — before any generation call is made.
     """
     script = json.loads((content_dir / "script.json").read_text(encoding="utf-8"))
     art = json.loads((content_dir / "art.json").read_text(encoding="utf-8"))
@@ -64,6 +65,12 @@ def run_characters(
         only_id = only
         if ":" in only:
             only_id, only_part = only.split(":", 1)
+            if only_part not in PART_LABELS:
+                available_parts = ", ".join(PART_LABELS)
+                raise ValueError(
+                    f"--only {only!r} has unknown part {only_part!r}; "
+                    f"available part(s): {available_parts}"
+                )
         matched = [character for character in characters if character["id"] == only_id]
         if not matched:
             available = ", ".join(character["id"] for character in characters)

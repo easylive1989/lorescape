@@ -213,6 +213,21 @@ def test_run_characters_only_with_unknown_id_raises_value_error(tmp_path):
     assert client.calls == []
 
 
+def test_run_characters_only_with_unknown_part_raises_value_error_without_calling_client(
+    tmp_path,
+):
+    content_dir = _one_character_content_dir(tmp_path)
+    client = _FakeClient(_Response([_Part(_magenta_with_center_red_square_png())]))
+
+    with pytest.raises(ValueError, match="head"):
+        run_characters(content_dir, client, only="anne:hed")
+
+    # No reference image should have been generated either — the bad part
+    # must be rejected before any generation call is made.
+    assert client.calls == []
+    assert not (content_dir / "assets" / "characters" / "anne" / "_reference.png").exists()
+
+
 def test_run_characters_force_overwrites_existing_reference_and_parts(tmp_path):
     content_dir = _one_character_content_dir(tmp_path)
     reference_dest = content_dir / "assets" / "characters" / "anne" / "_reference.png"
