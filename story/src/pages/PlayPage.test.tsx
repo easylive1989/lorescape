@@ -107,3 +107,14 @@ test('ended 時清除進度', async () => {
   expect(screen.getByTestId('ending')).toBeInTheDocument()
   expect(localStorage.getItem('story-progress:demo')).toBeNull()
 })
+
+test('劇本載入失敗顯示錯誤與「重新載入」按鈕，點擊後重試成功顯示 intro', async () => {
+  const fetchMock = vi.fn(async () => new Response('', { status: 500 }))
+  vi.stubGlobal('fetch', fetchMock)
+  renderPlay()
+  expect(await screen.findByRole('button', { name: '重新載入' })).toBeInTheDocument()
+
+  fetchMock.mockImplementation(async () => new Response(JSON.stringify(demoScript)))
+  await userEvent.click(screen.getByRole('button', { name: '重新載入' }))
+  expect(await screen.findByText('你是一名學徒。')).toBeInTheDocument()
+})

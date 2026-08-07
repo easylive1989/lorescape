@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { loadScript, assetUrl } from '../data/loadScript'
+import { preloadNode } from '../data/preload'
 import { saveProgress, loadProgress, clearProgress } from '../data/progress'
 import { initState, advance, choose, currentNode, type PlayState } from '../engine/player'
 import type { Script } from '../engine/schema'
@@ -13,10 +14,12 @@ export function PlayPage() {
   const [error, setError] = useState<string | null>(null)
   const [started, setStarted] = useState(false)
   const [state, setState] = useState<PlayState | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
+    setError(null)
     loadScript(slug).then(setScript).catch((e: Error) => setError(e.message))
-  }, [slug])
+  }, [slug, retryCount])
 
   useEffect(() => {
     if (!script || !state) return
@@ -25,12 +28,23 @@ export function PlayPage() {
   }, [script, state, slug])
 
   useEffect(() => {
+    const nodeId = state?.nodeId
+    if (!script || !nodeId) return
+    preloadNode(script, slug, nodeId)
+  }, [script, state?.nodeId, slug])
+
+  useEffect(() => {
     if (!state) return
     if (state.status === 'ended') clearProgress(slug)
     else saveProgress(slug, state)
   }, [state, slug])
 
-  if (error) return <div data-testid="play-page">{error}</div>
+  if (error) return (
+    <div data-testid="play-page">
+      {error}
+      <button onClick={() => setRetryCount((c) => c + 1)}>重新載入</button>
+    </div>
+  )
   if (!script) return <div data-testid="play-page">載入中…</div>
   if (!started) {
     const loaded = loadProgress(slug)
