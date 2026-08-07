@@ -33,7 +33,10 @@ export function PlayPage() {
   if (error) return <div data-testid="play-page">{error}</div>
   if (!script) return <div data-testid="play-page">載入中…</div>
   if (!started) {
-    const saved = loadProgress(slug)
+    const loaded = loadProgress(slug)
+    // 存檔可能指向已被劇本改版移除的節點（過期存檔）；此時視同無存檔，避免
+    // currentNode() 在後續 useEffect 找不到節點而丟出未捕捉例外。
+    const saved = loaded && script.nodes.some((n) => n.id === loaded.nodeId) ? loaded : null
     return (
       <div data-testid="play-page" className="intro">
         <h1>{script.title}</h1>

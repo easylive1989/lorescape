@@ -80,6 +80,23 @@ test('有進度時可選「從頭開始」清存檔並重新開始', async () =>
   )
 })
 
+test('存檔 nodeId 已不存在於劇本時，intro 視為無存檔並顯示「開始體驗」', async () => {
+  localStorage.setItem('story-progress:demo',
+    JSON.stringify({ nodeId: 'removed-node', paragraphIndex: 0, status: 'playing' }))
+  renderPlay()
+  expect(await screen.findByRole('button', { name: '開始體驗' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '繼續上次' })).not.toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: '開始體驗' }))
+  expect(screen.getByText('第一段')).toBeInTheDocument()
+})
+
+test('存檔缺欄位（壞資料）時，intro 視為無存檔並顯示「開始體驗」', async () => {
+  localStorage.setItem('story-progress:demo', JSON.stringify({ nodeId: 'n1' }))
+  renderPlay()
+  expect(await screen.findByRole('button', { name: '開始體驗' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '繼續上次' })).not.toBeInTheDocument()
+})
+
 test('ended 時清除進度', async () => {
   renderPlay()
   await userEvent.click(await screen.findByRole('button', { name: '開始體驗' }))
