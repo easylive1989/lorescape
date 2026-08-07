@@ -4,11 +4,14 @@
   align-items: center;
   justify-content: center;
   gap: 1rem;
-  height: 100%;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100dvh;
   padding: 2rem 1.5rem;
   text-align: center;
-  color: #fff;
-  background: rgba(0, 0, 0, 0.6);
+  color: #f5f5f5;
+  background: rgba(10, 10, 10, 0.72);
 }
 
 .ending-view .survey-form {
@@ -21,7 +24,7 @@
 }
 
 .ending-view .survey-form fieldset {
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(245, 245, 245, 0.3);
   border-radius: 0.5rem;
   padding: 0.75rem;
 }
@@ -37,6 +40,6 @@
 }
 
 .ending-view.thanks a {
-  color: #fff;
+  color: #f5f5f5;
   text-decoration: underline;
 }
