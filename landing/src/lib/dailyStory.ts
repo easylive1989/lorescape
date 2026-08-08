@@ -1,4 +1,5 @@
 import { getSupabaseClient } from "./supabase";
+import { STORY_COLUMNS } from "./storyColumns.mjs";
 
 export type StoryTeaser = {
   placeName: string;
@@ -11,10 +12,7 @@ export type StoryTeaser = {
   imageAttribution: string | null;
 };
 
-const COLUMNS =
-  "publish_date, language, place_name, place_location, era, story, " +
-  "image_url, image_attribution, card_title, card_title_sub, " +
-  "card_paragraphs, card_pull_quote, card_pull_quote_attrib";
+const COLUMNS = STORY_COLUMNS.join(", ");
 
 export function localeToLanguage(locale: "zh" | "en"): "zh-TW" | "en" {
   return locale === "zh" ? "zh-TW" : "en";

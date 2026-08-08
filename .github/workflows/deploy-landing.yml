@@ -8,14 +8,81 @@ name: Deploy Landing
 # new story is published or that day's shared link 404s. `schedule` rebuilds
 # every 3 hours (UTC) as a freshness baseline; trigger `workflow_dispatch`
 # manually right after publishing for an immediate refresh.
+#
+# Because the publish flow already dispatches this workflow, almost every
+# scheduled run has nothing new to ship. The `check` job below compares the
+# live site's deploy marker against a freshly computed one and skips the build
+# when they match, so the schedule only costs a build when it actually
+# publishes something. Manual runs always build.
 on:
   workflow_dispatch:
   schedule:
     - cron: "0 */3 * * *"
 
 jobs:
+  check:
+    name: Check for changes since the live deploy
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.decide.outputs.should_build }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: master
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Compare live deploy marker with current state
+        id: decide
+        working-directory: landing
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        # The marker pairs a hash of every rendered story field with the git
+        # ids of landing/ and firebase.json, so this skips only when both the
+        # content and everything that shapes the deployed site are already
+        # live. Every failure path (marker unreadable, site unreachable, first
+        # run before a marker exists) falls through to building — never
+        # skipping on missing evidence.
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "Manual run — building unconditionally."
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if ! current=$(node scripts/deploy-marker.mjs); then
+            echo "Could not compute the current marker — building."
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          live=$(curl -fsS --max-time 30 \
+            https://lorescape.app/deploy-marker.txt) || live=""
+          if [ -z "$live" ]; then
+            echo "No marker on the live site — building."
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "live marker:"; echo "$live"
+          echo "current marker:"; echo "$current"
+          if [ "$live" = "$current" ]; then
+            echo "No new stories and no landing source changes — skipping."
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Marker differs — building."
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          fi
+
   deploy-landing:
     name: Deploy Landing to Firebase Hosting
+    needs: check
+    if: needs.check.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -45,6 +112,8 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        # `postbuild` writes out/deploy-marker.txt describing what this build
+        # contains; the next scheduled run reads it back off the live site.
         run: npm run build
 
       - name: Deploy to Firebase Hosting (live)

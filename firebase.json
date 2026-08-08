@@ -16,6 +16,12 @@
       ],
       "headers": [
         {
+          "source": "/deploy-marker.txt",
+          "headers": [
+            { "key": "Cache-Control", "value": "no-store" }
+          ]
+        },
+        {
           "source": "/.well-known/apple-app-site-association",
           "headers": [
             { "key": "Content-Type", "value": "application/json" }

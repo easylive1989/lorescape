@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "postbuild": "node scripts/deploy-marker.mjs --write out/deploy-marker.txt",
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run"
