@@ -6,6 +6,57 @@
 
 ---
 
+## ISSUE-003 — Android deploy 因 runner 磁碟耗盡失敗（ENOSPC）
+
+- **發生日**：2026-08-07
+- **影響**：Deploy App workflow 的 Android job；iOS job（macOS runner）正常
+  上架 TestFlight，Play internal 該次沒送出
+
+### 現象
+
+Run [31187139231](https://github.com/easylive1989/lorescape/actions/runs/31187139231)
+的 `Build Android App Bundle` 跑了 9m52s 後，Gradle 三個 task 同時炸開：
+
+```
+Execution failed for task ':app:mergeReleaseNativeLibs'
+   > No space left on device
+Execution failed for task ':app:minifyReleaseWithR8'
+   > Failed to create directory '/home/runner/.gradle/caches/8.12/transforms/...'
+Could not add entry ':app:mergeReleaseNativeLibs' to cache executionHistory.bin
+   > java.io.IOException: No space left on device
+```
+
+Dart / Kotlin 編譯與 asset tree-shaking 全部通過，失敗點在建置後段
+（native libs merge + R8），也就是磁碟用量的高峰。
+
+### 原因
+
+runner 磁碟被塞滿，非程式碼問題。與 2026-08-05 成功的那次（`bafcf830`）
+相比，兩個變數同時往壞的方向動：
+
+1. **ubuntu runner image 換版**（主因）：`20260720.247.2` →
+   `20260804.265.1`。兩次建置流程完全相同（都要現場裝 NDK 27 +
+   SDK Platform 31 + CMake 3.22），工作量沒變、image 換新就爆了。
+2. **checkout 變大**（次因）：`63860365`（沉浸式故事 demo 合併，
+   deploy 前一小時）加了約 120MB 二進位檔（marketing 截圖、story 音檔），
+   repo 工作目錄 120MB → 239MB。Android job 其實只用得到 `frontend/`（11MB）。
+
+同期 `frontend/` 本身僅 16 檔案異動、淨 -461 行，佐證問題不在 App 端。
+log 裡沒有 `df` 輸出，無法回推當時究竟剩多少空間，也無法量化兩個因素的
+比重——這條 pipeline 應是長期貼著磁碟上限在跑，8/5 只是剛好還過得去。
+
+### 當下處理
+
+改 `deploy-app.yml`（三項）：
+
+- build 前後加 `df -h /`，之後不管成功失敗都看得到真實餘裕
+- build 前加 Free disk space 步驟，清掉 dotnet / ghc / ghcup / swift /
+  powershell / CodeQL 與預載 docker image
+- Android、iOS 兩個 job 的 checkout 改 `sparse-checkout: frontend`，
+  少拉 228MB
+
+---
+
 ## ISSUE-002 — Reel 自動發布間歇性 ProcessingFailedError（IG 端處理失敗）
 
 - **發生日**：2026-08-02（前例：2026-07-27）

@@ -16,10 +16,27 @@ jobs:
         working-directory: frontend
 
     steps:
+      # App 建置只用得到 frontend/，但整包 repo 有 239MB（marketing/ 就佔
+      # 172MB）。sparse-checkout 只拉 frontend/ 與根目錄檔案，省磁碟也省時間。
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           ref: master
+          sparse-checkout: frontend
+
+      # ubuntu runner image 越更新剩餘空間越少，2026-08-07 的 build 就是在
+      # mergeReleaseNativeLibs 階段 ENOSPC 掛掉（見 ISSUES.md）。先清掉這個
+      # job 用不到的預裝軟體；df 輸出保留著，方便日後判斷餘裕還剩多少。
+      - name: Free disk space
+        run: |
+          echo "=== 清理前 ==="
+          df -h /
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup \
+                      /usr/share/swift /usr/local/share/powershell \
+                      /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force
+          echo "=== 清理後 ==="
+          df -h /
 
       - name: Set up Java JDK
         uses: actions/setup-java@v4
@@ -61,6 +78,9 @@ jobs:
           echo "Generated VERSION: $VERSION"
           echo "Generated BUILD_NUMBER: $BUILD_NUMBER"
 
+      - name: Disk space before build
+        run: df -h /
+
       - name: Build Android App Bundle
         run: |
           flutter build appbundle --release \
@@ -78,6 +98,11 @@ jobs:
           RELEASEKEYPASSWORD: ${{ secrets.ANDROID_RELEASE_KEY_PASSWORD }}
           RELEASEKEYALIAS: ${{ secrets.ANDROID_RELEASE_KEY_ALIAS }}
           RELEASESTOREFILE: ../release-keystore.jks
+
+      # build 失敗時也要印，才知道是不是又把磁碟塞爆
+      - name: Disk space after build
+        if: ${{ always() }}
+        run: df -h /
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
@@ -108,10 +133,12 @@ jobs:
         working-directory: frontend
 
     steps:
+      # 同 Android job：只拉 frontend/
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           ref: master
+          sparse-checkout: frontend
 
       - name: Set up Xcode
         uses: maxim-lobanov/setup-xcode@v1
