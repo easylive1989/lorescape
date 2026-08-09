@@ -9,10 +9,8 @@ const PART_CLASS: Record<keyof Character['parts'], string> = {
 }
 
 // 依 layout.json 的百分比座標定位緊裁部件圖；width 不設，交由瀏覽器依圖片
-// 長寬比自算。呼叫端尚未接上 layout（PlayPage 要到 Task 4 才串接）時 part
-// 會是 undefined，此時不給定位樣式，避免噴例外炸掉整棵樹。
-function partStyle(part: PartLayout | undefined) {
-  if (!part) return undefined
+// 長寬比自算。
+function partStyle(part: PartLayout) {
   return {
     left: `${part.cx * 100}%`,
     top: `${part.top * 100}%`,
@@ -32,7 +30,7 @@ export function CharacterSprite({
   slug: string
   layout: Layout
 }) {
-  const charLayout = layout?.characters[character.id]
+  const charLayout = layout.characters[character.id]
   const className = [
     'sprite',
     `sprite--${member.position}`,
@@ -47,7 +45,7 @@ export function CharacterSprite({
         <img
           key={key}
           className={`sprite__part ${PART_CLASS[key]}`}
-          style={partStyle(charLayout?.[key])}
+          style={partStyle(charLayout[key])}
           src={assetUrl(slug, character.parts[key])}
           alt=""
         />

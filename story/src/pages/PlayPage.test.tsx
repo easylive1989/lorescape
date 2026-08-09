@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { vi, beforeEach } from 'vitest'
 import { PlayPage } from './PlayPage'
-import { demoScript } from '../test/fixtures'
+import { demoScript, demoLayout } from '../test/fixtures'
 
 vi.mock('../data/analytics', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../data/analytics')>()
@@ -19,8 +19,14 @@ class FakeAudio {
   constructor(src: string) { this.src = src }
 }
 
+// script.json 與 layout.json 共用一顆 fetch mock，依 URL 路由回對應假資料。
+function fetchStub(url: string | URL | Request) {
+  const body = String(url).includes('layout.json') ? demoLayout : demoScript
+  return Promise.resolve(new Response(JSON.stringify(body)))
+}
+
 beforeEach(() => {
-  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(demoScript))))
+  vi.stubGlobal('fetch', vi.fn(fetchStub))
   vi.stubGlobal('Audio', FakeAudio)
   localStorage.clear()
 })
@@ -139,12 +145,12 @@ test('結局後點「留下你的感受」送出問卷，顯示感謝頁與 IG �
 })
 
 test('劇本載入失敗顯示錯誤與「重新載入」按鈕，點擊後重試成功顯示 intro', async () => {
-  const fetchMock = vi.fn(async () => new Response('', { status: 500 }))
+  const fetchMock = vi.fn(async (_url: string | URL | Request) => new Response('', { status: 500 }))
   vi.stubGlobal('fetch', fetchMock)
   renderPlay()
   expect(await screen.findByRole('button', { name: '重新載入' })).toBeInTheDocument()
 
-  fetchMock.mockImplementation(async () => new Response(JSON.stringify(demoScript)))
+  fetchMock.mockImplementation(fetchStub)
   await userEvent.click(screen.getByRole('button', { name: '重新載入' }))
   expect(await screen.findByText('你是一名學徒。')).toBeInTheDocument()
 })
