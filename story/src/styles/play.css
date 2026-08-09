@@ -1,5 +1,9 @@
 .scene {
   position: relative;
+  /* Edge-hugging sprites overshoot the scene box (left/right: -10%); without
+     clipping, that overflow widens the mobile layout viewport and the whole
+     page zooms out. */
+  overflow: hidden;
   width: 100%;
   max-width: 480px;
   margin: 0 auto;

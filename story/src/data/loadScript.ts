@@ -4,7 +4,7 @@ import { validateScript, type Script } from '../engine/schema'
    is regenerated), so bump this whenever deployed content changes shape in a
    way stale caches would break — the query string busts every client cache
    at the next JS deploy. */
-const CONTENT_VERSION = '2'
+const CONTENT_VERSION = '3'
 
 export async function loadScript(slug: string): Promise<Script> {
   const res = await fetch(`/content/${slug}/script.json?v=${CONTENT_VERSION}`)

@@ -1,13 +1,13 @@
 .sprite {
   position: absolute;
   bottom: 0;
-  /* Registered layers letterbox inside this box (contain, bottom-anchored),
-     so the visible figure height is min(height, width * 1.5) — the box is
-     wider than the old cutout-box layout to keep the figure a similar size. */
-  width: 56vw;
-  max-width: 360px;
-  height: 60vh;
-  max-height: 480px;
+  /* Size and offsets are percentages of .scene, never viewport units: .scene
+     is capped at 480px, so vw-based geometry drifts apart from it on wide
+     screens (two fixed-width sprites then pile up in the middle). Registered
+     layers letterbox inside this box (contain, bottom-anchored), so the
+     visible figure height is min(height, width * 1.5). */
+  width: 72%;
+  height: 66%;
   animation: fade-slide-in 0.6s ease-out both;
   /* Purely decorative: being position:absolute, this box paints above the
      non-positioned .text-card/.choice-list regardless of DOM order, so
@@ -16,8 +16,19 @@
   pointer-events: none;
 }
 
+/* Two characters on stage: shrink both so they can share the width. The
+   sprites are consecutive first children of .scene, so `:has(+ .sprite)`
+   matches the first of a pair and `+ .sprite` the second. */
+.sprite:has(+ .sprite),
+.sprite + .sprite {
+  width: 58%;
+  height: 60%;
+}
+
+/* The registered canvas has transparent side margins (the figure fills only
+   its middle), so left/right anchors overshoot the edge to visually hug it. */
 .sprite--left {
-  left: 2vw;
+  left: -10%;
 }
 
 .sprite--center {
@@ -28,7 +39,7 @@
 }
 
 .sprite--right {
-  right: 2vw;
+  right: -10%;
 }
 
 /* Every part PNG is a registered layer: the same 1024x1536 canvas as the
