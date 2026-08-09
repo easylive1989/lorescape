@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { safeContentPath, validateContentPayload, type ContentFile } from './core'
+import { compressPng, safeAssetPath, safeContentPath, validateContentPayload, type ContentFile } from './core'
 
 test('safeContentPath 擋路徑跳脫', () => {
   expect(safeContentPath('/root', '../etc', 'script.json')).toBeNull()
@@ -28,4 +28,16 @@ test('validateContentPayload 對未知檔名 default-deny', () => {
   const result = validateContentPayload('notes.json' as ContentFile, { anything: 1 })
   expect(result.ok).toBe(false)
   if (!result.ok) expect(result.error).toBe('unknown content file')
+})
+
+test('safeAssetPath 只允許 assets 下安全路徑', () => {
+  expect(safeAssetPath('/root', 'demo', 'assets/scenes/a.png')).toBe('/root/demo/assets/scenes/a.png')
+  expect(safeAssetPath('/root', 'demo', 'assets/../../x.png')).toBeNull()
+  expect(safeAssetPath('/root', 'demo', 'scenes/a.png')).toBeNull()
+})
+
+test('compressPng 未安裝 pngquant 時回 skipped', async () => {
+  // 以不存在的路徑模擬：execFile 會因目標檔不存在而失敗（含 ENOENT 情境）
+  const result = await compressPng('/nonexistent.png')
+  expect(result).toBe('skipped')
 })

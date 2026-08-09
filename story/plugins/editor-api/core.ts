@@ -1,3 +1,4 @@
+import { execFile } from 'node:child_process'
 import path from 'node:path'
 import { catalogSchema, validateLayout, validateScript } from '../../src/engine/schema'
 
@@ -8,6 +9,26 @@ export function safeContentPath(root: string, slug: string, file: string): strin
   if (!resolved.startsWith(path.resolve(root) + path.sep)) return null
   if (slug.includes('..') || file.includes('..')) return null
   return resolved
+}
+
+export function safeAssetPath(root: string, slug: string, rel: string): string | null {
+  // rel 限定在 assets/ 之下、只許 [\w./-]、不許 .. 跳脫路徑
+  if (!rel.startsWith('assets/')) return null
+  if (!/^[\w./-]+$/.test(rel)) return null
+  if (rel.includes('..') || slug.includes('..')) return null
+  const resolved = path.resolve(root, slug, rel)
+  if (!resolved.startsWith(path.resolve(root) + path.sep)) return null
+  return resolved
+}
+
+export async function compressPng(absPath: string): Promise<'compressed' | 'skipped'> {
+  // 壓縮失敗（含未安裝 pngquant 的 ENOENT）一律視為 skipped，不阻擋上傳
+  return new Promise((resolve) => {
+    execFile(
+      'pngquant', ['--quality=70-92', '--speed', '1', '--strip', '--ext', '.png', '--force', absPath],
+      (error) => resolve(error ? 'skipped' : 'compressed'),
+    )
+  })
 }
 
 export function validateContentPayload(

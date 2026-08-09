@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import chokidar from 'chokidar'
 import type { Plugin } from 'vite'
-import { safeContentPath, validateContentPayload, type ContentFile } from './core'
+import { compressPng, safeAssetPath, safeContentPath, validateContentPayload, type ContentFile } from './core'
 import { classifyPath, SelfWriteGuard } from './watcher'
 
 export function editorApiPlugin(): Plugin {
@@ -40,6 +40,77 @@ export function editorApiPlugin(): Plugin {
         await watcher.close()
         return closeServer()
       }
+
+      server.middlewares.use('/__editor/assets', (req, res, next) => {
+        const url = new URL(req.url ?? '/', 'http://local')
+        // 掛在 /__editor/assets 之下，req.url 已去除該前綴：
+        // GET  /<slug>              → 列表
+        // POST /<slug>/<rel path>   → 上傳（rel 形如 assets/scenes/a.png）
+        const match = url.pathname.match(/^\/([\w-]+)(\/.*)?$/)
+        if (!match) return next()
+        const [, slug, rest] = match
+
+        if (req.method === 'GET') {
+          const dir = path.join(root, slug, 'assets')
+          if (!fs.existsSync(dir)) {
+            res.setHeader('content-type', 'application/json')
+            return res.end(JSON.stringify({ files: [] }))
+          }
+          const entries = fs.readdirSync(dir, { recursive: true }) as string[]
+          const files = entries
+            .filter((entry) => entry.endsWith('.png'))
+            .map((entry) => ({
+              path: entry.split(path.sep).join('/'),
+              mtime: fs.statSync(path.join(dir, entry)).mtimeMs,
+            }))
+          res.setHeader('content-type', 'application/json')
+          return res.end(JSON.stringify({ files }))
+        }
+
+        if (req.method === 'POST' && rest) {
+          const rel = rest.slice(1)
+          const target = safeAssetPath(root, slug, rel)
+          if (!target) { res.statusCode = 400; return res.end('{"error":"bad path"}') }
+          // body 大小上限：與 PUT content 同一慣例，擋超大 payload
+          const MAX_BODY_BYTES = 20 * 1024 * 1024
+          const chunks: Buffer[] = []
+          let bytes = 0
+          let rejected = false
+          req.on('data', (chunk: Buffer) => {
+            if (rejected) return
+            bytes += chunk.length
+            if (bytes > MAX_BODY_BYTES) {
+              rejected = true
+              res.statusCode = 413
+              res.end('{"error":"payload too large"}')
+              req.destroy()
+              return
+            }
+            chunks.push(chunk)
+          })
+          req.on('end', () => {
+            if (rejected) return
+            void (async () => {
+              try {
+                const buffer = Buffer.concat(chunks)
+                guard.markWrite(target)
+                fs.mkdirSync(path.dirname(target), { recursive: true })
+                fs.writeFileSync(target, buffer)
+                const result = await compressPng(target)
+                res.statusCode = 201
+                res.setHeader('content-type', 'application/json')
+                res.end(JSON.stringify({ path: rel, compressed: result === 'compressed' }))
+              } catch (error) {
+                res.statusCode = 400
+                res.end(JSON.stringify({ error: String(error) }))
+              }
+            })()
+          })
+          return
+        }
+
+        next()
+      })
 
       server.middlewares.use('/__editor', (req, res, next) => {
         const url = new URL(req.url ?? '/', 'http://local')
