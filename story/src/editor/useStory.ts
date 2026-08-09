@@ -41,24 +41,28 @@ export function useStory(slug: string, deps: UseStoryDeps = {}) {
 
   // SSE：外部更新命中目前故事的檔案時，捨棄尚未送出的本地變更並改用伺服端內容
   useEffect(() => {
+    const refreshFromServer = <T,>(
+      file: string,
+      path: string,
+      timer: { current: ReturnType<typeof setTimeout> | null } | null,
+      apply: (value: T) => void,
+    ) => {
+      if (timer?.current) { clearTimeout(timer.current); timer.current = null }
+      getJson<T>(path).then((value) => {
+        apply(value)
+        setExternalUpdate(file)
+      }, (err) => setError(err instanceof Error ? err.message : String(err)))
+    }
+
     const unsubscribe = subscribe((event: ContentEvent) => {
       if (event.slug !== slug) return
-      if (event.file === 'script.json') {
-        if (scriptTimer.current) { clearTimeout(scriptTimer.current); scriptTimer.current = null }
-        getJson<Script>(scriptPath).then((s) => {
-          setScript(s)
-          setExternalUpdate('script.json')
-        }, (err) => setError(err instanceof Error ? err.message : String(err)))
-      } else if (event.file === 'layout.json') {
-        if (layoutTimer.current) { clearTimeout(layoutTimer.current); layoutTimer.current = null }
-        getJson<Layout>(layoutPath).then((l) => {
-          setLayout(l)
-          setExternalUpdate('layout.json')
-        }, (err) => setError(err instanceof Error ? err.message : String(err)))
-      }
+      if (event.file === 'script.json') refreshFromServer<Script>('script.json', scriptPath, scriptTimer, setScript)
+      else if (event.file === 'layout.json') refreshFromServer<Layout>('layout.json', layoutPath, layoutTimer, setLayout)
+      // art.json 目前沒有本地編輯／debounce（無 updateArt），單純覆蓋 state 並標記 externalUpdate
+      else if (event.file === 'art.json') refreshFromServer<Record<string, unknown>>('art.json', artPath, null, setArt)
     })
     return unsubscribe
-  }, [slug, subscribe, scriptPath, layoutPath])
+  }, [slug, subscribe, scriptPath, layoutPath, artPath])
 
   // unmount 時清掉尚未觸發的 debounce timer，避免對已卸載的故事發 PUT
   useEffect(() => () => {
