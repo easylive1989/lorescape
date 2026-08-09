@@ -8,3 +8,8 @@ test('loadCatalog 抓取並回傳 stories', async () => {
   const entries = await loadCatalog()
   expect(entries[0].slug).toBe('s')
 })
+
+test('loadCatalog HTTP 失敗丟明確錯誤', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status: 404 })))
+  await expect(loadCatalog()).rejects.toThrow(/目錄載入失敗/)
+})
