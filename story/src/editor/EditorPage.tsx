@@ -3,17 +3,26 @@ import type { CatalogEntry } from '../engine/schema'
 import '../styles/editor.css'
 import { getJson } from './api'
 import { NodeList } from './panels/NodeList'
+import { StagePreview } from './stage/StagePreview'
 import { useStory } from './useStory'
 
 function EditorWorkspace({ slug }: { slug: string }) {
-  const { script, error, updateScript } = useStory(slug)
+  const { script, layout, error, updateScript } = useStory(slug)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+  const [paragraphIndex, setParagraphIndex] = useState(0)
 
   const handleReorder = (ids: string[]) => {
     if (!script) return
     const byId = new Map(script.nodes.map((node) => [node.id, node]))
     updateScript({ ...script, nodes: ids.map((id) => byId.get(id)!) })
   }
+
+  const handleSelectNode = (id: string) => {
+    setSelectedNodeId(id)
+    setParagraphIndex(0)
+  }
+
+  const previewNodeId = selectedNodeId ?? script?.startNode ?? null
 
   return (
     <div className="editor__workspace">
@@ -24,12 +33,23 @@ function EditorWorkspace({ slug }: { slug: string }) {
             <NodeList
               script={script}
               selectedId={selectedNodeId}
-              onSelect={setSelectedNodeId}
+              onSelect={handleSelectNode}
               onReorder={handleReorder}
             />
           </aside>
           <main className="editor__panel editor__panel--stage">
-            <h2>{script.title}</h2>
+            {previewNodeId && layout ? (
+              <StagePreview
+                script={script}
+                layout={layout}
+                slug={slug}
+                nodeId={previewNodeId}
+                paragraphIndex={paragraphIndex}
+                onParagraphChange={setParagraphIndex}
+              />
+            ) : (
+              <h2>{script.title}</h2>
+            )}
           </main>
           <aside className="editor__panel editor__panel--inspector" />
         </>
