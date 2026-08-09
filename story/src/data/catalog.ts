@@ -1,8 +1,8 @@
-export const catalog: { slug: string; title: string; place: string; blurb: string }[] = [
-  {
-    slug: 'tower-of-london-anne',
-    title: '千日之後',
-    place: '倫敦塔',
-    blurb: '你是安妮身邊最卑微的侍女，她只剩十七天——你，要留下嗎？',
-  },
-]
+import { catalogSchema, type CatalogEntry } from '../engine/schema'
+import { CONTENT_VERSION } from './loadScript'
+
+export async function loadCatalog(): Promise<CatalogEntry[]> {
+  const res = await fetch(`/content/index.json?v=${CONTENT_VERSION}`)
+  if (!res.ok) throw new Error(`目錄載入失敗：HTTP ${res.status}`)
+  return catalogSchema.parse(await res.json()).stories
+}

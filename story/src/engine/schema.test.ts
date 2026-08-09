@@ -1,4 +1,4 @@
-import { validateScript, validateLayout } from './schema'
+import { validateScript, validateLayout, catalogSchema } from './schema'
 import { demoScript } from '../test/fixtures'
 
 test('合法劇本通過並回傳型別化物件', () => {
@@ -65,4 +65,14 @@ test('validateLayout 搭配 script 檢查缺角色', () => {
     nodes: [{ id: 'n1', background: 'bg.png', paragraphs: ['x'], ending: { title: 'end' } }],
   })
   expect(() => validateLayout(goodLayout, script)).toThrow(/kingston/)
+})
+
+test('catalogSchema 接受合法目錄', () => {
+  const valid = { stories: [{ slug: 's', title: 't', place: 'p', blurb: 'b' }] }
+  expect(catalogSchema.parse(valid).stories[0].slug).toBe('s')
+})
+
+test('catalogSchema 拒絕缺欄位', () => {
+  const invalid = { stories: [{ slug: 's', title: 't', place: 'p' }] }
+  expect(() => catalogSchema.parse(invalid)).toThrow()
 })

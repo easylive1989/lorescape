@@ -1,5 +1,12 @@
 import { z } from 'zod'
 
+export const catalogEntrySchema = z.object({
+  slug: z.string().min(1), title: z.string().min(1),
+  place: z.string().min(1), blurb: z.string().min(1),
+})
+export const catalogSchema = z.object({ stories: z.array(catalogEntrySchema) })
+export type CatalogEntry = z.infer<typeof catalogEntrySchema>
+
 export const characterSchema = z.object({
   id: z.string().min(1), name: z.string().min(1),
   parts: z.object({ head: z.string(), torso: z.string(), leftArm: z.string(), rightArm: z.string() }),
