@@ -1,0 +1,25 @@
+// @vitest-environment node
+import { safeContentPath, validateContentPayload } from './core'
+
+test('safeContentPath 擋路徑跳脫', () => {
+  expect(safeContentPath('/root', '../etc', 'script.json')).toBeNull()
+  expect(safeContentPath('/root', 'demo', '../../secret')).toBeNull()
+  expect(safeContentPath('/root', 'demo', 'script.json'))
+    .toBe('/root/demo/script.json')
+})
+
+test('validateContentPayload 擋壞 script', () => {
+  const bad = validateContentPayload('script.json', { slug: 's' })
+  expect(bad.ok).toBe(false)
+})
+
+test('validateContentPayload 擋 layout 缺角色（帶 context script）', () => {
+  const script = {
+    slug: 's', title: 't', place: 'p', intro: 'i', startNode: 'n1',
+    characters: [{ id: 'anne', name: 'a', parts: { head: 'h', torso: 't', leftArm: 'l', rightArm: 'r' } }],
+    nodes: [{ id: 'n1', background: 'b', paragraphs: ['x'], ending: { title: 'e' } }],
+  }
+  const result = validateContentPayload('layout.json',
+    { canvas: { width: 1024, height: 1536 }, characters: {} }, { script })
+  expect(result.ok).toBe(false)
+})
