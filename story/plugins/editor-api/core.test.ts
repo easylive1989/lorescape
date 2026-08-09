@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { safeContentPath, validateContentPayload } from './core'
+import { safeContentPath, validateContentPayload, type ContentFile } from './core'
 
 test('safeContentPath 擋路徑跳脫', () => {
   expect(safeContentPath('/root', '../etc', 'script.json')).toBeNull()
@@ -22,4 +22,10 @@ test('validateContentPayload 擋 layout 缺角色（帶 context script）', () =
   const result = validateContentPayload('layout.json',
     { canvas: { width: 1024, height: 1536 }, characters: {} }, { script })
   expect(result.ok).toBe(false)
+})
+
+test('validateContentPayload 對未知檔名 default-deny', () => {
+  const result = validateContentPayload('notes.json' as ContentFile, { anything: 1 })
+  expect(result.ok).toBe(false)
+  if (!result.ok) expect(result.error).toBe('unknown content file')
 })

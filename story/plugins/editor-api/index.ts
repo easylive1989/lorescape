@@ -22,9 +22,25 @@ export function editorApiPlugin(): Plugin {
           return res.end(fs.readFileSync(target, 'utf-8'))
         }
         if (req.method === 'PUT') {
+          // body 大小上限：擋失控或惡意的超大 payload 把 body 字串撐爆記憶體；超過就 413 並中止累積
+          const MAX_BODY_BYTES = 20 * 1024 * 1024
           let body = ''
-          req.on('data', (chunk) => { body += chunk })
+          let bytes = 0
+          let rejected = false
+          req.on('data', (chunk) => {
+            if (rejected) return
+            bytes += chunk.length
+            if (bytes > MAX_BODY_BYTES) {
+              rejected = true
+              res.statusCode = 413
+              res.end('{"error":"payload too large"}')
+              req.destroy()
+              return
+            }
+            body += chunk
+          })
           req.on('end', () => {
+            if (rejected) return
             try {
               const data = JSON.parse(body)
               const scriptPath = safeContentPath(root, slug, 'script.json')

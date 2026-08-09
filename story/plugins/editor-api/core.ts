@@ -20,6 +20,8 @@ export function validateContentPayload(
       validateLayout(data, context?.script ? validateScript(context.script) : undefined)
     else if (file === 'index.json') catalogSchema.parse(data)
     else if (file === 'art.json') JSON.parse(JSON.stringify(data))
+    // default-deny：不在已知四種內容檔名之列一律擋下，避免未知檔名跳過驗證直接落盤
+    else return { ok: false, error: 'unknown content file' }
     return { ok: true }
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) }
