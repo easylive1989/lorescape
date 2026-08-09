@@ -1,8 +1,11 @@
 .sprite {
   position: absolute;
   bottom: 0;
-  width: 40vw;
-  max-width: 320px;
+  /* Registered layers letterbox inside this box (contain, bottom-anchored),
+     so the visible figure height is min(height, width * 1.5) — the box is
+     wider than the old cutout-box layout to keep the figure a similar size. */
+  width: 56vw;
+  max-width: 360px;
   height: 60vh;
   max-height: 480px;
   animation: fade-slide-in 0.6s ease-out both;
@@ -28,51 +31,32 @@
   right: 2vw;
 }
 
+/* Every part PNG is a registered layer: the same 1024x1536 canvas as the
+   character's reference sheet, with the part already scaled and positioned
+   on it (transparent elsewhere). Stacking all layers at 100%/100% with the
+   same object-fit therefore reassembles the figure with correct proportions
+   — no per-part boxes needed. */
 .sprite__part {
   position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
+  object-position: center bottom;
   pointer-events: none;
 }
 
-/* Each part is a tightly-cropped cutout (bbox of its own opaque pixels), not
-   a full-body-sized canvas, so it can't just stack at 100%/100% — every part
-   would independently scale up to fill the whole sprite box. Instead each
-   part gets its own anchored sub-region approximating a standing figure
-   (head above torso, arms at the sides), and `object-fit: contain` fits the
-   part's own aspect ratio within that sub-region. */
-.sprite__head {
-  left: 50%;
-  top: 0;
-  width: 46%;
-  height: 34%;
-  translate: -50% 0;
-}
-
 .sprite__torso {
-  left: 50%;
-  top: 22%;
-  width: 66%;
-  height: 78%;
-  translate: -50% 0;
   animation: breathe 3.2s ease-in-out infinite;
   transform-origin: center bottom;
 }
 
 .sprite__arm-left,
 .sprite__arm-right {
-  top: 24%;
-  width: 24%;
-  height: 72%;
+  /* Pivot near the shoulders (~22% down the registered canvas) so the sway
+     reads as arms swinging, not the whole layer sliding. */
   animation: sway 3.2s ease-in-out infinite;
-  transform-origin: top center;
-}
-
-.sprite__arm-left {
-  left: 14%;
-}
-
-.sprite__arm-right {
-  right: 14%;
+  transform-origin: 50% 22%;
 }
 
 .sprite__arm-right {
@@ -81,7 +65,8 @@
 
 .is-talking .sprite__head {
   animation: nod 0.9s ease-in-out infinite;
-  transform-origin: center bottom;
+  /* Neck sits ~16% down the registered canvas. */
+  transform-origin: 50% 16%;
 }
 
 @keyframes fade-slide-in {
