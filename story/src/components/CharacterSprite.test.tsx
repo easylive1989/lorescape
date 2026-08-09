@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { CharacterSprite } from './CharacterSprite'
+import { assetUrl } from '../data/loadScript'
 import { demoScript } from '../test/fixtures'
 
 const master = demoScript.characters[0]
@@ -9,7 +10,7 @@ test('渲染四個部件圖', () => {
   const sprite = screen.getByTestId('sprite-master')
   expect(sprite.querySelectorAll('img')).toHaveLength(4)
   expect(sprite.querySelector('.sprite__head')).toHaveAttribute(
-    'src', '/content/demo/assets/characters/master/head.png')
+    'src', assetUrl('demo', 'characters/master/head.png'))
 })
 
 test('talking 時掛 is-talking class；否則不掛', () => {

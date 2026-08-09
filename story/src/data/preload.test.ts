@@ -1,4 +1,5 @@
 import { beforeEach, expect, test, vi } from 'vitest'
+import { assetUrl } from './loadScript'
 import { preloadNode, __resetPreloadedForTest } from './preload'
 import type { Script } from '../engine/schema'
 
@@ -33,9 +34,9 @@ beforeEach(() => {
 test('對選擇節點呼叫會載入該節點與所有 choice 目標的背景', () => {
   preloadNode(script, 'demo', 'n1')
   const srcs = instances.map((i) => i.src)
-  expect(srcs).toContain('/content/demo/assets/scenes/n1.png')
-  expect(srcs).toContain('/content/demo/assets/scenes/end-a.png')
-  expect(srcs).toContain('/content/demo/assets/scenes/end-b.png')
+  expect(srcs).toContain(assetUrl('demo', 'scenes/n1.png'))
+  expect(srcs).toContain(assetUrl('demo', 'scenes/end-a.png'))
+  expect(srcs).toContain(assetUrl('demo', 'scenes/end-b.png'))
   expect(srcs.length).toBe(3)
 })
 
