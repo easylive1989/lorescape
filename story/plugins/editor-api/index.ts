@@ -1,7 +1,9 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import chokidar from 'chokidar'
 import type { Plugin } from 'vite'
 import { safeContentPath, validateContentPayload, type ContentFile } from './core'
+import { classifyPath, SelfWriteGuard } from './watcher'
 
 export function editorApiPlugin(): Plugin {
   return {
@@ -9,6 +11,36 @@ export function editorApiPlugin(): Plugin {
     apply: 'serve',
     configureServer(server) {
       const root = path.resolve(server.config.root, 'public/content')
+      const guard = new SelfWriteGuard()
+      const clients = new Set<import('node:http').ServerResponse>()
+
+      server.middlewares.use('/__editor/events', (req, res) => {
+        res.writeHead(200, {
+          'content-type': 'text/event-stream',
+          'cache-control': 'no-cache', connection: 'keep-alive',
+        })
+        res.write('\n')
+        clients.add(res)
+        req.on('close', () => clients.delete(res))
+      })
+
+      const watcher = chokidar.watch(root, { ignoreInitial: true })
+      for (const type of ['change', 'add', 'unlink'] as const)
+        watcher.on(type, (absPath: string) => {
+          if (guard.isSelf(absPath)) return
+          const event = classifyPath(root, absPath)
+          if (!event) return
+          const payload = `data: ${JSON.stringify({ ...event, type })}\n\n`
+          for (const client of clients) client.write(payload)
+        })
+      // httpServer 在 middleware mode（含 vitest 內部的測試 server）為 null，不會 emit 'close'；
+      // 改包 server.close() 本身以確保 watcher 一定會被關掉，避免 process 卡住不退出
+      const closeServer = server.close.bind(server)
+      server.close = async () => {
+        await watcher.close()
+        return closeServer()
+      }
+
       server.middlewares.use('/__editor', (req, res, next) => {
         const url = new URL(req.url ?? '/', 'http://local')
         const match = url.pathname.match(/^\/content\/(?:([\w-]+)\/)?([\w.-]+\.json)$/)
@@ -52,6 +84,7 @@ export function editorApiPlugin(): Plugin {
                 res.statusCode = 400
                 return res.end(JSON.stringify({ error: verdict.error }))
               }
+              guard.markWrite(target)
               fs.writeFileSync(target, JSON.stringify(data, null, 2) + '\n')
               res.statusCode = 204
               res.end()
