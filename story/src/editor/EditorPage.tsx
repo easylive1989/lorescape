@@ -2,14 +2,40 @@ import { useEffect, useState } from 'react'
 import type { CatalogEntry } from '../engine/schema'
 import '../styles/editor.css'
 import { getJson } from './api'
+import { NodeList } from './panels/NodeList'
 import { useStory } from './useStory'
 
 function EditorWorkspace({ slug }: { slug: string }) {
-  const { script, error } = useStory(slug)
+  const { script, error, updateScript } = useStory(slug)
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+
+  const handleReorder = (ids: string[]) => {
+    if (!script) return
+    const byId = new Map(script.nodes.map((node) => [node.id, node]))
+    updateScript({ ...script, nodes: ids.map((id) => byId.get(id)!) })
+  }
+
   return (
     <div className="editor__workspace">
       {error && <p className="editor__error">錯誤：{error}</p>}
-      {script ? <h2>{script.title}</h2> : <p>載入中…</p>}
+      {script ? (
+        <>
+          <aside className="editor__panel editor__panel--nodes">
+            <NodeList
+              script={script}
+              selectedId={selectedNodeId}
+              onSelect={setSelectedNodeId}
+              onReorder={handleReorder}
+            />
+          </aside>
+          <main className="editor__panel editor__panel--stage">
+            <h2>{script.title}</h2>
+          </main>
+          <aside className="editor__panel editor__panel--inspector" />
+        </>
+      ) : (
+        <p>載入中…</p>
+      )}
     </div>
   )
 }
