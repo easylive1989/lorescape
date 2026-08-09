@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import type { CatalogEntry } from '../engine/schema'
+import type { CatalogEntry, ScriptNode } from '../engine/schema'
 import '../styles/editor.css'
 import { getJson } from './api'
 import { NodeList } from './panels/NodeList'
+import { NodePanel } from './panels/NodePanel'
 import { StagePreview } from './stage/StagePreview'
 import { useStory } from './useStory'
 
@@ -22,7 +23,13 @@ function EditorWorkspace({ slug }: { slug: string }) {
     setParagraphIndex(0)
   }
 
+  const handleNodeChange = (next: ScriptNode) => {
+    if (!script) return
+    updateScript({ ...script, nodes: script.nodes.map((n) => (n.id === next.id ? next : n)) })
+  }
+
   const previewNodeId = selectedNodeId ?? script?.startNode ?? null
+  const selectedNode = script?.nodes.find((n) => n.id === selectedNodeId) ?? null
 
   return (
     <div className="editor__workspace">
@@ -51,7 +58,13 @@ function EditorWorkspace({ slug }: { slug: string }) {
               <h2>{script.title}</h2>
             )}
           </main>
-          <aside className="editor__panel editor__panel--inspector" />
+          <aside className="editor__panel editor__panel--inspector">
+            {selectedNode ? (
+              <NodePanel script={script} node={selectedNode} onChange={handleNodeChange} />
+            ) : (
+              <p className="editor__hint">選擇節點以編輯</p>
+            )}
+          </aside>
         </>
       ) : (
         <p>載入中…</p>
