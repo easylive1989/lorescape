@@ -41,7 +41,9 @@ export default function EditorPage() {
         </select>
       </header>
       {error && <p className="editor__error">錯誤：{error}</p>}
-      {slug && <EditorWorkspace slug={slug} />}
+      {/* key={slug}：切換故事時強制整個工作區重掛，避免舊故事尚未送出的
+          debounce PUT 沿用到新故事的路徑上 */}
+      {slug && <EditorWorkspace key={slug} slug={slug} />}
     </div>
   )
 }
