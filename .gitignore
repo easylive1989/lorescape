@@ -78,3 +78,4 @@ dashboard/out/
 
 # Graphify 產出的知識圖譜（本地分析工具，不進版控）
 graphify-out/
+dashboard/out/

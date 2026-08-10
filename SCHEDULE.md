@@ -1,9 +1,9 @@
 # Lorescape Scheduler 行程表
 
 每天、每週（週一）、每月（1 號）的例行工作。使用者開工時由
-`/lorescape-scheduler` skill 讀取本表、查證完成度後依序執行；dashboard 的
-「Scheduler 行程表」區塊也解析本表。格式勿改：三個 `## ` 區段、各一張
-「時間｜工作｜指令 / skill」三欄表。
+`/lorescape-scheduler` skill 讀取本表、查證完成度後依序執行。格式勿改：
+三個 `## ` 區段、各一張「時間｜工作｜指令 / skill」三欄表。
+（2026-08-10 起 dashboard 只剩產品數據單頁，不再解析本表。）
 
 ## 每日
 

@@ -1,12 +1,13 @@
 ---
 name: lorescape-metrics
-description: Use when the user wants to update Lorescape's accumulating daily metrics — Google Search Console search traffic, GA4 landing + app traffic, Instagram account reach/followers, per-post IG/Reels insights, Reels 24h/48h/7d insight snapshots from IG App screenshots, RevenueCat subscription/revenue snapshot, App Store / Play downloads & ratings, or App Store product page impressions/views. Triggers on 「產品數據報告」「這週/這月數據」「抓 GSC / 搜尋流量」「GA4 / landing / App 流量」「IG 數據 / 觸及」「每則貼文 / 貼文成效」「reel 洞察 / 截圖數據」「訂閱 / 營收 / MRR / RevenueCat」「App 下載 / 評分」「商店頁瀏覽 / 曝光 / product page views」. Sources via API (GSC / GA4 / IG / RevenueCat / App Store Connect / Play reports bucket)；Reels 快照另由使用者提供 IG App 洞察截圖. Accumulates into in-repo CSVs (data/metrics/*.csv, gitignored), one file per source. Local, read-only, does not touch the server.
+description: Use when the user wants to update Lorescape's accumulating daily metrics — Google Search Console search traffic, GA4 landing + app traffic, Instagram account reach/followers, per-post IG/Reels insights, Reels 24h/48h/7d insight snapshots from IG App screenshots, RevenueCat subscription/revenue snapshot, App Store / Play downloads & ratings, or App Store product page impressions/views. Triggers on 「產品數據報告」「這週/這月數據」「抓 GSC / 搜尋流量」「GA4 / landing / App 流量」「IG 數據 / 觸及」「每則貼文 / 貼文成效」「reel 洞察 / 截圖數據」「訂閱 / 營收 / MRR / RevenueCat」「App 下載 / 評分」「商店頁瀏覽 / 曝光 / product page views」. Sources via API (GSC / GA4 / IG / RevenueCat / App Store Connect / Play reports bucket)；Reels 快照另由使用者提供 IG App 洞察截圖. Accumulates into in-repo CSVs (data/metrics/*.csv, tracked in git since 2026-08-10), one file per source. Local, read-only, does not touch the server.
 ---
 
 # Lorescape 數據抓取報告
 
 把 Lorescape 各來源的產品數據**累積**到 repo 內的 **`data/metrics/*.csv`**
-（gitignored——含營收而 repo 是 public），每來源一檔、逐日一列、
+（2026-08-10 起納入版控——repo 為 private，原「含營收故不進版控」的
+理由不成立），每來源一檔、逐日一列、
 跨次累積。CSV 是唯一資料來源，補抓缺口時直接讀回 CSV 判斷。
 （2026-07-11 前累積在 Google Sheet，歷史已匯出後停用。）
 全部來源都走 API（GSC / GA4 / IG / IG 逐則貼文 / RevenueCat / App Store
@@ -77,8 +78,8 @@ image / carousel 貼文不做快照，維持 `ig_posts` 的 API 逐日追蹤即�
 2026-07-11 前用瀏覽器手抓的 `stores.csv` 保留當歷史檔，不再更新。
 
 不要手動編輯 API 來源的 CSV（下次同步會整檔覆寫）；`ig_reels_insights.csv`
-是唯一例外（Claude 依本 skill 讀寫）。分析請複製出去或用 dashboard
-（`dashboard/` 工具的產品數據 tab 直接讀這些 CSV）。
+是唯一例外（Claude 依本 skill 讀寫）。分析請複製出去，或跑
+`python3 dashboard/build_metric.py` 產生單檔 `dashboard/out/metric.html`。
 
 ## 前置條件
 
@@ -166,7 +167,7 @@ image / carousel 貼文不做快照，維持 `ig_posts` 的 API 逐日追蹤即�
 ## 注意
 
 - 全程本機、唯讀，不寫 Supabase、不碰 server 排程；只寫 repo 內的
-  `data/metrics/*.csv`（gitignored，不會被 commit）。
+  `data/metrics/*.csv`（已納入版控，記得一併 commit）。
 - 某來源缺憑證或失敗時，該來源標 `skipped: <原因>`，其他來源照常累積，
   不需整批重跑；之後補設定再跑會自動補上缺口。
 - IG 帳號歷史 followers/media 無法回溯，只在最新一天填快照；逐日 reach /
