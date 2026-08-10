@@ -109,6 +109,8 @@
   }
   h2 { font-size: 15px; margin: 0 0 3px; letter-spacing: -0.01em; }
   .sub { font-size: 12.5px; color: var(--ink-muted); margin: 0 0 14px; }
+  .fh { font-size: 12.5px; color: var(--ink-2); font-weight: 600;
+        margin: 16px 0 6px; }
   .legend { display: flex; gap: 15px; flex-wrap: wrap; margin: 0 0 10px; font-size: 12.5px; color: var(--ink-2); }
   .legend span { display: inline-flex; align-items: center; gap: 6px; }
   .sw { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
@@ -201,8 +203,16 @@
 
   <section>
     <h2>週漏斗</h2>
-    <p class="sub">上週七天各階段人數與階段轉換率。</p>
-    <div class="chart" id="c-funnel"></div>
+    <p class="sub">上週七天各階段與階段轉換率。<b>刻意拆成兩段</b>——
+      「iOS 下載」只計 iOS（Play 至今未匯出安裝數），而「首次開啟 App」含
+      iOS + Android，兩者口徑不同；中間也沒有共通的 user id 可串。硬接會算出
+      失真的轉換率，所以不接。</p>
+    <h3 class="fh">獲客（IG → 落地頁 → 商店）</h3>
+    <div class="chart" id="c-funnel-acq"></div>
+    <h3 class="fh">App 內（開啟 → 導覽）</h3>
+    <div class="chart" id="c-funnel-app"></div>
+    <div class="note">單位不一致的階段已標在括號裡：「次」是事件數，「人」是
+      去重人數。轉換率只在相鄰同單位階段之間才嚴格成立。</div>
   </section>
 
   <section>
@@ -499,39 +509,38 @@ function skipChart() {
 }
 
 /* ------------------------------------------------------------------- 漏斗 */
-function funnelChart() {
-  const host = document.getElementById('c-funnel');
-  const rows = DATA.funnel;
-  host.innerHTML = '';
+function funnelChart(hostId, rows) {
+  const host = document.getElementById(hostId);
   const W = 680, rowH = 42, H = rows.length * rowH + 16;
   const m = { l: 116, r: 96 };
   const iw = W - m.l - m.r;
   const max = Math.max(...rows.map(r => r.value)) || 1;
-  const steps = ['#86b6ef', '#5598e7', '#2a78d6', '#184f95'];
+  const steps = ['#86b6ef', '#5598e7', '#2a78d6', '#1c5cab', '#184f95'];
   const svg = el('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}` });
   rows.forEach((r, i) => {
     const y = i * rowH + 8;
     const w = Math.max(3, iw * r.value / max);
-    svg.appendChild(el('text', { x: m.l - 10, y: y + 20, 'text-anchor': 'end', class: 'lbl' }, r.stage));
+    svg.appendChild(el('text', { x: m.l - 10, y: y + 20, 'text-anchor': 'end', class: 'lbl' },
+      r.stage));
     const bar = el('rect', {
       x: m.l, y, width: w, height: 26, rx: 4, fill: steps[Math.min(i, steps.length - 1)],
     });
     const prev = i ? rows[i - 1].value : null;
     const conv = prev ? (r.value / prev * 100) : null;
-    hoverable(bar, `<b>${r.stage}</b><br>${fmtInt(r.value)} 人`
-      + (conv != null ? `<br>上一階段轉換 <b>${conv.toFixed(2)}%</b>` : ''));
+    hoverable(bar, `<b>${r.stage}</b><br>${fmtInt(r.value)} ${r.unit || ''}`
+      + (conv != null ? `<br>上一階段轉換 <b>${conv.toFixed(2)}%</b>` : '')
+      + (r.extra ? `<br>${r.extra}` : ''));
     svg.appendChild(bar);
-    // 階段人數落差達三個量級，長條會窄到塞不下字 —— 數值與轉換率一律排在長條右側
-    const label = el('text', { x: m.l + w + 9, y: y + 19, class: 'lbl-strong' },
-      fmtInt(r.value));
-    svg.appendChild(label);
+    // 階段落差可達三個量級，長條會窄到塞不下字 —— 一律排在長條右側
+    const valueText = `${fmtInt(r.value)}${r.unit ? ' ' + r.unit : ''}`;
+    svg.appendChild(el('text', { x: m.l + w + 9, y: y + 19, class: 'lbl-strong' }, valueText));
     if (conv != null) {
       svg.appendChild(el('text', {
-        x: m.l + w + 9 + String(fmtInt(r.value)).length * 7.5 + 8,
-        y: y + 19, class: 'lbl',
+        x: m.l + w + 9 + valueText.length * 7.5 + 8, y: y + 19, class: 'lbl',
       }, `↓ ${conv.toFixed(2)}%`));
     }
   });
+  host.innerHTML = '';
   host.appendChild(svg);
 }
 
@@ -583,7 +592,8 @@ table('t-skip', [
   { h: '觀看', f: r => fmtInt(r.views) },
 ], [...DATA.reels_skip].reverse());
 
-funnelChart();
+funnelChart('c-funnel-acq', DATA.funnel_acq);
+funnelChart('c-funnel-app', DATA.funnel_app);
 
 lineChart('c-ga4', DATA.ga4_daily, [
   { key: 'web', name: 'web', color: 'var(--s1)' },

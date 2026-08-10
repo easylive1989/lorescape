@@ -23,10 +23,12 @@ from metrics._common import (
     date_range,
     missing_days,
 )
+from metrics.app_funnel import SOURCE as APP_FUNNEL_SOURCE
 from metrics.ga4 import SOURCE as GA4_SOURCE
 from metrics.gsc import SOURCE as GSC_SOURCE
 from metrics.ig import SOURCE as IG_SOURCE
 from metrics.ig_posts import SOURCE as IG_POSTS_SOURCE
+from metrics.landing_cta import SOURCE as LANDING_CTA_SOURCE
 from metrics.narration import SOURCE as NARRATION_SOURCE
 from metrics.retention import SOURCE as RETENTION_SOURCE
 from metrics.revenuecat import SOURCE as REVENUECAT_SOURCE
@@ -41,7 +43,8 @@ DATA_DIR = REPO_ROOT / "data" / "metrics"
 SOURCES: dict[str, DailySource] = {
     source.name: source
     for source in (
-        GSC_SOURCE, GA4_SOURCE, IG_SOURCE, IG_POSTS_SOURCE, NARRATION_SOURCE,
+        GSC_SOURCE, GA4_SOURCE, LANDING_CTA_SOURCE, IG_SOURCE, IG_POSTS_SOURCE,
+        NARRATION_SOURCE, APP_FUNNEL_SOURCE,
         RETENTION_SOURCE, REVENUECAT_SOURCE, STORE_ANDROID_SOURCE,
         STORE_IOS_SOURCE, STORE_IOS_PAGES_SOURCE,
     )

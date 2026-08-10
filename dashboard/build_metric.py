@@ -36,6 +36,11 @@ def read_rows(name: str) -> list[dict]:
         return list(csv.DictReader(f))
 
 
+def fmt_int(value: float | None) -> str:
+    """千分位整數字串，供內嵌說明文字使用。"""
+    return "—" if value is None else f"{round(value):,}"
+
+
 def num(value) -> float | None:
     if value in (None, ""):
         return None
@@ -119,6 +124,8 @@ def build_payload() -> dict:
     narration = read_rows("narration")
     posts = read_rows("ig_posts")
     insights = read_rows("ig_reels_insights")
+    cta = read_rows("landing_cta")
+    app = read_rows("app_funnel")
 
     def wow(rows, col):
         return total(rows, col, cur_start, cur_end), total(rows, col, prev_start, prev_end)
@@ -207,12 +214,33 @@ def build_payload() -> dict:
     reels_skip.sort(key=lambda x: x["date"])
     reels_skip = reels_skip[-14:]
 
-    funnel = [
-        {"stage": "IG 觸及", "value": reach_c},
-        {"stage": "個人檔案瀏覽", "value": pv_c},
-        {"stage": "Landing 活躍", "value": web_c},
-        {"stage": "iOS 下載", "value": ios_c},
+    cta_c, cta_p = wow(cta, "click_users")
+    cta_clicks_c, _ = wow(cta, "clicks")
+    ios_click_c, _ = wow(cta, "ios_clicks")
+    and_click_c, _ = wow(cta, "android_clicks")
+
+    # 兩段刻意分開：iOS 下載只有 iOS（Play 未匯出安裝數），first_open 卻含
+    # iOS + Android，硬接會算出 >100% 的轉換率。中間也沒有共同的 user id。
+    funnel_acq = [
+        {"stage": "IG 觸及", "value": reach_c, "unit": "人"},
+        {"stage": "個人檔案瀏覽", "value": pv_c, "unit": "次"},
+        {"stage": "Landing 活躍", "value": web_c, "unit": "人"},
+        {"stage": "下載按鈕點擊", "value": cta_c, "unit": "人",
+         "extra": f"{fmt_int(cta_clicks_c)} 次點擊"
+                  f"（iOS {fmt_int(ios_click_c)} / Android {fmt_int(and_click_c)}）"},
+        {"stage": "iOS 下載", "value": ios_c, "unit": "次"},
     ]
+    funnel_app = [
+        {"stage": "首次開啟 App", "value": total(app, "first_open_users", cur_start, cur_end),
+         "unit": "人"},
+        {"stage": "開始導覽", "value": total(app, "narration_start_users", cur_start, cur_end),
+         "unit": "人"},
+        {"stage": "完成導覽", "value": total(app, "narration_complete_users", cur_start, cur_end),
+         "unit": "人"},
+    ]
+
+    kpis.insert(4, {"label": "下載按鈕點擊", "value": cta_c, "prev": cta_p,
+                    "fmt": "int", "note": "落地頁 CTA，去重人數"})
 
     sources = []
     for name in ["ig", "ga4", "gsc", "store_ios", "store_ios_pages",
@@ -236,7 +264,8 @@ def build_payload() -> dict:
         "ga4_daily": ga4_daily,
         "posts": by_post,
         "reels_skip": reels_skip,
-        "funnel": funnel,
+        "funnel_acq": funnel_acq,
+        "funnel_app": funnel_app,
         "sources": sources,
         "revenuecat": {
             "date": rc_latest.get("date", "—"),

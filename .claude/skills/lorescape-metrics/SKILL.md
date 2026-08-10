@@ -22,6 +22,8 @@ Connect / Play 報表 bucket），不再用瀏覽器抓。
 | --- | --- | --- | --- |
 | `gsc` | `gsc.csv` | date | 站台每日 clicks / impressions / ctr / position |
 | `ga4` | `ga4.csv` | date | 每日 web / iOS / Android 各自的 active / new users（App = iOS + Android） |
+| `landing_cta` | `landing_cta.csv` | date | 落地頁下載 CTA 點擊（GA4 `download_click`）：click_users / clicks、依 platform（ios / android）與 location（hero / navbar / final_cta / footer / story / place）拆分 |
+| `app_funnel` | `app_funnel.csv` | date | App 端漏斗階段的**人數**（GA4 `totalUsers`）：first_open / narration_started / narration_completed |
 | `ig` | `ig.csv` | date | 帳號每日 reach / profile_views（= 個人檔案/bio 瀏覽數）（+ 最新一天 followers/media 快照） |
 | `ig_posts` | `ig_posts.csv` | (media_id, obs_date) | 每則貼文**逐日**追蹤：obs_date、posted_date、reach、likes、comments、saved、shares、total_interactions，Reels 另含 views、avg_watch_time |
 | `ig_reels` | `ig_reels_insights.csv` | (media_id, checkpoint) | **Reels 洞察快照**（發布後 24h / 48h / 7d 三個 checkpoint）：略過率等六比率、瀏覽來源占比、觀眾輪廓（粉絲比／年齡／性別／國家）——API 拿不到，由使用者提供 IG App 截圖、Claude 讀圖寫入 |

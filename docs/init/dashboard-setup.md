@@ -35,9 +35,12 @@ python3 dashboard/build_metric.py
 ## 內容
 
 KPI 列（本週 vs 前週）、IG 每日觸及、粉絲累積、Reels vs Carousel 觸及
-（對數刻度）、Reels 24h 略過率（依 calendar 的謎/閉 style 上色）、週漏斗、
-App / Landing 每日活躍、各來源資料新鮮度。每張圖有 hover tooltip，主要圖表
-另附表格檢視。
+（對數刻度）、Reels 24h 略過率（依 calendar 的謎/閉 style 上色）、週漏斗
+（獲客段與 App 內段分開，見下）、App / Landing 每日活躍、各來源資料新鮮度。
+每張圖有 hover tooltip，主要圖表另附表格檢視。
+
+漏斗刻意分兩段：「iOS 下載」只計 iOS（Play 未匯出安裝數），「首次開啟 App」
+含 iOS + Android，口徑不同且無共通 user id，接成一條會算出失真的轉換率。
 
 謎/閉 style 由 `marketing/content-calendar/_reels-place-calendar.md` 解析，
 表格第 5 欄與「style 排程」散文兩種寫法都支援。

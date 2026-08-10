@@ -27,9 +27,20 @@ python3 dashboard/build_metric.py     # → dashboard/out/metric.html
 ## 內容
 
 KPI 列（本週 vs 前週）、IG 每日觸及、粉絲累積、Reels vs Carousel 觸及
-（對數刻度）、Reels 24h 略過率（依 calendar 的謎/閉 style 上色）、週漏斗、
-App/Landing 每日活躍、各來源資料新鮮度。每張圖都有 hover tooltip，主要圖表
-另附表格檢視。
+（對數刻度）、Reels 24h 略過率（依 calendar 的謎/閉 style 上色）、**週漏斗
+（獲客段 ＋ App 內段，刻意分開）**、App/Landing 每日活躍、各來源資料新鮮度。
+每張圖都有 hover tooltip，主要圖表另附表格檢視。
+
+### 漏斗為什麼是兩段而不是一條
+
+「iOS 下載」只計 iOS（Play 至今未匯出安裝數，見 BACKLOG F14），而
+「首次開啟 App」含 iOS + Android，兩者口徑不同；中間也沒有共通的 user id
+可串。接成一條會算出失真甚至超過 100% 的轉換率，所以拆成：
+
+- **獲客**：IG 觸及 → 個人檔案瀏覽 → Landing 活躍 → 下載按鈕點擊 → iOS 下載
+- **App 內**：首次開啟 App → 開始導覽 → 完成導覽
+
+單位（人／次）標在每個階段的數值旁——轉換率只在相鄰同單位階段間嚴格成立。
 
 謎/閉 style 由 `marketing/content-calendar/_reels-place-calendar.md` 解析
 （表格第 5 欄與「style 排程」散文兩種寫法都吃）。
