@@ -33,7 +33,7 @@ test('按下↓將該節點與下一個節點交換順序', () => {
   render(<NodeList script={demoScript} selectedId={null} onSelect={() => {}} onReorder={onReorder} />)
   const downButtons = screen.getAllByRole('button', { name: '下移' })
   fireEvent.click(downButtons[0])
-  expect(onReorder).toHaveBeenCalledWith(['end-a', 'n1', 'end-b'])
+  expect(onReorder).toHaveBeenCalledWith(['end-a', 'n1', 'end-b', 'n2'])
 })
 
 test('按下↑將該節點與上一個節點交換順序', () => {
@@ -41,7 +41,7 @@ test('按下↑將該節點與上一個節點交換順序', () => {
   render(<NodeList script={demoScript} selectedId={null} onSelect={() => {}} onReorder={onReorder} />)
   const upButtons = screen.getAllByRole('button', { name: '上移' })
   fireEvent.click(upButtons[1])
-  expect(onReorder).toHaveBeenCalledWith(['end-a', 'n1', 'end-b'])
+  expect(onReorder).toHaveBeenCalledWith(['end-a', 'n1', 'end-b', 'n2'])
 })
 
 test('第一列的上移按鈕與最後一列的下移按鈕停用', () => {

@@ -404,3 +404,109 @@
 .story-panel__parts {
   flex-wrap: wrap;
 }
+
+/* Task 16：左欄「節點／結構」分頁切換 + React Flow 節點圖 */
+.editor__left-tabs {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0 0.75rem 0.5rem;
+  border-bottom: 1px solid #222;
+}
+
+.editor__left-tab {
+  flex: 1;
+  padding: 0.35rem 0.5rem;
+  background: none;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.editor__left-tab--active {
+  background-color: #2a3a5a;
+  color: #f5f5f5;
+  border-color: #5ab3ff;
+}
+
+.graph-view {
+  display: flex;
+  flex-direction: column;
+  height: calc(100% - 3rem);
+  min-height: 320px;
+}
+
+.graph-view__canvas {
+  flex: 1;
+  min-height: 0;
+}
+
+.graph-view__toast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  margin: 0 0.75rem 0.5rem;
+  background-color: #4a1f1f;
+  color: #ffb3b3;
+  border: 1px solid #a33;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.graph-view__toast button {
+  background: none;
+  border: 1px solid #a33;
+  color: inherit;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 0.1rem 0.4rem;
+}
+
+.graph-node {
+  min-width: 180px;
+  padding: 0.5rem 0.6rem;
+  background-color: #1a1a1a;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: #f5f5f5;
+  font-size: 0.8rem;
+}
+
+.graph-node--start {
+  border-color: #5ab3ff;
+}
+
+.graph-node__start-badge {
+  display: inline-block;
+  margin-right: 0.35rem;
+  padding: 0.05rem 0.3rem;
+  background-color: #5ab3ff;
+  color: #111;
+  border-radius: 3px;
+  font-size: 0.65rem;
+}
+
+.graph-node__label {
+  margin-bottom: 0.4rem;
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.graph-node__actions {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.graph-node__actions button {
+  flex: 1;
+  background: none;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 0.7rem;
+  padding: 0.2rem;
+}

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { CatalogEntry, Layout, Script, ScriptNode } from '../engine/schema'
 import '../styles/editor.css'
 import { getJson } from './api'
+import { GraphView } from './graph/GraphView'
 import { AssetPicker } from './panels/AssetPicker'
 import { NodeList } from './panels/NodeList'
 import { NodePanel } from './panels/NodePanel'
@@ -102,6 +103,8 @@ export function forceCenterCast(script: Script, nodeId: string, charId: string):
 function EditorWorkspace({ slug }: { slug: string }) {
   const { script, layout, catalogEntry, error, updateScript, updateLayout, updateBlurb, updateCatalogEntry } = useStory(slug)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+  // Task 16：左欄「節點／結構」分頁——結構分頁顯示 GraphView（React Flow 節點圖）
+  const [leftTab, setLeftTab] = useState<'nodes' | 'graph'>('nodes')
   const [paragraphIndex, setParagraphIndex] = useState(0)
   const [boneMode, setBoneMode] = useState(false)
   const [boneCharIdOverride, setBoneCharIdOverride] = useState<string | null>(null)
@@ -182,12 +185,36 @@ function EditorWorkspace({ slug }: { slug: string }) {
             <button type="button" className="editor__story-settings" onClick={handleShowStorySettings}>
               故事設定
             </button>
-            <NodeList
-              script={script}
-              selectedId={selectedNodeId}
-              onSelect={handleSelectNode}
-              onReorder={handleReorder}
-            />
+            <div className="editor__left-tabs" role="tablist">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={leftTab === 'nodes'}
+                className={`editor__left-tab${leftTab === 'nodes' ? ' editor__left-tab--active' : ''}`}
+                onClick={() => setLeftTab('nodes')}
+              >
+                節點
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={leftTab === 'graph'}
+                className={`editor__left-tab${leftTab === 'graph' ? ' editor__left-tab--active' : ''}`}
+                onClick={() => setLeftTab('graph')}
+              >
+                結構
+              </button>
+            </div>
+            {leftTab === 'nodes' ? (
+              <NodeList
+                script={script}
+                selectedId={selectedNodeId}
+                onSelect={handleSelectNode}
+                onReorder={handleReorder}
+              />
+            ) : (
+              <GraphView script={script} onScriptChange={updateScript} />
+            )}
           </aside>
           <main className="editor__panel editor__panel--stage">
             <div className="editor__bone-toolbar">

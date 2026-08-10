@@ -13,6 +13,9 @@ export const demoScript: Script = {
         { text: '往左', to: 'end-a' }, { text: '往右', to: 'end-b' }] },
     { id: 'end-a', background: 'scenes/n1.png', paragraphs: ['結局A'], ending: { title: '結局A' } },
     { id: 'end-b', background: 'scenes/n1.png', paragraphs: ['結局B'], ending: { title: '結局B' } },
+    // n2：附加在陣列末端、無入邊的 next 型節點，只供 Task 16 的 graphMath
+    // retarget 測試使用；不影響既有節點的順序/索引，其餘 task 的測試不受影響。
+    { id: 'n2', background: 'scenes/n1.png', paragraphs: ['過場'], next: 'end-b' },
   ],
 }
 

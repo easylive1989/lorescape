@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import EditorPage, { forceCenterCast } from './EditorPage'
 import { demoScript, demoLayout } from '../test/fixtures'
@@ -204,5 +204,78 @@ describe('EditorPage 故事屬性面板（Task 15）', () => {
         { slug: 'other', title: '別的故事', place: '別的地點', blurb: '別的簡介' },
       ])
     }, { timeout: 2000 })
+  })
+})
+
+describe('EditorPage 左欄節點／結構分頁（Task 16）', () => {
+  function stubFetchRoutes() {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (init?.method === 'PUT') return new Response(null, { status: 204 })
+      if (url.includes('index.json')) {
+        return new Response(JSON.stringify({
+          stories: [{ slug: 'demo', title: demoScript.title, place: demoScript.place, blurb: '測試簡介' }],
+        }))
+      }
+      if (url.includes('script.json')) return new Response(JSON.stringify(demoScript))
+      if (url.includes('layout.json')) return new Response(JSON.stringify(demoLayout))
+      return new Response('{}')
+    }))
+  }
+
+  test('預設顯示節點清單；切到「結構」分頁顯示節點圖', async () => {
+    stubFetchRoutes()
+    const user = userEvent.setup()
+    render(<EditorPage />)
+    await screen.findByRole('option', { name: demoScript.title })
+    await user.selectOptions(screen.getByLabelText('選擇故事'), 'demo')
+
+    // 預設節點分頁：NodeList 的拖曳把手存在
+    expect(await screen.findAllByLabelText('拖曳排序')).toHaveLength(demoScript.nodes.length)
+
+    await user.click(screen.getByRole('tab', { name: '結構' }))
+
+    // 結構分頁：NodeList 消失，改顯示 GraphView 的節點卡片
+    expect(screen.queryByLabelText('拖曳排序')).not.toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: `在 ${demoScript.nodes[0].id} 後面插入節點` })).toBeInTheDocument()
+  })
+
+  test('在結構分頁插入節點，成功變更會送出 PUT script.json（走既有樂觀+debounce 路徑）', async () => {
+    stubFetchRoutes()
+    const user = userEvent.setup()
+    render(<EditorPage />)
+    await screen.findByRole('option', { name: demoScript.title })
+    await user.selectOptions(screen.getByLabelText('選擇故事'), 'demo')
+    await user.click(screen.getByRole('tab', { name: '結構' }))
+
+    // 節點卡片的按鈕在 React Flow pane 內：改用 fireEvent.click 直接送 click，
+    // 避開 userEvent 完整指標事件序列觸發 d3-zoom/d3-drag 對 pane 的 mousedown
+    // handler 在 jsdom 下丟例外的相容性問題（GraphView.test.tsx 同一慣例）。
+    const first = demoScript.nodes[0]
+    fireEvent.click(await screen.findByRole('button', { name: `在 ${first.id} 後面插入節點` }))
+
+    await waitFor(() => {
+      const scriptPut = vi.mocked(fetch).mock.calls.find(([input, init]) =>
+        String(input).includes('script.json') && init?.method === 'PUT')
+      expect(scriptPut).toBeDefined()
+      const body = JSON.parse(scriptPut![1]!.body as string)
+      expect(body.nodes).toHaveLength(demoScript.nodes.length + 1)
+    }, { timeout: 2000 })
+  })
+
+  test('在結構分頁刪除有入邊的節點：顯示錯誤且不送出 PUT', async () => {
+    stubFetchRoutes()
+    const user = userEvent.setup()
+    render(<EditorPage />)
+    await screen.findByRole('option', { name: demoScript.title })
+    await user.selectOptions(screen.getByLabelText('選擇故事'), 'demo')
+    await user.click(screen.getByRole('tab', { name: '結構' }))
+
+    fireEvent.click(await screen.findByRole('button', { name: '刪除節點 end-a' }))
+    expect(await screen.findByRole('alert')).toBeInTheDocument()
+
+    const scriptPut = vi.mocked(fetch).mock.calls.find(([input, init]) =>
+      String(input).includes('script.json') && init?.method === 'PUT')
+    expect(scriptPut).toBeUndefined()
   })
 })

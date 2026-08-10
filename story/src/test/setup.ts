@@ -11,3 +11,11 @@ if (!('EventSource' in globalThis)) {
   // @ts-expect-error 只補測試環境需要的最小介面
   globalThis.EventSource = MockEventSource
 }
+
+// Task 16：@xyflow/react 在 jsdom 需要 ResizeObserver（量測節點/畫布尺寸），
+// jsdom 本身不提供，補最小假物件即可（測試不需要真的觸發 resize 回呼）。
+globalThis.ResizeObserver ??= class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
