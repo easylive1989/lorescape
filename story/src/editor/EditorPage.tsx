@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { CatalogEntry, Layout, ScriptNode } from '../engine/schema'
+import type { CatalogEntry, Layout, Script, ScriptNode } from '../engine/schema'
 import '../styles/editor.css'
 import { getJson } from './api'
 import { NodeList } from './panels/NodeList'
@@ -79,6 +79,24 @@ function BoneValuePanel(props: {
   )
 }
 
+// 骨骼是每個角色的全域資料（layout.json 不分節點），跟編輯當下該角色在
+// 哪個節點、站位左中右、是否同台有誰完全無關；只是 CharacterSprite 的定位
+// 公式是相對「自己的 sprite 容器」算的，容器的螢幕位置與寬度會隨 cast 站位
+// （sprite--left/right）與同台人數（雙人時寬度縮成 58%）變化，而 BoneEditor
+// 目前固定用單人置中（sprite--center、72% 寬）的幾何疊圖。兩者容器對不上時
+// 拖拉換算比例仍正確，但視覺上部件框會偏離真正的角色圖。
+// 修法：骨骼模式時，只把「預覽節點的 cast」這份純展示用資料替換成
+// 「僅編輯中角色、置中」，不落盤、不影響其他節點或其他角色的站位/同台設定，
+// 讓真實 sprite 與 BoneEditor 的固定幾何天然對齊。
+export function forceCenterCast(script: Script, nodeId: string, charId: string): Script {
+  return {
+    ...script,
+    nodes: script.nodes.map((n) =>
+      n.id === nodeId ? { ...n, cast: [{ character: charId, position: 'center' }] } : n,
+    ),
+  }
+}
+
 function EditorWorkspace({ slug }: { slug: string }) {
   const { script, layout, error, updateScript, updateLayout } = useStory(slug)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
@@ -115,6 +133,12 @@ function EditorWorkspace({ slug }: { slug: string }) {
   const boneCharId = boneCharIdOverride && cast.some((m) => m.character === boneCharIdOverride)
     ? boneCharIdOverride
     : (cast[0]?.character ?? null)
+
+  // 舞台預覽用的 script：骨骼模式時把預覽節點的 cast 換成單人置中，讓
+  // BoneEditor 的固定幾何跟真實 sprite 對齊（見 forceCenterCast 註解）。
+  const stageScript = script && effectiveBoneMode && boneCharId && previewNodeId
+    ? forceCenterCast(script, previewNodeId, boneCharId)
+    : script
 
   return (
     <div className="editor__workspace">
@@ -157,9 +181,9 @@ function EditorWorkspace({ slug }: { slug: string }) {
                 </select>
               )}
             </div>
-            {previewNodeId && layout ? (
+            {previewNodeId && layout && stageScript ? (
               <StagePreview
-                script={script}
+                script={stageScript}
                 layout={layout}
                 slug={slug}
                 nodeId={previewNodeId}
