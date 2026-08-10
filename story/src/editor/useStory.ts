@@ -18,6 +18,10 @@ export function useStory(slug: string, deps: UseStoryDeps = {}) {
   const [catalog, setCatalog] = useState<Catalog | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [externalUpdate, setExternalUpdate] = useState<string | null>(null)
+  // 每次 SSE 觸發的外部更新都遞增，即使同一檔案連續被外部改動、externalUpdate
+  // 字串值不變（React 對相同值的 state 不會視為變更），EditorPage 的 toast 仍能
+  // 靠這個 seq 判斷「又來了一次新的外部更新」並重置顯示計時。
+  const [externalUpdateSeq, setExternalUpdateSeq] = useState(0)
 
   const scriptTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const layoutTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -36,6 +40,7 @@ export function useStory(slug: string, deps: UseStoryDeps = {}) {
     setCatalog(null)
     setError(null)
     setExternalUpdate(null)
+    setExternalUpdateSeq(0)
     const handleLoadError = (err: unknown) => {
       if (!cancelled) setError(err instanceof Error ? err.message : String(err))
     }
@@ -58,6 +63,7 @@ export function useStory(slug: string, deps: UseStoryDeps = {}) {
       getJson<T>(path).then((value) => {
         apply(value)
         setExternalUpdate(file)
+        setExternalUpdateSeq((n) => n + 1)
       }, (err) => setError(err instanceof Error ? err.message : String(err)))
     }
 
@@ -123,7 +129,7 @@ export function useStory(slug: string, deps: UseStoryDeps = {}) {
   const catalogEntry = catalog?.stories.find((s) => s.slug === slug) ?? null
 
   return {
-    script, art, layout, catalogEntry, error, externalUpdate,
+    script, art, layout, catalogEntry, error, externalUpdate, externalUpdateSeq,
     updateScript, updateLayout, updateBlurb, updateCatalogEntry,
   }
 }

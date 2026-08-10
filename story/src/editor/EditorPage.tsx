@@ -100,8 +100,35 @@ export function forceCenterCast(script: Script, nodeId: string, charId: string):
   }
 }
 
+const EXTERNAL_UPDATE_TOAST_MS = 4000
+
+// SSE 收到外部更新（例如 Claude 或其他工具直接改 public/content 底下的檔案，
+// 不經工作台 PUT）時的顯著提示：非 null 就顯示、EXTERNAL_UPDATE_TOAST_MS 後自動
+// 消失。依賴 [file, seq] 而非只有 file——同一檔案連續被外部改動時 file 字串值
+// 不變，但 seq 每次都遞增，確保計時器確實重置（見 useStory.ts 的 externalUpdateSeq 註解）。
+function ExternalUpdateToast({ file, seq }: { file: string | null; seq: number }) {
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    if (!file) return
+    setVisible(true)
+    const timer = setTimeout(() => setVisible(false), EXTERNAL_UPDATE_TOAST_MS)
+    return () => clearTimeout(timer)
+  }, [file, seq])
+
+  if (!visible || !file) return null
+  return (
+    <div className="editor__external-toast" role="status">
+      內容已被外部更新：{file}
+    </div>
+  )
+}
+
 function EditorWorkspace({ slug }: { slug: string }) {
-  const { script, layout, catalogEntry, error, updateScript, updateLayout, updateBlurb, updateCatalogEntry } = useStory(slug)
+  const {
+    script, layout, catalogEntry, error, externalUpdate, externalUpdateSeq,
+    updateScript, updateLayout, updateBlurb, updateCatalogEntry,
+  } = useStory(slug)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   // Task 16：左欄「節點／結構」分頁——結構分頁顯示 GraphView（React Flow 節點圖）
   const [leftTab, setLeftTab] = useState<'nodes' | 'graph'>('nodes')
@@ -179,6 +206,7 @@ function EditorWorkspace({ slug }: { slug: string }) {
   return (
     <div className="editor__workspace">
       {error && <p className="editor__error">錯誤：{error}</p>}
+      <ExternalUpdateToast file={externalUpdate} seq={externalUpdateSeq} />
       {script ? (
         <>
           <aside className="editor__panel editor__panel--nodes">

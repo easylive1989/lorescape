@@ -510,3 +510,21 @@
   font-size: 0.7rem;
   padding: 0.2rem;
 }
+
+/* SSE 外部更新提示（非工作台自己送出的變更，例如 Claude 或其他工具直接改
+   public/content 底下的檔案）：position: fixed 疊在畫面上方，不佔用
+   .editor__workspace 的 grid 版位。 */
+.editor__external-toast {
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  padding: 0.5rem 1rem;
+  background-color: #1f3a4a;
+  color: #a8d8ff;
+  border: 1px solid #3a6a8a;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
