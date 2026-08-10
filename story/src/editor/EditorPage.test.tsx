@@ -112,3 +112,64 @@ describe('EditorPage 骨骼模式：舞台強制單人置中', () => {
     expect(within(stage).getAllByTestId(/^sprite-/)).toHaveLength(1)
   })
 })
+
+describe('EditorPage 故事屬性面板（Task 15）', () => {
+  function stubFetchRoutes() {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (init?.method === 'PUT') return new Response(null, { status: 204 })
+      if (url.includes('/__editor/assets/')) {
+        return new Response(JSON.stringify({ files: [{ path: 'characters/master/new-head.png', mtime: 1 }] }))
+      }
+      if (url.includes('index.json')) {
+        return new Response(JSON.stringify({
+          stories: [{ slug: 'demo', title: demoScript.title, place: demoScript.place, blurb: '測試簡介' }],
+        }))
+      }
+      if (url.includes('script.json')) return new Response(JSON.stringify(demoScript))
+      if (url.includes('layout.json')) return new Response(JSON.stringify(demoLayout))
+      return new Response('{}')
+    }))
+  }
+
+  test('未選取節點時右欄顯示 StoryPanel；選取節點後切成 NodePanel；點「故事設定」清除選取切回', async () => {
+    stubFetchRoutes()
+    const user = userEvent.setup()
+    render(<EditorPage />)
+    await screen.findByRole('option', { name: demoScript.title })
+    await user.selectOptions(screen.getByLabelText('選擇故事'), 'demo')
+
+    expect(await screen.findByRole('textbox', { name: '標題' })).toBeInTheDocument()
+
+    await user.click(screen.getByText(demoScript.nodes[0].id))
+    expect(screen.queryByRole('textbox', { name: '標題' })).not.toBeInTheDocument()
+    expect(screen.getByText('段落')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '故事設定' }))
+    expect(await screen.findByRole('textbox', { name: '標題' })).toBeInTheDocument()
+  })
+
+  test('點角色部件換檔鈕開 AssetPicker，選圖後把新檔路徑寫回該角色部件並送出 PUT', async () => {
+    stubFetchRoutes()
+    const user = userEvent.setup()
+    render(<EditorPage />)
+    await screen.findByRole('option', { name: demoScript.title })
+    await user.selectOptions(screen.getByLabelText('選擇故事'), 'demo')
+    await screen.findByRole('textbox', { name: '標題' })
+
+    await user.click(screen.getByRole('button', { name: '換檔／師傅／頭' }))
+    const thumb = await screen.findByRole('button', { name: '選擇 characters/master/new-head.png' })
+    await user.click(thumb)
+
+    // 選圖後 AssetPicker 應收合
+    expect(screen.queryByRole('button', { name: /^選擇 /})).not.toBeInTheDocument()
+
+    await waitFor(() => {
+      const putCall = vi.mocked(fetch).mock.calls.find(([input, init]) =>
+        String(input).includes('script.json') && init?.method === 'PUT')
+      expect(putCall).toBeDefined()
+      const body = JSON.parse(putCall![1]!.body as string)
+      expect(body.characters[0].parts.head).toBe('characters/master/new-head.png')
+    }, { timeout: 2000 })
+  })
+})

@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react'
 import type { CatalogEntry, Layout, Script, ScriptNode } from '../engine/schema'
 import '../styles/editor.css'
 import { getJson } from './api'
+import { AssetPicker } from './panels/AssetPicker'
 import { NodeList } from './panels/NodeList'
 import { NodePanel } from './panels/NodePanel'
+import { StoryPanel } from './panels/StoryPanel'
 import { BoneEditor } from './stage/BoneEditor'
 import { applyPartDelta, type PartKey } from './stage/boneMath'
 import { StagePreview } from './stage/StagePreview'
@@ -98,12 +100,15 @@ export function forceCenterCast(script: Script, nodeId: string, charId: string):
 }
 
 function EditorWorkspace({ slug }: { slug: string }) {
-  const { script, layout, error, updateScript, updateLayout } = useStory(slug)
+  const { script, layout, catalogEntry, error, updateScript, updateLayout, updateBlurb } = useStory(slug)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [paragraphIndex, setParagraphIndex] = useState(0)
   const [boneMode, setBoneMode] = useState(false)
   const [boneCharIdOverride, setBoneCharIdOverride] = useState<string | null>(null)
   const [bonePart, setBonePart] = useState<PartKey>('torso')
+  // Task 15：故事屬性面板的部件換檔——StoryPanel 只負責通知「要換哪個角色的哪個部件」，
+  // 實際開哪個 AssetPicker、選完怎麼落盤都由 EditorPage 這層統籌（多角色×多部件共用一個 picker）
+  const [partPickerTarget, setPartPickerTarget] = useState<{ charId: string; part: PartKey } | null>(null)
 
   const handleReorder = (ids: string[]) => {
     if (!script) return
@@ -116,9 +121,31 @@ function EditorWorkspace({ slug }: { slug: string }) {
     setParagraphIndex(0)
   }
 
+  const handleShowStorySettings = () => {
+    setSelectedNodeId(null)
+    setPartPickerTarget(null)
+  }
+
   const handleNodeChange = (next: ScriptNode) => {
     if (!script) return
     updateScript({ ...script, nodes: script.nodes.map((n) => (n.id === next.id ? next : n)) })
+  }
+
+  const handleScriptMeta = (patch: Partial<Pick<Script, 'title' | 'intro' | 'place'>>) => {
+    if (!script) return
+    updateScript({ ...script, ...patch })
+  }
+
+  const handlePartFile = (relPath: string) => {
+    if (!script || !partPickerTarget) return
+    const { charId, part } = partPickerTarget
+    updateScript({
+      ...script,
+      characters: script.characters.map((c) =>
+        c.id === charId ? { ...c, parts: { ...c.parts, [part]: relPath } } : c,
+      ),
+    })
+    setPartPickerTarget(null)
   }
 
   const previewNodeId = selectedNodeId ?? script?.startNode ?? null
@@ -146,6 +173,9 @@ function EditorWorkspace({ slug }: { slug: string }) {
       {script ? (
         <>
           <aside className="editor__panel editor__panel--nodes">
+            <button type="button" className="editor__story-settings" onClick={handleShowStorySettings}>
+              故事設定
+            </button>
             <NodeList
               script={script}
               selectedId={selectedNodeId}
@@ -215,7 +245,23 @@ function EditorWorkspace({ slug }: { slug: string }) {
             ) : selectedNode ? (
               <NodePanel script={script} node={selectedNode} slug={slug} onChange={handleNodeChange} />
             ) : (
-              <p className="editor__hint">選擇節點以編輯</p>
+              <>
+                <StoryPanel
+                  script={script}
+                  catalogEntry={catalogEntry}
+                  characters={script.characters}
+                  onScriptMeta={handleScriptMeta}
+                  onBlurb={updateBlurb}
+                  onPartFile={(charId, part) => setPartPickerTarget({ charId, part })}
+                />
+                {partPickerTarget && (
+                  <AssetPicker
+                    slug={slug}
+                    category={`characters/${partPickerTarget.charId}`}
+                    onPick={handlePartFile}
+                  />
+                )}
+              </>
             )}
           </aside>
         </>
