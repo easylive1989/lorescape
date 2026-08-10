@@ -10,7 +10,8 @@ const PART_CLASS: Record<keyof Character['parts'], string> = {
 
 // 依 layout.json 的百分比座標定位緊裁部件圖；width 不設，交由瀏覽器依圖片
 // 長寬比自算。
-function partStyle(part: PartLayout) {
+// 匯出供 BoneEditor（Task 14）沿用同一組百分比定位公式，避免兩處算式分岔。
+export function partStyle(part: PartLayout) {
   return {
     left: `${part.cx * 100}%`,
     top: `${part.top * 100}%`,
