@@ -1,6 +1,6 @@
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { useStory } from './useStory'
-import { demoScript, demoLayout } from '../test/fixtures'
+import { demoScript } from '../test/fixtures'
 import type { ContentEvent } from './api'
 
 const demoCatalog = {
@@ -15,17 +15,15 @@ function stubFetchRoutes() {
     const url = String(input)
     if (init?.method === 'PUT') return new Response(null, { status: 204 })
     if (url.includes('script.json')) return new Response(JSON.stringify(demoScript))
-    if (url.includes('layout.json')) return new Response(JSON.stringify(demoLayout))
     if (url.includes('index.json')) return new Response(JSON.stringify(demoCatalog))
     return new Response('{}')
   }))
 }
 
-test('載入 script 與 layout', async () => {
+test('載入 script', async () => {
   stubFetchRoutes()
   const { result } = renderHook(() => useStory('demo'))
   await waitFor(() => expect(result.current.script?.slug).toBe(demoScript.slug))
-  expect(result.current.layout).not.toBeNull()
 })
 
 test('updateScript 樂觀更新並 debounce PUT', async () => {
@@ -48,7 +46,6 @@ test('PUT 400 時把錯誤訊息放進 error，不覆蓋本地編輯', async () 
     const url = String(input)
     if (init?.method === 'PUT') return new Response(JSON.stringify({ error: '節點缺少 next/choices/ending' }), { status: 400 })
     if (url.includes('script.json')) return new Response(JSON.stringify(demoScript))
-    if (url.includes('layout.json')) return new Response(JSON.stringify(demoLayout))
     if (url.includes('index.json')) return new Response(JSON.stringify(demoCatalog))
     return new Response('{}')
   }))
@@ -77,7 +74,6 @@ test('SSE 收到符合目前故事的更新 → 重新 GET 覆蓋 state 並標�
   vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input)
     if (url.includes('script.json')) return new Response(JSON.stringify(updated))
-    if (url.includes('layout.json')) return new Response(JSON.stringify(demoLayout))
     return new Response('{}')
   }))
   act(() => handler?.({ type: 'change', slug: 'demo', file: 'script.json' }))
@@ -90,7 +86,6 @@ test('SSE 收到 art.json 更新 → 重新 GET 覆蓋 art 並標記 externalUpd
   vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input)
     if (url.includes('script.json')) return new Response(JSON.stringify(demoScript))
-    if (url.includes('layout.json')) return new Response(JSON.stringify(demoLayout))
     if (url.includes('art.json')) return new Response(JSON.stringify({ palette: 'v1' }))
     if (url.includes('index.json')) return new Response(JSON.stringify(demoCatalog))
     return new Response('{}')
@@ -106,7 +101,6 @@ test('SSE 收到 art.json 更新 → 重新 GET 覆蓋 art 並標記 externalUpd
   vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input)
     if (url.includes('script.json')) return new Response(JSON.stringify(demoScript))
-    if (url.includes('layout.json')) return new Response(JSON.stringify(demoLayout))
     if (url.includes('art.json')) return new Response(JSON.stringify({ palette: 'v2-外部改的' }))
     return new Response('{}')
   }))
@@ -135,7 +129,6 @@ test('updateScript debounce 尚未送出時收到同檔 SSE → 放棄本地變�
     const url = String(input)
     if (init?.method === 'PUT') return new Response(null, { status: 204 })
     if (url.includes('script.json')) return new Response(JSON.stringify(external))
-    if (url.includes('layout.json')) return new Response(JSON.stringify(demoLayout))
     return new Response('{}')
   }))
   // 撞檔 SSE 在 500ms debounce 觸發之前到達：本地未送出的變更該被放棄
@@ -234,7 +227,6 @@ test('SSE 收到 index.json 更新（slug 為空字串）→ 重新 GET 覆蓋 c
   vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input)
     if (url.includes('script.json')) return new Response(JSON.stringify(demoScript))
-    if (url.includes('layout.json')) return new Response(JSON.stringify(demoLayout))
     if (url.includes('index.json')) return new Response(JSON.stringify(updatedCatalog))
     return new Response('{}')
   }))

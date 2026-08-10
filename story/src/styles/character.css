@@ -4,8 +4,8 @@
   /* Size and offsets are percentages of .scene, never viewport units: .scene
      is capped at 480px, so vw-based geometry drifts apart from it on wide
      screens (two fixed-width sprites then pile up in the middle).
-     部件以 layout.json 的基準畫布比例定位，容器必須固定 2:3
-     （1024×1536），否則百分比定位變形。 */
+     角色圖以 1024×1536 的基準畫布比例縮放，容器必須固定 2:3，
+     否則 .sprite__image 的 object-fit: contain 會跟著變形。 */
   width: 72%;
   aspect-ratio: 2 / 3;
   /* 部件各自動（呼吸/擺臂/點頭）會拉開緊裁圖之間的接縫造成破圖，故動畫
@@ -48,10 +48,14 @@
   right: -10%;
 }
 
-/* 每個部件是緊裁圖，位置由 layout.json 換算的 inline style（left/top/height）
-   決定；此處只留定位與互動屬性。 */
-.sprite__part {
+/* 角色為單張去背全身圖，貼底置中收在 sprite 框內。 */
+.sprite__image {
   position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
   pointer-events: none;
 }
 

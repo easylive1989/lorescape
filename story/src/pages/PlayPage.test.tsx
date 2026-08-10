@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { vi, beforeEach } from 'vitest'
 import { PlayPage } from './PlayPage'
-import { demoScript, demoLayout } from '../test/fixtures'
+import { demoScript } from '../test/fixtures'
 
 vi.mock('../data/analytics', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../data/analytics')>()
@@ -19,10 +19,8 @@ class FakeAudio {
   constructor(src: string) { this.src = src }
 }
 
-// script.json 與 layout.json 共用一顆 fetch mock，依 URL 路由回對應假資料。
-function fetchStub(url: string | URL | Request) {
-  const body = String(url).includes('layout.json') ? demoLayout : demoScript
-  return Promise.resolve(new Response(JSON.stringify(body)))
+function fetchStub() {
+  return Promise.resolve(new Response(JSON.stringify(demoScript)))
 }
 
 beforeEach(() => {

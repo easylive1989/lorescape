@@ -20,18 +20,16 @@ npm test        # vitest run
 | 路徑 | 內容 |
 |---|---|
 | `/` | 劇本選單首頁 |
-| `/play/:slug` | 播放頁——讀取 `public/content/<slug>/{script,layout,art}.json` 播放劇本 |
+| `/play/:slug` | 播放頁——讀取 `public/content/<slug>/{script,art}.json` 播放劇本 |
 | `/editor` | **工作台**（僅 `npm run dev` 開發模式，`import.meta.env.DEV` 守衛；不進 production bundle） |
 
 ## 資料結構
 
-一個劇本 = `public/content/<slug>/` 下三份檔案：
+一個劇本 = `public/content/<slug>/` 下兩份檔案：
 
 - `script.json`：節點（段落、選項、cast 站位/talking、背景、結局）、
-  角色定義、`startNode`。
-- `layout.json`：骨骼版位——各角色各部件（頭／身體／左右臂）在畫布上的
-  `cx`/`top`/`height`（比例座標）。
-- `art.json`：部件圖檔換檔設定。
+  角色定義（`id`/`name`/`image`：單張去背全身圖路徑）、`startNode`。
+- `art.json`：素材生成用的風格與角色描述設定。
 
 `public/content/index.json` 是劇本 catalog（slug/title/place/blurb），
 `/` 首頁與 `/editor` 的劇本下拉選單都讀這份。
@@ -62,15 +60,14 @@ npm run dev
   節點」「刪除節點」；拖曳連線可把某個 `next`／選項改指向另一個既有節點
   （存檔前會先跑 `validateScript`，通過才送出）。刪除仍被其他節點指向的
   節點、或刪除 `startNode` 會被擋下並跳出可關閉的錯誤 toast，不會寫檔。
-- **骨骼**：勾選「骨骼模式」後，舞台上可直接拖曳／微調各角色部件
-  （頭／身體／左右臂）的位置與縮放，寫回 `layout.json`；`/play` 頁的
-  `CharacterSprite` 執行時直接讀這份座標定位。
-- **站位／talking**：節點屬性面板可調整每個 cast 成員的站位（左／中／
-  右）與是否為目前說話者。
-- **背景／部件素材**：節點屬性面板「背景」與故事設定面板「角色部件」都
+- **角色站位／talking**：每個角色是單張去背全身圖（`characters/<id>/full.png`），
+  不再有骨骼／部件編輯；節點屬性面板可調整每個 cast 成員的站位（左／中／
+  右）與是否為目前說話者，站位的視覺效果交由 `character.css` 的
+  `.sprite--left/center/right` 定位與縮放。
+- **背景／角色圖素材**：節點屬性面板「背景」與故事設定面板「角色圖」都
   有「更換」按鈕，展開素材選圖器（縮圖列表 + 上傳）。
 - **素材上傳規格化**：背景（`scenes/`）上傳的任意比例圖片，前端用
-  canvas 依「置中裁切」（cover）規則統一裁成 900×1600 再送出；角色部件
+  canvas 依「置中裁切」（cover）規則統一裁成 900×1600 再送出；角色圖
   （`characters/<id>/`）上傳則原檔直傳、保留原始比例。
 
 ### 磁碟即真相與 SSE 行為

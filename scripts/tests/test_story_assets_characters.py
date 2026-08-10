@@ -1,4 +1,4 @@
-"""Tests for story_assets.characters — reference + part generation and cutout."""
+"""Tests for story_assets.characters — reference + full-body generation and cutout."""
 from __future__ import annotations
 
 import io
@@ -78,108 +78,62 @@ def _write_content_dir(tmp_path, characters, character_prompts):
 def _one_character_content_dir(tmp_path):
     return _write_content_dir(
         tmp_path,
-        [
-            {
-                "id": "anne",
-                "name": "Anne",
-                "parts": {
-                    "head": "characters/anne/head.png",
-                    "torso": "characters/anne/torso.png",
-                    "leftArm": "characters/anne/left-arm.png",
-                    "rightArm": "characters/anne/right-arm.png",
-                },
-            }
-        ],
+        [{"id": "anne", "name": "Anne", "image": "characters/anne/full.png"}],
         {"anne": "Anne Boleyn, a queen"},
     )
 
 
-def test_run_characters_makes_one_reference_and_four_part_calls(tmp_path):
+def test_run_characters_makes_one_reference_call_and_writes_reference_and_image(tmp_path):
     content_dir = _one_character_content_dir(tmp_path)
     client = _FakeClient(_Response([_Part(_magenta_with_center_red_square_png())]))
 
     run_characters(content_dir, client)
 
-    assert len(client.calls) == 5
+    assert len(client.calls) == 1
     assert (content_dir / "assets" / "characters" / "anne" / "_reference.png").exists()
-    for rel_path in (
-        "characters/anne/head.png",
-        "characters/anne/torso.png",
-        "characters/anne/left-arm.png",
-        "characters/anne/right-arm.png",
-    ):
-        dest = content_dir / "assets" / rel_path
-        assert dest.exists()
-        # cutout ran: result should be smaller than the 10x10 source.
-        image = Image.open(dest)
-        assert image.size == (4, 4)
+    dest = content_dir / "assets" / "characters" / "anne" / "full.png"
+    assert dest.exists()
+    # cutout ran: result should be smaller than the 10x10 source.
+    image = Image.open(dest)
+    assert image.size == (4, 4)
 
 
-def test_run_characters_part_prompt_mentions_only_the_part(tmp_path):
-    content_dir = _one_character_content_dir(tmp_path)
-    client = _FakeClient(_Response([_Part(_magenta_with_center_red_square_png())]))
-
-    run_characters(content_dir, client)
-
-    part_call_prompts = [call["contents"][0] for call in client.calls[1:]]
-    assert any("ONLY the head" in prompt for prompt in part_call_prompts)
-
-
-def test_run_characters_skips_existing_reference_and_only_generates_missing_parts(tmp_path):
+def test_run_characters_skips_existing_reference_but_still_writes_missing_image(tmp_path):
     content_dir = _one_character_content_dir(tmp_path)
     reference_dest = content_dir / "assets" / "characters" / "anne" / "_reference.png"
     reference_dest.parent.mkdir(parents=True)
-    reference_dest.write_bytes(b"existing-reference")
-
-    # Pre-populate 3 of the 4 parts; only "torso" is missing.
-    for rel_path in (
-        "characters/anne/head.png",
-        "characters/anne/left-arm.png",
-        "characters/anne/right-arm.png",
-    ):
-        dest = content_dir / "assets" / rel_path
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_bytes(b"existing-part")
+    reference_dest.write_bytes(_magenta_with_center_red_square_png())
 
     client = _FakeClient(_Response([_Part(_magenta_with_center_red_square_png())]))
 
     run_characters(content_dir, client)
 
-    assert reference_dest.read_bytes() == b"existing-reference"
-    assert len(client.calls) == 1  # only the missing "torso" part
-    torso_dest = content_dir / "assets" / "characters" / "anne" / "torso.png"
-    assert torso_dest.read_bytes() != b"existing-part"
-    # No reference part was appended? Actually reference bytes should be
-    # passed as the reference_png for the generate_image call.
-    contents = client.calls[0]["contents"]
-    assert len(contents) == 2
-    assert contents[1].inline_data.data == b"existing-reference"
+    assert reference_dest.read_bytes() == _magenta_with_center_red_square_png()
+    assert client.calls == []  # reference reused, no generation call needed
+    image_dest = content_dir / "assets" / "characters" / "anne" / "full.png"
+    assert image_dest.exists()
+
+
+def test_run_characters_skips_existing_image(tmp_path):
+    content_dir = _one_character_content_dir(tmp_path)
+    image_dest = content_dir / "assets" / "characters" / "anne" / "full.png"
+    image_dest.parent.mkdir(parents=True)
+    image_dest.write_bytes(b"existing-image")
+
+    client = _FakeClient(_Response([_Part(_magenta_with_center_red_square_png())]))
+
+    run_characters(content_dir, client)
+
+    assert image_dest.read_bytes() == b"existing-image"
+    assert len(client.calls) == 1  # still needs to generate the reference
 
 
 def test_run_characters_only_filters_to_single_character(tmp_path):
     content_dir = _write_content_dir(
         tmp_path,
         [
-            {
-                "id": "anne",
-                "name": "Anne",
-                "parts": {
-                    "head": "characters/anne/head.png",
-                    "torso": "characters/anne/torso.png",
-                    "leftArm": "characters/anne/left-arm.png",
-                    "rightArm": "characters/anne/right-arm.png",
-                },
-            },
-            {
-                "id": "kingston",
-                "name": "Kingston",
-                "parts": {
-                    "head": "characters/kingston/head.png",
-                    "torso": "characters/kingston/torso.png",
-                    "leftArm": "characters/kingston/left-arm.png",
-                    "rightArm": "characters/kingston/right-arm.png",
-                },
-            },
+            {"id": "anne", "name": "Anne", "image": "characters/anne/full.png"},
+            {"id": "kingston", "name": "Kingston", "image": "characters/kingston/full.png"},
         ],
         {"anne": "Anne Boleyn, a queen", "kingston": "William Kingston, a constable"},
     )
@@ -189,18 +143,7 @@ def test_run_characters_only_filters_to_single_character(tmp_path):
 
     assert not (content_dir / "assets" / "characters" / "kingston").exists()
     assert (content_dir / "assets" / "characters" / "anne" / "_reference.png").exists()
-    assert len(client.calls) == 5
-
-
-def test_run_characters_only_with_part_suffix_generates_single_part(tmp_path):
-    content_dir = _one_character_content_dir(tmp_path)
-    client = _FakeClient(_Response([_Part(_magenta_with_center_red_square_png())]))
-
-    run_characters(content_dir, client, only="anne:head")
-
-    assert len(client.calls) == 2  # reference + head only
-    assert (content_dir / "assets" / "characters" / "anne" / "head.png").exists()
-    assert not (content_dir / "assets" / "characters" / "anne" / "torso.png").exists()
+    assert len(client.calls) == 1
 
 
 def test_run_characters_only_with_unknown_id_raises_value_error(tmp_path):
@@ -213,33 +156,17 @@ def test_run_characters_only_with_unknown_id_raises_value_error(tmp_path):
     assert client.calls == []
 
 
-def test_run_characters_only_with_unknown_part_raises_value_error_without_calling_client(
-    tmp_path,
-):
-    content_dir = _one_character_content_dir(tmp_path)
-    client = _FakeClient(_Response([_Part(_magenta_with_center_red_square_png())]))
-
-    with pytest.raises(ValueError, match="head"):
-        run_characters(content_dir, client, only="anne:hed")
-
-    # No reference image should have been generated either — the bad part
-    # must be rejected before any generation call is made.
-    assert client.calls == []
-    assert not (content_dir / "assets" / "characters" / "anne" / "_reference.png").exists()
-
-
-def test_run_characters_force_overwrites_existing_reference_and_parts(tmp_path):
+def test_run_characters_force_overwrites_existing_reference_and_image(tmp_path):
     content_dir = _one_character_content_dir(tmp_path)
     reference_dest = content_dir / "assets" / "characters" / "anne" / "_reference.png"
     reference_dest.parent.mkdir(parents=True)
-    reference_dest.write_bytes(b"existing-reference")
-    torso_dest = content_dir / "assets" / "characters" / "anne" / "torso.png"
-    torso_dest.write_bytes(b"existing-torso")
+    reference_dest.write_bytes(_magenta_with_center_red_square_png())
+    image_dest = content_dir / "assets" / "characters" / "anne" / "full.png"
+    image_dest.write_bytes(b"existing-image")
 
     client = _FakeClient(_Response([_Part(_magenta_with_center_red_square_png())]))
 
     run_characters(content_dir, client, force=True)
 
-    assert reference_dest.read_bytes() != b"existing-reference"
-    assert torso_dest.read_bytes() != b"existing-torso"
-    assert len(client.calls) == 5
+    assert len(client.calls) == 1
+    assert image_dest.read_bytes() != b"existing-image"

@@ -146,11 +146,7 @@ export function editorApiPlugin(): Plugin {
             if (rejected) return
             try {
               const data = JSON.parse(body)
-              const scriptPath = safeContentPath(root, slug, 'script.json')
-              const context = file === 'layout.json' && scriptPath && fs.existsSync(scriptPath)
-                ? { script: JSON.parse(fs.readFileSync(scriptPath, 'utf-8')) }
-                : undefined
-              const verdict = validateContentPayload(file as ContentFile | 'index.json', data, context)
+              const verdict = validateContentPayload(file as ContentFile | 'index.json', data)
               if (!verdict.ok) {
                 res.statusCode = 400
                 return res.end(JSON.stringify({ error: verdict.error }))

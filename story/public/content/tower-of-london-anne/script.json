@@ -8,32 +8,17 @@
     {
       "id": "anne",
       "name": "安妮·博林",
-      "parts": {
-        "head": "characters/anne/head.png",
-        "torso": "characters/anne/torso.png",
-        "leftArm": "characters/anne/left-arm.png",
-        "rightArm": "characters/anne/right-arm.png"
-      }
+      "image": "characters/anne/full.png"
     },
     {
       "id": "kingston",
       "name": "威廉·金斯頓爵士",
-      "parts": {
-        "head": "characters/kingston/head.png",
-        "torso": "characters/kingston/torso.png",
-        "leftArm": "characters/kingston/left-arm.png",
-        "rightArm": "characters/kingston/right-arm.png"
-      }
+      "image": "characters/kingston/full.png"
     },
     {
       "id": "thomas",
       "name": "湯瑪斯·艾爾德",
-      "parts": {
-        "head": "characters/thomas/head.png",
-        "torso": "characters/thomas/torso.png",
-        "leftArm": "characters/thomas/left-arm.png",
-        "rightArm": "characters/thomas/right-arm.png"
-      }
+      "image": "characters/thomas/full.png"
     }
   ],
   "nodes": [
@@ -41,7 +26,13 @@
       "id": "n1",
       "background": "scenes/greenwich-privy-chamber.png",
       "bgm": "audio/main.mp3",
-      "cast": [{ "character": "anne", "position": "center", "talking": true }],
+      "cast": [
+        {
+          "character": "anne",
+          "position": "center",
+          "talking": true
+        }
+      ],
       "paragraphs": [
         "你正把王后的亞麻床單攤平，第三次了——她昨夜睡得不好，褶子怎麼也抹不掉。五月的日光從鉛條格窗斜進來，落在牆上她的獵鷹紋章上。",
         "門在你身後被推開，沒有敲。四個穿黑袍的人走進王后的寢殿，靴底沾著泥。為首的那位念了一長串頭銜，然後說出「叛國」兩個字。",
@@ -53,7 +44,13 @@
     {
       "id": "n2",
       "background": "scenes/greenwich-privy-chamber.png",
-      "cast": [{ "character": "thomas", "position": "left", "talking": true }],
+      "cast": [
+        {
+          "character": "thomas",
+          "position": "left",
+          "talking": true
+        }
+      ],
       "paragraphs": [
         "天黑之後，僕役搬著梯子進來，開始拆牆上的獵鷹紋章。你聽見鐵釘從橡木裡被撬出來的聲音，一根，又一根。沒有人叫你走，也沒有人叫你留下。",
         "湯瑪斯在門邊等你。你們是同鄉，他的制服上還縫著王家徽記。「西摩小姐的班底在招人，」他說，「明天早上定名冊。瑪格麗，你再不去就沒位置了。」",
@@ -61,8 +58,14 @@
         "你去鋪最後一次床。枕頭底下有一本小書：安妮親手抄的法文福音，十年前海佛堡的冬天她教你認字用的那一本。書頁裡還夾著一根黑色的髮絲。"
       ],
       "choices": [
-        { "text": "把書藏進懷裡——她總會需要它", "to": "n3a" },
-        { "text": "去御膳房西邊那間，把名字寫上", "to": "n3b" }
+        {
+          "text": "把書藏進懷裡——她總會需要它",
+          "to": "n3a"
+        },
+        {
+          "text": "去御膳房西邊那間，把名字寫上",
+          "to": "n3b"
+        }
       ]
     },
     {
@@ -79,7 +82,13 @@
     {
       "id": "n3b",
       "background": "scenes/seymour-wardrobe.png",
-      "cast": [{ "character": "thomas", "position": "center", "talking": true }],
+      "cast": [
+        {
+          "character": "thomas",
+          "position": "center",
+          "talking": true
+        }
+      ],
       "paragraphs": [
         "你成了西摩小姐班底裡的一個名字。第一件差事是清點舊王后交還的衣物與首飾，一件一件唸出來，讓書記登記估價。",
         "法蘭西頭冠，鑲珍珠，估價八鎊。深紅天鵝絨長袍一襲，估價十二鎊。清單第十一項：法文小書一本，手抄，無估價。你的聲音在這裡卡住了。",
@@ -91,7 +100,13 @@
     {
       "id": "n4",
       "background": "scenes/tower-constable-room.png",
-      "cast": [{ "character": "kingston", "position": "center", "talking": true }],
+      "cast": [
+        {
+          "character": "kingston",
+          "position": "center",
+          "talking": true
+        }
+      ],
       "paragraphs": [
         "倫敦塔內城的一間小屋，石牆滲著河水的涼。桌上攤著封了蠟的信，牆上掛的鑰匙串比你的手臂還長。威廉·金斯頓爵士抬起眼，看了你三秒。",
         "他看見的是一個沒有爵位、沒有姓氏值得記住的鋪床女僕。「王后身邊有四個人，」他說，「都是樞密大臣親自指派的。她們的職責是聽、是記，不是陪。」",
@@ -99,15 +114,30 @@
         "他沒有請你坐，也沒有叫人把你趕出去。窗外傳來換班的腳步聲，一下一下，很規律。他把手擱在桌上：「說吧。你來做什麼。」"
       ],
       "choices": [
-        { "text": "說實話：我來把一樣東西交給王后", "to": "n5a" },
-        { "text": "謊稱奉命前來清點王后的衣物", "to": "n5b" },
-        { "text": "什麼也不說，把書放在桌上就走", "to": "n5b" }
+        {
+          "text": "說實話：我來把一樣東西交給王后",
+          "to": "n5a"
+        },
+        {
+          "text": "謊稱奉命前來清點王后的衣物",
+          "to": "n5b"
+        },
+        {
+          "text": "什麼也不說，把書放在桌上就走",
+          "to": "n5b"
+        }
       ]
     },
     {
       "id": "n5a",
       "background": "scenes/queens-lodging-tower.png",
-      "cast": [{ "character": "anne", "position": "center", "talking": true }],
+      "cast": [
+        {
+          "character": "anne",
+          "position": "center",
+          "talking": true
+        }
+      ],
       "paragraphs": [
         "金斯頓沉默了很久，久到你以為他已經當你不存在。然後他站起來，取下那串鑰匙。「一刻鐘，」他說，「我不會告訴任何人。你也不會。」",
         "這是三年前她加冕前夜住的同一間房。黑白棋盤的地磚、同樣的壁爐、同樣的燭臺——只是小了一半，冷了一倍。她坐在窗邊，聽見腳步聲才轉過頭。",
@@ -120,7 +150,13 @@
     {
       "id": "n5b",
       "background": "scenes/lodging-door-corridor.png",
-      "cast": [{ "character": "kingston", "position": "right", "talking": true }],
+      "cast": [
+        {
+          "character": "kingston",
+          "position": "right",
+          "talking": true
+        }
+      ],
       "paragraphs": [
         "門在你身後合上。你站在王后寓所外的走廊上，離她只有一道橡木板的距離，而這道距離，你今生跨不過去了。",
         "走廊盡頭的窄窗透進一點月光。你聽見門裡有人在笑——是她的聲音，你聽了十年，隔著一堵牆也不會認錯。你不知道她在笑什麼。",
@@ -133,8 +169,15 @@
       "id": "n6",
       "background": "scenes/queens-lodging-tower.png",
       "cast": [
-        { "character": "kingston", "position": "left" },
-        { "character": "anne", "position": "right", "talking": true }
+        {
+          "character": "kingston",
+          "position": "left"
+        },
+        {
+          "character": "anne",
+          "position": "right",
+          "talking": true
+        }
       ],
       "paragraphs": [
         "凌晨兩點，牧師來了。依規矩，總管必須在場——因為在聖餐之前發的誓，在英格蘭的法律裡是算數的。你被允許站在門邊，因為總得有人端水。",
@@ -147,7 +190,12 @@
     {
       "id": "n7",
       "background": "scenes/tower-green-dawn.png",
-      "cast": [{ "character": "kingston", "position": "center" }],
+      "cast": [
+        {
+          "character": "kingston",
+          "position": "center"
+        }
+      ],
       "paragraphs": [
         "五月十九日早晨，塔園的草地上結著薄霜。臨時搭起的矮臺很低，只有幾階。圍觀的人不到兩百——他們刻意把這件事辦得很小。",
         "四百年來，這座塔外的塔丘上處決過一百一十二個人；而在塔牆之內，這是第七次。血腥的名聲有一半是後人添的，但這一次是真的。",
@@ -156,8 +204,14 @@
         "她從寓所那頭走過來了，走得很穩。從這裡到那幾階，你有走過去的時間，也有退開的時間——但只夠選一樣。"
       ],
       "choices": [
-        { "text": "走上前，補上那個空著的名額", "to": "ending-loyalty" },
-        { "text": "退開半步，讓開一條路", "to": "ending-survival" }
+        {
+          "text": "走上前，補上那個空著的名額",
+          "to": "ending-loyalty"
+        },
+        {
+          "text": "退開半步，讓開一條路",
+          "to": "ending-survival"
+        }
       ]
     },
     {
@@ -170,7 +224,9 @@
         "一五五九年一月十四日，倫敦下著雪。你站在人群裡，看見她的女兒從那座塔出發，穿過整座城，走向自己的加冕典禮。",
         "歷史會記得那個女孩，也記得她的母親。歷史不會記得那四雙手。但你的手還記得那個重量。"
       ],
-      "ending": { "title": "忠誠的代價" }
+      "ending": {
+        "title": "忠誠的代價"
+      }
     },
     {
       "id": "ending-survival",
@@ -182,7 +238,9 @@
         "一五五九年一月十四日，倫敦下著雪。你站在人群裡，看見她的女兒從那座塔出發，穿過整座城，走向自己的加冕典禮。",
         "身旁的年輕人問你：老太太，你見過那位王后嗎？你說：見過。然後你就沒有再說下去，一直到隊伍走遠。"
       ],
-      "ending": { "title": "活下去的重量" }
+      "ending": {
+        "title": "活下去的重量"
+      }
     }
   ]
 }

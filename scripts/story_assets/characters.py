@@ -1,10 +1,8 @@
-"""Generate a story's character reference + part sprite images.
+"""Generate a story's character reference + full-body sprite images.
 
 For each character: generate one full-body reference image on a solid
-magenta background, then use it as a style/likeness reference to generate
-each of the four body parts (head, torso, left arm, right arm), chroma-key
-them to transparent PNGs, and write them to the paths declared in
-script.json's `characters[].parts`.
+magenta background, then chroma-key it to a transparent PNG and write it to
+the path declared in script.json's `characters[].image`.
 """
 from __future__ import annotations
 
@@ -19,28 +17,6 @@ REFERENCE_SUFFIX = (
     "single character, no text"
 )
 
-# script.json parts key -> human-readable part name used in the prompt.
-PART_LABELS = {
-    "head": "head",
-    "torso": "torso",
-    "leftArm": "left arm",
-    "rightArm": "right arm",
-}
-
-DEFAULT_PART_LAYOUT = {
-    "head": {"cx": 0.5, "top": 0.02, "height": 0.20},
-    "torso": {"cx": 0.5, "top": 0.16, "height": 0.80},
-    "leftArm": {"cx": 0.30, "top": 0.20, "height": 0.38},
-    "rightArm": {"cx": 0.70, "top": 0.20, "height": 0.38},
-}
-
-
-def _part_prompt(part_label: str) -> str:
-    return (
-        f"ONLY the {part_label} of this exact character, same style and colors, "
-        "nothing else, centered, plain solid magenta background #FF00FF"
-    )
-
 
 def run_characters(
     content_dir: Path,
@@ -48,17 +24,16 @@ def run_characters(
     only: str | None = None,
     force: bool = False,
 ) -> None:
-    """Generate reference + part images for each character under `content_dir`.
+    """Generate reference + full-body image for each character under `content_dir`.
 
-    Writes `assets/characters/<id>/_reference.png` and each part at the path
-    declared in script.json's `characters[].parts`. Existing files are
-    skipped unless `force` is set; when the reference already exists it is
-    reused (not regenerated) even if some parts are still missing.
+    Writes `assets/characters/<id>/_reference.png` and the chroma-keyed
+    cutout at the path declared in script.json's `characters[].image`.
+    Existing files are skipped unless `force` is set; when the reference
+    already exists it is reused (not regenerated) even if the cutout image
+    is still missing.
 
-    `only` restricts the run to a single character id, optionally scoped to
-    one part with `<id>:<part>` (part is one of head/torso/leftArm/rightArm).
-    Raises ValueError if `only`'s id matches no character, or if `only`'s
-    part is not a recognized part key — before any generation call is made.
+    `only` restricts the run to a single character id. Raises ValueError if
+    `only` matches no character — before any generation call is made.
     """
     script = json.loads((content_dir / "script.json").read_text(encoding="utf-8"))
     art = json.loads((content_dir / "art.json").read_text(encoding="utf-8"))
@@ -67,18 +42,8 @@ def run_characters(
     character_prompts: dict[str, str] = art.get("characters", {})
     characters = script.get("characters", [])
 
-    only_part: str | None = None
     if only is not None:
-        only_id = only
-        if ":" in only:
-            only_id, only_part = only.split(":", 1)
-            if only_part not in PART_LABELS:
-                available_parts = ", ".join(PART_LABELS)
-                raise ValueError(
-                    f"--only {only!r} has unknown part {only_part!r}; "
-                    f"available part(s): {available_parts}"
-                )
-        matched = [character for character in characters if character["id"] == only_id]
+        matched = [character for character in characters if character["id"] == only]
         if not matched:
             available = ", ".join(character["id"] for character in characters)
             raise ValueError(
@@ -101,34 +66,14 @@ def run_characters(
             reference_dest.parent.mkdir(parents=True, exist_ok=True)
             reference_dest.write_bytes(reference_bytes)
 
-        parts: dict[str, str] = character.get("parts", {})
-        for part_key, part_label in PART_LABELS.items():
-            if only_part is not None and part_key != only_part:
-                continue
-            rel_path = parts.get(part_key)
-            if rel_path is None:
-                continue
+        image_rel = character.get("image")
+        if image_rel is None:
+            raise ValueError(f"script.json character {char_id!r} is missing an image path")
 
-            dest = content_dir / "assets" / rel_path
-            if dest.exists() and not force:
-                continue
+        dest = content_dir / "assets" / image_rel
+        if dest.exists() and not force:
+            continue
 
-            raw_bytes = generate_image(
-                client, _part_prompt(part_label), reference_png=reference_bytes
-            )
-            cutout_bytes = chroma_key(raw_bytes)
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            dest.write_bytes(cutout_bytes)
-        ensure_layout_entry(content_dir, char_id)
-
-
-def ensure_layout_entry(content_dir: Path, char_id: str) -> None:
-    layout_path = content_dir / "layout.json"
-    layout = (json.loads(layout_path.read_text(encoding="utf-8"))
-              if layout_path.exists()
-              else {"canvas": {"width": 1024, "height": 1536}, "characters": {}})
-    if char_id in layout["characters"]:
-        return
-    layout["characters"][char_id] = json.loads(json.dumps(DEFAULT_PART_LAYOUT))
-    layout_path.write_text(
-        json.dumps(layout, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        cutout_bytes = chroma_key(reference_bytes)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(cutout_bytes)

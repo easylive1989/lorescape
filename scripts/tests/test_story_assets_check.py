@@ -6,16 +6,7 @@ import json
 from story_assets.check import check_content
 
 _CHARACTERS = [
-    {
-        "id": "anne",
-        "name": "Anne",
-        "parts": {
-            "head": "characters/anne/head.png",
-            "torso": "characters/anne/torso.png",
-            "leftArm": "characters/anne/left-arm.png",
-            "rightArm": "characters/anne/right-arm.png",
-        },
-    }
+    {"id": "anne", "name": "Anne", "image": "characters/anne/full.png"},
 ]
 
 _NODES = [
@@ -45,8 +36,7 @@ def _write_all_assets(content_dir, nodes=_NODES, characters=_CHARACTERS):
         if bgm:
             _touch(content_dir, bgm)
     for character in characters:
-        for rel_path in character["parts"].values():
-            _touch(content_dir, rel_path)
+        _touch(content_dir, character["image"])
 
 
 def test_all_assets_present_returns_empty_list(tmp_path):
@@ -56,14 +46,14 @@ def test_all_assets_present_returns_empty_list(tmp_path):
     assert check_content(tmp_path) == []
 
 
-def test_missing_character_part_file_is_reported(tmp_path):
+def test_missing_character_image_file_is_reported(tmp_path):
     _write_script(tmp_path)
     _write_all_assets(tmp_path)
-    (tmp_path / "assets" / "characters" / "anne" / "torso.png").unlink()
+    (tmp_path / "assets" / "characters" / "anne" / "full.png").unlink()
 
     missing = check_content(tmp_path)
 
-    assert missing == ["characters/anne/torso.png"]
+    assert missing == ["characters/anne/full.png"]
 
 
 def test_missing_background_is_reported(tmp_path):
@@ -99,13 +89,13 @@ def test_multiple_missing_files_are_all_reported(tmp_path):
     _write_all_assets(tmp_path)
     (tmp_path / "assets" / "scenes" / "a.png").unlink()
     (tmp_path / "assets" / "audio" / "main.mp3").unlink()
-    (tmp_path / "assets" / "characters" / "anne" / "head.png").unlink()
+    (tmp_path / "assets" / "characters" / "anne" / "full.png").unlink()
 
     missing = check_content(tmp_path)
 
     assert set(missing) == {
         "scenes/a.png",
         "audio/main.mp3",
-        "characters/anne/head.png",
+        "characters/anne/full.png",
     }
     assert len(missing) == 3

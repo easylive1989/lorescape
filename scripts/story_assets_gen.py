@@ -58,14 +58,6 @@ def _cmd_check(args: argparse.Namespace) -> int:
     return 0
 
 
-def _cmd_tighten(args: argparse.Namespace) -> int:
-    from story_assets.layout_migrate import migrate
-
-    content_dir = _content_dir(args.slug)
-    migrate(content_dir)
-    return 0
-
-
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Generate story image assets via Gemini")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -91,8 +83,7 @@ def main(argv: list[str] | None = None) -> int:
     characters_parser.add_argument(
         "--only",
         default=None,
-        help="Generate only this character id, or <id>:<part> "
-        "(part is head/torso/leftArm/rightArm), e.g. anne or anne:head",
+        help="Generate only this character id, e.g. anne",
     )
     characters_parser.add_argument(
         "--force", action="store_true", help="Overwrite existing files"
@@ -106,14 +97,6 @@ def main(argv: list[str] | None = None) -> int:
         "--slug", required=True, help="Story slug under story/public/content/"
     )
     check_parser.set_defaults(func=_cmd_check)
-
-    tighten_parser = subparsers.add_parser(
-        "tighten", help="registered 部件裁緊並產出 layout.json"
-    )
-    tighten_parser.add_argument(
-        "--slug", required=True, help="Story slug under story/public/content/"
-    )
-    tighten_parser.set_defaults(func=_cmd_tighten)
 
     args = parser.parse_args(argv)
     return args.func(args) or 0

@@ -13,17 +13,6 @@ test('validateContentPayload 擋壞 script', () => {
   expect(bad.ok).toBe(false)
 })
 
-test('validateContentPayload 擋 layout 缺角色（帶 context script）', () => {
-  const script = {
-    slug: 's', title: 't', place: 'p', intro: 'i', startNode: 'n1',
-    characters: [{ id: 'anne', name: 'a', parts: { head: 'h', torso: 't', leftArm: 'l', rightArm: 'r' } }],
-    nodes: [{ id: 'n1', background: 'b', paragraphs: ['x'], ending: { title: 'e' } }],
-  }
-  const result = validateContentPayload('layout.json',
-    { canvas: { width: 1024, height: 1536 }, characters: {} }, { script })
-  expect(result.ok).toBe(false)
-})
-
 test('validateContentPayload 對未知檔名 default-deny', () => {
   const result = validateContentPayload('notes.json' as ContentFile, { anything: 1 })
   expect(result.ok).toBe(false)

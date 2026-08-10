@@ -11,7 +11,7 @@ def check_content(content_dir: Path) -> list[str]:
 
     Checks every node's `background` (always required) and `bgm` (only
     when set — a node with no bgm requires no audio file), plus every
-    character's four `parts` paths. Returned paths are relative to
+    character's `image` path. Returned paths are relative to
     `assets/`, in first-seen order, with no duplicates. An empty list
     means the content directory is complete.
     """
@@ -31,7 +31,6 @@ def check_content(content_dir: Path) -> list[str]:
         _require(node.get("bgm"))
 
     for character in script.get("characters", []):
-        for rel_path in character.get("parts", {}).values():
-            _require(rel_path)
+        _require(character.get("image"))
 
     return [rel_path for rel_path in required if not (assets_dir / rel_path).exists()]

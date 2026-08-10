@@ -1,18 +1,17 @@
 import type { ReactNode } from 'react'
 import { SceneView } from '../../components/SceneView'
 import type { PlayState } from '../../engine/player'
-import type { Layout, Script } from '../../engine/schema'
+import type { Script } from '../../engine/schema'
 
 export function StagePreview(props: {
   script: Script
-  layout: Layout
   slug: string
   nodeId: string
   paragraphIndex: number
   onParagraphChange(index: number): void
   children?: ReactNode
 }) {
-  const { script, layout, slug, nodeId, paragraphIndex, onParagraphChange, children } = props
+  const { script, slug, nodeId, paragraphIndex, onParagraphChange, children } = props
   const node = script.nodes.find((n) => n.id === nodeId) ?? script.nodes[0]
   const total = node.paragraphs.length
   const isLast = paragraphIndex >= total - 1
@@ -30,7 +29,6 @@ export function StagePreview(props: {
         script={script}
         state={state}
         slug={slug}
-        layout={layout}
         onAdvance={() => {}}
         onChoose={() => {}}
       >

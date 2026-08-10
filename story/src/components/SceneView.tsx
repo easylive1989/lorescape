@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { assetUrl } from '../data/loadScript'
 import { currentNode, type PlayState } from '../engine/player'
-import type { Layout, Script } from '../engine/schema'
+import type { Script } from '../engine/schema'
 import { CharacterSprite } from './CharacterSprite'
 import { TextCard } from './TextCard'
 import { ChoiceList } from './ChoiceList'
@@ -10,7 +10,6 @@ export function SceneView({
   script,
   state,
   slug,
-  layout,
   onAdvance,
   onChoose,
   children,
@@ -18,7 +17,6 @@ export function SceneView({
   script: Script
   state: PlayState
   slug: string
-  layout: Layout
   onAdvance: () => void
   onChoose: (index: number) => void
   children?: ReactNode
@@ -30,7 +28,7 @@ export function SceneView({
       {(node.cast ?? []).map((member) => {
         const character = characterById.get(member.character)
         return character ? (
-          <CharacterSprite key={character.id} character={character} member={member} slug={slug} layout={layout} />
+          <CharacterSprite key={character.id} character={character} member={member} slug={slug} />
         ) : null
       })}
       {children}

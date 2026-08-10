@@ -9,7 +9,7 @@ export type CatalogEntry = z.infer<typeof catalogEntrySchema>
 
 export const characterSchema = z.object({
   id: z.string().min(1), name: z.string().min(1),
-  parts: z.object({ head: z.string(), torso: z.string(), leftArm: z.string(), rightArm: z.string() }),
+  image: z.string().min(1),
 })
 export const castMemberSchema = z.object({
   character: z.string(), position: z.enum(['left', 'center', 'right']),
@@ -37,21 +37,6 @@ export type Choice = z.infer<typeof choiceSchema>
 export type ScriptNode = z.infer<typeof nodeSchema>
 export type Script = z.infer<typeof scriptSchema>
 
-export const partLayoutSchema = z.object({
-  cx: z.number().min(-0.5).max(1.5),
-  top: z.number().min(-0.5).max(1.5),
-  height: z.number().min(0.01).max(1.5),
-})
-export const layoutSchema = z.object({
-  canvas: z.object({ width: z.number().positive(), height: z.number().positive() }),
-  characters: z.record(z.string(), z.object({
-    head: partLayoutSchema, torso: partLayoutSchema,
-    leftArm: partLayoutSchema, rightArm: partLayoutSchema,
-  })),
-})
-export type PartLayout = z.infer<typeof partLayoutSchema>
-export type Layout = z.infer<typeof layoutSchema>
-
 export function validateScript(data: unknown): Script {
   const script = scriptSchema.parse(data)
   const nodeIds = new Set(script.nodes.map((n) => n.id))
@@ -67,12 +52,4 @@ export function validateScript(data: unknown): Script {
       if (!charIds.has(m.character)) throw new Error(`節點 ${node.id} 引用未定義角色：${m.character}`)
   }
   return script
-}
-
-export function validateLayout(data: unknown, script?: Script): Layout {
-  const layout = layoutSchema.parse(data)
-  for (const character of script?.characters ?? [])
-    if (!(character.id in layout.characters))
-      throw new Error(`layout.json 缺角色：${character.id}`)
-  return layout
 }

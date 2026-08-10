@@ -1,21 +1,14 @@
 import type { CatalogEntry, Character, Script } from '../../engine/schema'
 
-const PART_OPTIONS: { key: keyof Character['parts']; label: string }[] = [
-  { key: 'head', label: '頭' },
-  { key: 'torso', label: '身體' },
-  { key: 'leftArm', label: '左臂' },
-  { key: 'rightArm', label: '右臂' },
-]
-
 export function StoryPanel(props: {
   script: Script
   catalogEntry: CatalogEntry | null
   characters: Character[]
   onScriptMeta(patch: Partial<Pick<Script, 'title' | 'intro' | 'place'>>): void
   onBlurb(blurb: string): void
-  onPartFile(charId: string, part: keyof Character['parts']): void
+  onCharacterImage(charId: string): void
 }) {
-  const { script, catalogEntry, characters, onScriptMeta, onBlurb, onPartFile } = props
+  const { script, catalogEntry, characters, onScriptMeta, onBlurb, onCharacterImage } = props
 
   return (
     <div className="node-panel">
@@ -60,21 +53,13 @@ export function StoryPanel(props: {
       </section>
 
       <section className="node-panel__section">
-        <h3>角色部件</h3>
+        <h3>角色圖</h3>
         {characters.map((character) => (
           <div className="node-panel__row" key={character.id}>
             <span className="node-panel__background-name">{character.name}</span>
-            <div className="node-panel__row-buttons story-panel__parts">
-              {PART_OPTIONS.map((opt) => (
-                <button
-                  key={opt.key}
-                  type="button"
-                  onClick={() => onPartFile(character.id, opt.key)}
-                >
-                  換檔／{character.name}／{opt.label}
-                </button>
-              ))}
-            </div>
+            <button type="button" onClick={() => onCharacterImage(character.id)}>
+              更換角色圖／{character.name}
+            </button>
           </div>
         ))}
       </section>

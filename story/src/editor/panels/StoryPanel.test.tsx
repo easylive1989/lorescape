@@ -8,17 +8,13 @@ const catalogEntry: CatalogEntry = {
 }
 
 const secondCharacter: Character = {
-  id: 'apprentice', name: '徒弟',
-  parts: {
-    head: 'characters/apprentice/head.png', torso: 'characters/apprentice/torso.png',
-    leftArm: 'characters/apprentice/left-arm.png', rightArm: 'characters/apprentice/right-arm.png',
-  },
+  id: 'apprentice', name: '徒弟', image: 'characters/apprentice/full.png',
 }
 
 function renderPanel(overrides: Partial<Parameters<typeof StoryPanel>[0]> = {}) {
   const onScriptMeta = vi.fn()
   const onBlurb = vi.fn()
-  const onPartFile = vi.fn()
+  const onCharacterImage = vi.fn()
   render(
     <StoryPanel
       script={demoScript}
@@ -26,11 +22,11 @@ function renderPanel(overrides: Partial<Parameters<typeof StoryPanel>[0]> = {}) 
       characters={demoScript.characters}
       onScriptMeta={onScriptMeta}
       onBlurb={onBlurb}
-      onPartFile={onPartFile}
+      onCharacterImage={onCharacterImage}
       {...overrides}
     />,
   )
-  return { onScriptMeta, onBlurb, onPartFile }
+  return { onScriptMeta, onBlurb, onCharacterImage }
 }
 
 test('編輯標題呼叫 onScriptMeta({ title })', () => {
@@ -67,21 +63,21 @@ test('catalogEntry 為 null 時 blurb 欄位顯示空字串', () => {
   expect(textarea.value).toBe('')
 })
 
-test('部件列表列出 4 部件 × 角色數的換檔鈕，且點擊呼叫 onPartFile(charId, part)', () => {
-  const { onPartFile } = renderPanel({
+test('角色列表列出每個角色一顆換圖鈕，且點擊呼叫 onCharacterImage(charId)', () => {
+  const { onCharacterImage } = renderPanel({
     characters: [demoScript.characters[0], secondCharacter],
   })
-  const buttons = screen.getAllByRole('button', { name: /^換檔／/ })
-  expect(buttons).toHaveLength(8) // 4 部件 × 2 角色
+  const buttons = screen.getAllByRole('button', { name: /^更換角色圖／/ })
+  expect(buttons).toHaveLength(2)
 
-  fireEvent.click(screen.getByRole('button', { name: '換檔／師傅／頭' }))
-  expect(onPartFile).toHaveBeenCalledWith('master', 'head')
+  fireEvent.click(screen.getByRole('button', { name: '更換角色圖／師傅' }))
+  expect(onCharacterImage).toHaveBeenCalledWith('master')
 
-  fireEvent.click(screen.getByRole('button', { name: '換檔／徒弟／右臂' }))
-  expect(onPartFile).toHaveBeenCalledWith('apprentice', 'rightArm')
+  fireEvent.click(screen.getByRole('button', { name: '更換角色圖／徒弟' }))
+  expect(onCharacterImage).toHaveBeenCalledWith('apprentice')
 })
 
-test('無角色時不顯示換檔鈕', () => {
+test('無角色時不顯示換圖鈕', () => {
   renderPanel({ characters: [] })
-  expect(screen.queryAllByRole('button', { name: /^換檔／/ })).toHaveLength(0)
+  expect(screen.queryAllByRole('button', { name: /^更換角色圖／/ })).toHaveLength(0)
 })
