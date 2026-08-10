@@ -1,0 +1,530 @@
+/* Task 10：三欄工作區——左欄節點清單／中欄舞台／右欄屬性面板 */
+.editor {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100dvh;
+  min-height: 100dvh;
+  background-color: #111;
+  color: #f5f5f5;
+}
+
+.editor__header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #333;
+}
+
+.editor__workspace {
+  display: grid;
+  grid-template-columns: 260px 1fr 340px;
+  min-height: 0;
+}
+
+.editor__panel {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.editor__panel--nodes {
+  border-right: 1px solid #333;
+}
+
+.editor__panel--stage {
+  padding: 1rem;
+}
+
+.editor__panel--inspector {
+  border-left: 1px solid #333;
+}
+
+.editor__error {
+  color: #ff6b6b;
+  padding: 0 1rem;
+}
+
+.node-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.node-list__item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #222;
+}
+
+.node-list__item--selected {
+  background-color: #2a3a5a;
+}
+
+.node-list__handle {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: grab;
+  padding: 0.25rem;
+}
+
+.node-list__label {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  background: none;
+  border: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  padding: 0;
+}
+
+.node-list__id {
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.node-list__summary {
+  color: #aaa;
+  font-size: 0.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.node-list__order-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.node-list__order-buttons button {
+  background: none;
+  border: 1px solid #444;
+  color: #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0.1rem 0.3rem;
+}
+
+.node-list__order-buttons button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+/* Task 11：舞台預覽——手機外框，SceneView 的 .scene 原為 100dvh，框內改吃滿外框高度 */
+.stage-frame {
+  width: 480px;
+  max-width: 100%;
+  aspect-ratio: 9 / 19.5;
+  position: relative;
+  overflow: hidden;
+  margin: 0 auto;
+  border-radius: 12px;
+  border: 1px solid #333;
+}
+
+.stage-frame .scene {
+  height: 100%;
+}
+
+.stage-frame__paragraph-nav {
+  position: absolute;
+  bottom: 0.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background-color: rgb(0 0 0 / 60%);
+  color: #f5f5f5;
+  z-index: 1;
+}
+
+.stage-frame__paragraph-nav button {
+  background: none;
+  border: 1px solid #666;
+  border-radius: 50%;
+  color: inherit;
+  width: 1.75rem;
+  height: 1.75rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.stage-frame__paragraph-nav button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.stage-frame__paragraph-count {
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+/* Task 12：節點屬性面板——右欄段落／結局型態／cast／背景編輯 */
+.editor__hint {
+  color: #888;
+  padding: 1rem;
+}
+
+.node-panel {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.node-panel__section h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.node-panel__row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.node-panel__textarea {
+  flex: 1;
+  min-width: 0;
+  min-height: 3rem;
+  resize: vertical;
+  background-color: #1a1a1a;
+  color: #f5f5f5;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 0.4rem;
+}
+
+.node-panel__row-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.node-panel__row select,
+.node-panel__row input[type='text'] {
+  background-color: #1a1a1a;
+  color: #f5f5f5;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 0.3rem;
+}
+
+.node-panel__row input[type='text'] {
+  flex: 1;
+  min-width: 0;
+}
+
+.node-panel__checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.node-panel__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+}
+
+.node-panel__field select,
+.node-panel__field input {
+  background-color: #1a1a1a;
+  color: #f5f5f5;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 0.3rem;
+}
+
+.node-panel__background-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #ccc;
+  font-size: 0.85rem;
+}
+
+/* Task 13：背景選擇器（縮圖格狀 + 上傳） */
+.asset-picker {
+  margin-top: 0.5rem;
+  padding: 0.6rem;
+  background-color: #1a1a1a;
+  border: 1px solid #444;
+  border-radius: 4px;
+}
+
+.asset-picker__error {
+  color: #f5a5a5;
+  font-size: 0.8rem;
+  margin: 0 0 0.5rem;
+}
+
+.asset-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 0.4rem;
+  margin-bottom: 0.6rem;
+}
+
+.asset-picker__thumb {
+  padding: 0;
+  border: 1px solid #444;
+  border-radius: 4px;
+  overflow: hidden;
+  aspect-ratio: 9 / 16;
+  cursor: pointer;
+}
+
+.asset-picker__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.asset-picker__upload {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: #ccc;
+}
+
+/* Task 14：骨骼編輯——舞台拖拉外框與右欄數值面板 */
+.editor__bone-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.editor__bone-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+}
+
+/* 幾何與 CharacterSprite 的 .sprite（sprite--center）一致，確保部件框跟真正
+   的角色圖疊在同一位置；拖拉分母即這個外框的 getBoundingClientRect()。 */
+.bone-editor {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  translate: -50% 0;
+  width: 72%;
+  aspect-ratio: 2 / 3;
+  z-index: 2;
+}
+
+.bone-editor__part {
+  /* left/top/height/translate 皆由 partStyle() inline style 決定（與
+     CharacterSprite 同一份公式），這裡只留視覺與互動屬性。 */
+  position: absolute;
+  border: 1px dashed rgb(255 255 255 / 50%);
+  cursor: grab;
+  box-sizing: border-box;
+}
+
+.bone-editor__part:active {
+  cursor: grabbing;
+}
+
+.bone-editor__part--selected {
+  border: 2px solid #5ab3ff;
+  background-color: rgb(90 179 255 / 15%);
+}
+
+.bone-editor__label {
+  position: absolute;
+  top: -1.4rem;
+  left: 50%;
+  translate: -50% 0;
+  white-space: nowrap;
+  font-size: 0.7rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background-color: rgb(0 0 0 / 70%);
+  color: #f5f5f5;
+}
+
+.bone-panel {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.bone-panel h3 {
+  margin: 0 0 0.25rem;
+  font-size: 0.85rem;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Task 15：故事屬性面板——左欄「故事設定」按鈕清除節點選取，右欄角色部件換檔鈕 */
+.editor__story-settings {
+  display: block;
+  width: calc(100% - 1.5rem);
+  margin: 0.5rem 0.75rem;
+  padding: 0.4rem 0.6rem;
+  background-color: #1a1a1a;
+  color: #f5f5f5;
+  border: 1px solid #444;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.story-panel__parts {
+  flex-wrap: wrap;
+}
+
+/* Task 16：左欄「節點／結構」分頁切換 + React Flow 節點圖 */
+.editor__left-tabs {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0 0.75rem 0.5rem;
+  border-bottom: 1px solid #222;
+}
+
+.editor__left-tab {
+  flex: 1;
+  padding: 0.35rem 0.5rem;
+  background: none;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.editor__left-tab--active {
+  background-color: #2a3a5a;
+  color: #f5f5f5;
+  border-color: #5ab3ff;
+}
+
+.graph-view {
+  display: flex;
+  flex-direction: column;
+  height: calc(100% - 3rem);
+  min-height: 320px;
+}
+
+.graph-view__canvas {
+  flex: 1;
+  min-height: 0;
+}
+
+.graph-view__toast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  margin: 0 0.75rem 0.5rem;
+  background-color: #4a1f1f;
+  color: #ffb3b3;
+  border: 1px solid #a33;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.graph-view__toast button {
+  background: none;
+  border: 1px solid #a33;
+  color: inherit;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 0.1rem 0.4rem;
+}
+
+.graph-node {
+  min-width: 180px;
+  padding: 0.5rem 0.6rem;
+  background-color: #1a1a1a;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: #f5f5f5;
+  font-size: 0.8rem;
+}
+
+.graph-node--start {
+  border-color: #5ab3ff;
+}
+
+.graph-node__start-badge {
+  display: inline-block;
+  margin-right: 0.35rem;
+  padding: 0.05rem 0.3rem;
+  background-color: #5ab3ff;
+  color: #111;
+  border-radius: 3px;
+  font-size: 0.65rem;
+}
+
+.graph-node__label {
+  margin-bottom: 0.4rem;
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.graph-node__actions {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.graph-node__actions button {
+  flex: 1;
+  background: none;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 0.7rem;
+  padding: 0.2rem;
+}
+
+/* SSE 外部更新提示（非工作台自己送出的變更，例如 Claude 或其他工具直接改
+   public/content 底下的檔案）：position: fixed 疊在畫面上方，不佔用
+   .editor__workspace 的 grid 版位。 */
+.editor__external-toast {
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  padding: 0.5rem 1rem;
+  background-color: #1f3a4a;
+  color: #a8d8ff;
+  border: 1px solid #3a6a8a;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}

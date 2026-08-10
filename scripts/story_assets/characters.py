@@ -27,6 +27,13 @@ PART_LABELS = {
     "rightArm": "right arm",
 }
 
+DEFAULT_PART_LAYOUT = {
+    "head": {"cx": 0.5, "top": 0.02, "height": 0.20},
+    "torso": {"cx": 0.5, "top": 0.16, "height": 0.80},
+    "leftArm": {"cx": 0.30, "top": 0.20, "height": 0.38},
+    "rightArm": {"cx": 0.70, "top": 0.20, "height": 0.38},
+}
+
 
 def _part_prompt(part_label: str) -> str:
     return (
@@ -112,3 +119,16 @@ def run_characters(
             cutout_bytes = chroma_key(raw_bytes)
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_bytes(cutout_bytes)
+        ensure_layout_entry(content_dir, char_id)
+
+
+def ensure_layout_entry(content_dir: Path, char_id: str) -> None:
+    layout_path = content_dir / "layout.json"
+    layout = (json.loads(layout_path.read_text(encoding="utf-8"))
+              if layout_path.exists()
+              else {"canvas": {"width": 1024, "height": 1536}, "characters": {}})
+    if char_id in layout["characters"]:
+        return
+    layout["characters"][char_id] = json.loads(json.dumps(DEFAULT_PART_LAYOUT))
+    layout_path.write_text(
+        json.dumps(layout, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

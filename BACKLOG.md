@@ -634,6 +634,20 @@ epic 承接自原公司層 backlog；目前只有 E1（見下方「Epic」）。
   `LorescapeMap` 移到探索頁浮層（`LorescapeMap` 目前僅此一處使用）。ADR 0005
   attribution 段同步更新
 
+## F19: Story 工作台後續打磨
+
+- 狀態: 待辦
+- 來源: 2026-08-10 工作台最終全分支審查的建議（spec 見
+  `docs/superpowers/specs/2026-08-09-story-workbench-design.md`）
+- [ ] T1: 節點終結型態切換入口（next ⇄ choices ⇄ ending）——計畫內
+  Task 12 與 Task 16 互相指望對方實作，結果兩邊都沒做；目前只能由
+  Claude 直改 script.json 繞過
+- [ ] T2: 上傳端點加副檔名白名單（`rel.endsWith('.png')`）與
+  `sec-fetch-site` Origin 檢查（dev-only 風險低，防瀏覽器跨站寫檔）
+- [ ] T3: 其餘 polish 一批（審查 ledger 的 deferred minors：孤兒節點
+  標紅、stage 素材 SSE 換圖、getJson runtime 驗證、tab a11y、
+  key={index} focus 等——見 git 歷史中最終審查報告）
+
 ## F18: 歷程頁面重新設計
 
 - 狀態: 已完成（2026-07-21）

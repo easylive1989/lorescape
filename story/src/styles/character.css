@@ -3,11 +3,11 @@
   bottom: 0;
   /* Size and offsets are percentages of .scene, never viewport units: .scene
      is capped at 480px, so vw-based geometry drifts apart from it on wide
-     screens (two fixed-width sprites then pile up in the middle). Registered
-     layers letterbox inside this box (contain, bottom-anchored), so the
-     visible figure height is min(height, width * 1.5). */
+     screens (two fixed-width sprites then pile up in the middle).
+     部件以 layout.json 的基準畫布比例定位，容器必須固定 2:3
+     （1024×1536），否則百分比定位變形。 */
   width: 72%;
-  height: 66%;
+  aspect-ratio: 2 / 3;
   animation: fade-slide-in 0.6s ease-out both;
   /* Purely decorative: being position:absolute, this box paints above the
      non-positioned .text-card/.choice-list regardless of DOM order, so
@@ -22,7 +22,6 @@
 .sprite:has(+ .sprite),
 .sprite + .sprite {
   width: 58%;
-  height: 60%;
 }
 
 /* The registered canvas has transparent side margins (the figure fills only
@@ -42,18 +41,10 @@
   right: -10%;
 }
 
-/* Every part PNG is a registered layer: the same 1024x1536 canvas as the
-   character's reference sheet, with the part already scaled and positioned
-   on it (transparent elsewhere). Stacking all layers at 100%/100% with the
-   same object-fit therefore reassembles the figure with correct proportions
-   — no per-part boxes needed. */
+/* 每個部件是緊裁圖，位置由 layout.json 換算的 inline style（left/top/height）
+   決定；此處只留定位與互動屬性。 */
 .sprite__part {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: center bottom;
   pointer-events: none;
 }
 
@@ -64,10 +55,8 @@
 
 .sprite__arm-left,
 .sprite__arm-right {
-  /* Pivot near the shoulders (~22% down the registered canvas) so the sway
-     reads as arms swinging, not the whole layer sliding. */
   animation: sway 3.2s ease-in-out infinite;
-  transform-origin: 50% 22%;
+  transform-origin: top center;
 }
 
 .sprite__arm-right {
@@ -76,8 +65,7 @@
 
 .is-talking .sprite__head {
   animation: nod 0.9s ease-in-out infinite;
-  /* Neck sits ~16% down the registered canvas. */
-  transform-origin: 50% 16%;
+  transform-origin: 50% 70%;
 }
 
 @keyframes fade-slide-in {

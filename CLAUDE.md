@@ -11,6 +11,7 @@ Lorescape 是 AI 景點故事導覽 App：為使用者眼前的景點生成以 W
 | `backend/` | Python FastAPI 服務（只服務 App）：narration API（含訂閱 402 驗證）、訂閱 webhook 與 reconcile。Docker 部署於 VPS |
 | `publisher/` | Social publisher（Python）：daily story 產線、Discord 審核 bot、IG 發布。獨立 image 與 .env，Docker 部署於 VPS |
 | `landing/` | Next.js 雙語官網 lorescape.app，含 `/place/[slug]` SEO 景點頁 |
+| `story/` | 獨立 Vite + React SPA：沉浸式互動劇本引擎（`/play/:slug`），資料以 `public/content/<slug>/` 純檔案為準；內建本機視覺化工作台（`npm run dev` → `/editor`，僅 DEV，見 `story/README.md`） |
 | `supabase/` | Supabase schema 與 migrations |
 | `marketing/` | 行銷產出與工具（子資料夾見下表） |
 | `scripts/` | 每日故事 / reel / metrics 自動化腳本（Python，uv 管理）；metrics 全走 API（GSC / GA4 / IG / RevenueCat / App Store / Play） |

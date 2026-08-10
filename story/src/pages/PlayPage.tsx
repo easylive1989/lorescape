@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { loadScript, assetUrl } from '../data/loadScript'
+import { loadLayout } from '../data/loadLayout'
 import { preloadNode } from '../data/preload'
 import { saveProgress, loadProgress, clearProgress } from '../data/progress'
 import { trackEvent } from '../data/analytics'
 import { initState, advance, choose as choosePlayer, currentNode, type PlayState } from '../engine/player'
-import type { Script } from '../engine/schema'
+import type { Layout, Script } from '../engine/schema'
 import { SceneView } from '../components/SceneView'
 import { EndingView } from '../components/EndingView'
 import { audioManager } from '../audio/audioManager'
@@ -13,6 +14,7 @@ import { audioManager } from '../audio/audioManager'
 export function PlayPage() {
   const { slug = '' } = useParams()
   const [script, setScript] = useState<Script | null>(null)
+  const [layout, setLayout] = useState<Layout | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [started, setStarted] = useState(false)
   const [state, setState] = useState<PlayState | null>(null)
@@ -21,7 +23,12 @@ export function PlayPage() {
 
   useEffect(() => {
     setError(null)
-    loadScript(slug).then(setScript).catch((e: Error) => setError(e.message))
+    loadScript(slug)
+      .then(async (loadedScript) => {
+        setScript(loadedScript)
+        setLayout(await loadLayout(slug, loadedScript))
+      })
+      .catch((e: Error) => setError(e.message))
   }, [slug, retryCount])
 
   useEffect(() => {
@@ -55,7 +62,7 @@ export function PlayPage() {
       <button onClick={() => setRetryCount((c) => c + 1)}>重新載入</button>
     </div>
   )
-  if (!script) return <div data-testid="play-page">載入中…</div>
+  if (!script || !layout) return <div data-testid="play-page">載入中…</div>
   if (!started) {
     const loaded = loadProgress(slug)
     // 存檔可能指向已被劇本改版移除的節點（過期存檔）；此時視同無存檔，避免
@@ -101,6 +108,7 @@ export function PlayPage() {
           script={script}
           state={state}
           slug={slug}
+          layout={layout}
           onAdvance={() => setState(advance(script, state))}
           onChoose={(i) => {
             const node = currentNode(script, state)

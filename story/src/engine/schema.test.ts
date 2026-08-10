@@ -1,4 +1,4 @@
-import { validateScript } from './schema'
+import { validateScript, validateLayout, catalogSchema } from './schema'
 import { demoScript } from '../test/fixtures'
 
 test('合法劇本通過並回傳型別化物件', () => {
@@ -25,4 +25,54 @@ test('cast 引用未定義角色時 throw', () => {
   const bad = structuredClone(demoScript)
   bad.nodes[0].cast![0].character = 'ghost'
   expect(() => validateScript(bad)).toThrow(/ghost/)
+})
+
+const goodLayout = {
+  canvas: { width: 1024, height: 1536 },
+  characters: {
+    anne: {
+      head: { cx: 0.5, top: 0.03, height: 0.22 },
+      torso: { cx: 0.5, top: 0.2, height: 0.78 },
+      leftArm: { cx: 0.33, top: 0.23, height: 0.35 },
+      rightArm: { cx: 0.64, top: 0.22, height: 0.35 },
+    },
+  },
+}
+
+test('validateLayout 接受合法 layout', () => {
+  expect(validateLayout(goodLayout).characters.anne.head.cx).toBe(0.5)
+})
+
+test('validateLayout 拒絕缺部件', () => {
+  const bad = structuredClone(goodLayout) as Record<string, unknown>
+  delete (bad.characters as Record<string, Record<string, unknown>>).anne.torso
+  expect(() => validateLayout(bad)).toThrow()
+})
+
+test('validateLayout 拒絕超界數值', () => {
+  const bad = structuredClone(goodLayout)
+  bad.characters.anne.head.height = 9
+  expect(() => validateLayout(bad)).toThrow()
+})
+
+test('validateLayout 搭配 script 檢查缺角色', () => {
+  const script = validateScript({
+    slug: 's', title: 't', place: 'p', intro: 'i', startNode: 'n1',
+    characters: [
+      { id: 'anne', name: '安妮', parts: { head: 'a', torso: 'b', leftArm: 'c', rightArm: 'd' } },
+      { id: 'kingston', name: '金斯頓', parts: { head: 'a', torso: 'b', leftArm: 'c', rightArm: 'd' } },
+    ],
+    nodes: [{ id: 'n1', background: 'bg.png', paragraphs: ['x'], ending: { title: 'end' } }],
+  })
+  expect(() => validateLayout(goodLayout, script)).toThrow(/kingston/)
+})
+
+test('catalogSchema 接受合法目錄', () => {
+  const valid = { stories: [{ slug: 's', title: 't', place: 'p', blurb: 'b' }] }
+  expect(catalogSchema.parse(valid).stories[0].slug).toBe('s')
+})
+
+test('catalogSchema 拒絕缺欄位', () => {
+  const invalid = { stories: [{ slug: 's', title: 't', place: 'p' }] }
+  expect(() => catalogSchema.parse(invalid)).toThrow()
 })
