@@ -1,0 +1,6 @@
+date,ios_downloads_30d,ios_avg_rating,ios_ratings_count,ios_reviews_count,android_installs,android_avg_rating,android_ratings_count,note
+2026-06-29,1,5.0,1,0,,,,Android Play stats not ready (launched 2026-06-25); iOS downloads = rolling 30d total to 06-28
+2026-07-01,,,,,,,,"iOS 準備提交未上架 (App 分析不可用); Android 正式版 2 天前上線 100%, 統計資料尚無資料"
+2026-07-05,3,5.0,1,0,0,,,"iOS 首次下載近30d(App Analytics),截至7/4;Play 尚無安裝/評分資料"
+2026-07-09,1,5.0,1,0,0,,,iOS 趨勢窗 6/9-7/8(30日);Android 剛上線(約7/9發布)尚無資料
+2026-07-10,1,5.0,1,0,,,,App Store 近30天下載截至7/9(6/10-7/9);iOS評分5.0/1則/0評論;Play剛上架2天尚無資料(安裝0/無評分)

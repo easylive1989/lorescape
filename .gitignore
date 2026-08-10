@@ -68,9 +68,13 @@ marketing/tools/reel-remotion/public/fonts/
 dashboard/out/
 *.egg-info/
 
-# Metrics 累積數據（含營收，repo 為 public 故不進版控）
-# 錨定在 repo 根：只忽略頂層 data/，別誤掃 Flutter 各 feature 的 data/ 層
-/data/
+# Metrics 累積數據：2026-08-10 起納入版控（repo 實為 private，原本
+# 「repo 是 public 故不進版控」的理由不成立）。只收 CSV，其餘一律排除。
+# 錨定在 repo 根：只掃頂層 data/，別誤掃 Flutter 各 feature 的 data/ 層
+/data/*
+!/data/metrics/
+/data/metrics/*
+!/data/metrics/*.csv
 
 # Graphify 產出的知識圖譜（本地分析工具，不進版控）
 graphify-out/
