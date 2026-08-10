@@ -8,7 +8,14 @@
      （1024×1536），否則百分比定位變形。 */
   width: 72%;
   aspect-ratio: 2 / 3;
-  animation: fade-slide-in 0.6s ease-out both;
+  /* 部件各自動（呼吸/擺臂/點頭）會拉開緊裁圖之間的接縫造成破圖，故動畫
+     一律整個 sprite 同動：進場後接整體微呼吸（延遲 0.6s 等進場跑完，
+     兩個動畫都寫 transform，錯開才不互蓋）。分層紙娃娃動畫留待日後
+     素材加了重疊裕度再恢復（BACKLOG F19）。 */
+  animation:
+    fade-slide-in 0.6s ease-out both,
+    breathe 4s ease-in-out 0.6s infinite;
+  transform-origin: center bottom;
   /* Purely decorative: being position:absolute, this box paints above the
      non-positioned .text-card/.choice-list regardless of DOM order, so
      without this it silently swallows taps meant for them wherever the
@@ -48,26 +55,6 @@
   pointer-events: none;
 }
 
-.sprite__torso {
-  animation: breathe 3.2s ease-in-out infinite;
-  transform-origin: center bottom;
-}
-
-.sprite__arm-left,
-.sprite__arm-right {
-  animation: sway 3.2s ease-in-out infinite;
-  transform-origin: top center;
-}
-
-.sprite__arm-right {
-  animation-delay: -1.6s;
-}
-
-.is-talking .sprite__head {
-  animation: nod 0.9s ease-in-out infinite;
-  transform-origin: 50% 70%;
-}
-
 @keyframes fade-slide-in {
   from {
     opacity: 0;
@@ -79,32 +66,13 @@
   }
 }
 
+/* 整體微呼吸：幅度刻意極小（0.6%），只求「還活著」的氣息感。 */
 @keyframes breathe {
   0%,
   100% {
-    transform: scaleY(1);
+    transform: translateY(0) scaleY(1);
   }
   50% {
-    transform: scaleY(1.015);
-  }
-}
-
-@keyframes sway {
-  0%,
-  100% {
-    transform: rotate(-2deg);
-  }
-  50% {
-    transform: rotate(2deg);
-  }
-}
-
-@keyframes nod {
-  0%,
-  100% {
-    transform: translateY(0) rotate(0deg);
-  }
-  50% {
-    transform: translateY(2px) rotate(1deg);
+    transform: translateY(0) scaleY(1.006);
   }
 }
