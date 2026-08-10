@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import type { CastMember, Choice, Script, ScriptNode } from '../../engine/schema'
+import { AssetPicker } from './AssetPicker'
 
 const MAX_CHOICES = 3
 
@@ -11,8 +13,14 @@ function moveItem<T>(list: T[], index: number, delta: number): T[] {
   return next
 }
 
-export function NodePanel(props: { script: Script; node: ScriptNode; onChange(next: ScriptNode): void }) {
-  const { script, node, onChange } = props
+export function NodePanel(props: {
+  script: Script
+  node: ScriptNode
+  slug: string
+  onChange(next: ScriptNode): void
+}) {
+  const { script, node, slug, onChange } = props
+  const [showBackgroundPicker, setShowBackgroundPicker] = useState(false)
 
   // 段落
   const updateParagraph = (index: number, value: string) =>
@@ -181,9 +189,20 @@ export function NodePanel(props: { script: Script; node: ScriptNode; onChange(ne
         <h3>背景</h3>
         <div className="node-panel__row">
           <span className="node-panel__background-name">{node.background}</span>
-          {/* Task 13：接 AssetPicker，此處先放停用的 stub 鈕 */}
-          <button type="button" disabled>更換</button>
+          <button type="button" onClick={() => setShowBackgroundPicker((v) => !v)}>
+            {showBackgroundPicker ? '取消' : '更換'}
+          </button>
         </div>
+        {showBackgroundPicker && (
+          <AssetPicker
+            slug={slug}
+            category="scenes"
+            onPick={(relPath) => {
+              onChange({ ...node, background: relPath })
+              setShowBackgroundPicker(false)
+            }}
+          />
+        )}
       </section>
     </div>
   )

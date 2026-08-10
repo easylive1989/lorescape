@@ -60,7 +60,7 @@ function EditorWorkspace({ slug }: { slug: string }) {
           </main>
           <aside className="editor__panel editor__panel--inspector">
             {selectedNode ? (
-              <NodePanel script={script} node={selectedNode} onChange={handleNodeChange} />
+              <NodePanel script={script} node={selectedNode} slug={slug} onChange={handleNodeChange} />
             ) : (
               <p className="editor__hint">選擇節點以編輯</p>
             )}
