@@ -100,7 +100,7 @@ export function forceCenterCast(script: Script, nodeId: string, charId: string):
 }
 
 function EditorWorkspace({ slug }: { slug: string }) {
-  const { script, layout, catalogEntry, error, updateScript, updateLayout, updateBlurb } = useStory(slug)
+  const { script, layout, catalogEntry, error, updateScript, updateLayout, updateBlurb, updateCatalogEntry } = useStory(slug)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [paragraphIndex, setParagraphIndex] = useState(0)
   const [boneMode, setBoneMode] = useState(false)
@@ -134,6 +134,12 @@ function EditorWorkspace({ slug }: { slug: string }) {
   const handleScriptMeta = (patch: Partial<Pick<Script, 'title' | 'intro' | 'place'>>) => {
     if (!script) return
     updateScript({ ...script, ...patch })
+    // index.json（首頁卡片讀的清單）也有同名的 title/place 欄位，兩邊都要改才不會顯示過時內容；
+    // intro 只存在 script.json，不用同步
+    const catalogPatch: Partial<Pick<CatalogEntry, 'title' | 'place'>> = {}
+    if (patch.title !== undefined) catalogPatch.title = patch.title
+    if (patch.place !== undefined) catalogPatch.place = patch.place
+    if (Object.keys(catalogPatch).length > 0) updateCatalogEntry(catalogPatch)
   }
 
   const handlePartFile = (relPath: string) => {

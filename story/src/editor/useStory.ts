@@ -102,11 +102,13 @@ export function useStory(slug: string, deps: UseStoryDeps = {}) {
     }, DEBOUNCE_MS)
   }, [layoutPath])
 
-  // 讀-改-寫：index.json 是所有故事共用一份，只改目前 slug 那筆的 blurb，其他故事條目原樣寫回
-  const updateBlurb = useCallback((blurb: string) => {
+  // 讀-改-寫：index.json 是所有故事共用一份，只改目前 slug 那筆的欄位（title/place/blurb
+  // 任意子集），其他故事條目原樣寫回。title/place 也存在 script.json 裡（EditorPage 的
+  // handleScriptMeta 負責兩邊同步），這裡只管 index.json 這一份。
+  const updateCatalogEntry = useCallback((patch: Partial<Pick<CatalogEntry, 'title' | 'place' | 'blurb'>>) => {
     if (!catalog) return
     const next: Catalog = {
-      stories: catalog.stories.map((s) => (s.slug === slug ? { ...s, blurb } : s)),
+      stories: catalog.stories.map((s) => (s.slug === slug ? { ...s, ...patch } : s)),
     }
     setCatalog(next)
     if (catalogTimer.current) clearTimeout(catalogTimer.current)
@@ -116,7 +118,12 @@ export function useStory(slug: string, deps: UseStoryDeps = {}) {
     }, DEBOUNCE_MS)
   }, [catalog, slug])
 
+  const updateBlurb = useCallback((blurb: string) => updateCatalogEntry({ blurb }), [updateCatalogEntry])
+
   const catalogEntry = catalog?.stories.find((s) => s.slug === slug) ?? null
 
-  return { script, art, layout, catalogEntry, error, externalUpdate, updateScript, updateLayout, updateBlurb }
+  return {
+    script, art, layout, catalogEntry, error, externalUpdate,
+    updateScript, updateLayout, updateBlurb, updateCatalogEntry,
+  }
 }

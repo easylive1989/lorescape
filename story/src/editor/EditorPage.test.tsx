@@ -123,7 +123,10 @@ describe('EditorPage 故事屬性面板（Task 15）', () => {
       }
       if (url.includes('index.json')) {
         return new Response(JSON.stringify({
-          stories: [{ slug: 'demo', title: demoScript.title, place: demoScript.place, blurb: '測試簡介' }],
+          stories: [
+            { slug: 'demo', title: demoScript.title, place: demoScript.place, blurb: '測試簡介' },
+            { slug: 'other', title: '別的故事', place: '別的地點', blurb: '別的簡介' },
+          ],
         }))
       }
       if (url.includes('script.json')) return new Response(JSON.stringify(demoScript))
@@ -170,6 +173,36 @@ describe('EditorPage 故事屬性面板（Task 15）', () => {
       expect(putCall).toBeDefined()
       const body = JSON.parse(putCall![1]!.body as string)
       expect(body.characters[0].parts.head).toBe('characters/master/new-head.png')
+    }, { timeout: 2000 })
+  })
+
+  // Fix round 1（code review Important）：StoryPanel 改 title/place 只寫 script.json，
+  // index.json 的同名欄位沒同步，HomePage 卡片（讀 index.json）會顯示過時標題/地點。
+  test('改標題後，script.json 與 index.json 都送出 PUT；index.json 只改該 slug 的 title，其他故事條目不動', async () => {
+    stubFetchRoutes()
+    const user = userEvent.setup()
+    render(<EditorPage />)
+    await screen.findByRole('option', { name: demoScript.title })
+    await user.selectOptions(screen.getByLabelText('選擇故事'), 'demo')
+
+    const titleInput = await screen.findByRole('textbox', { name: '標題' })
+    await user.clear(titleInput)
+    await user.type(titleInput, '新標題')
+
+    await waitFor(() => {
+      const scriptPut = vi.mocked(fetch).mock.calls.find(([input, init]) =>
+        String(input).includes('script.json') && init?.method === 'PUT')
+      expect(scriptPut).toBeDefined()
+      expect(JSON.parse(scriptPut![1]!.body as string).title).toBe('新標題')
+
+      const catalogPut = vi.mocked(fetch).mock.calls.find(([input, init]) =>
+        String(input).includes('index.json') && init?.method === 'PUT')
+      expect(catalogPut).toBeDefined()
+      const catalogBody = JSON.parse(catalogPut![1]!.body as string)
+      expect(catalogBody.stories).toEqual([
+        { slug: 'demo', title: '新標題', place: demoScript.place, blurb: '測試簡介' },
+        { slug: 'other', title: '別的故事', place: '別的地點', blurb: '別的簡介' },
+      ])
     }, { timeout: 2000 })
   })
 })

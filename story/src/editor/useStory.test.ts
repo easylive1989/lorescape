@@ -195,6 +195,29 @@ test('updateBlurb 樂觀更新並 debounce PUT index.json，只改該 slug 的 b
   vi.useRealTimers()
 })
 
+test('updateCatalogEntry 可同時改 title/place，debounce PUT index.json 且只動該 slug 條目', async () => {
+  vi.useFakeTimers()
+  stubFetchRoutes()
+  const { result } = renderHook(() => useStory('demo'))
+  await act(async () => { await vi.runOnlyPendingTimersAsync() })
+
+  act(() => result.current.updateCatalogEntry({ title: '新標題', place: '新地點' }))
+  expect(result.current.catalogEntry?.title).toBe('新標題')
+  expect(result.current.catalogEntry?.place).toBe('新地點')
+  expect(vi.mocked(fetch).mock.calls.some(([, i]) => i?.method === 'PUT')).toBe(false)
+
+  await act(async () => { await vi.advanceTimersByTimeAsync(600) })
+  const putCall = vi.mocked(fetch).mock.calls.find(([, i]) => i?.method === 'PUT')
+  expect(putCall).toBeDefined()
+  expect(String(putCall![0])).toContain('index.json')
+  const body = JSON.parse(putCall![1]!.body as string)
+  expect(body.stories).toEqual([
+    { slug: 'demo', title: '新標題', place: '新地點', blurb: '原本的簡介' },
+    { slug: 'other', title: '別的故事', place: '別的地點', blurb: '別的簡介' },
+  ])
+  vi.useRealTimers()
+})
+
 test('SSE 收到 index.json 更新（slug 為空字串）→ 重新 GET 覆蓋 catalogEntry 並標記 externalUpdate', async () => {
   stubFetchRoutes()
   let handler: ((e: ContentEvent) => void) | undefined
