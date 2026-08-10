@@ -197,6 +197,49 @@ def build_payload() -> dict:
     )
 
     styles = parse_style_map()
+
+    # 每支 Reel 的完整明細：ig_posts 的最新一次觀察 ＋ 三個 checkpoint 快照。
+    # ig_posts 只追蹤發布後 7 天，之後那筆最新觀察就是該支的最終累計值。
+    snap: dict[str, dict[str, dict]] = {}
+    for r in insights:
+        snap.setdefault(r["media_id"], {})[r.get("checkpoint", "")] = r
+
+    latest_obs: dict[str, dict] = {}
+    for r in posts:
+        if r.get("type") == "REELS":
+            latest_obs[r["media_id"]] = r  # 檔案依 posted→media→obs 排序
+
+    def ms_to_s(value) -> float | None:
+        v = num(value)
+        return round(v / 1000, 1) if v is not None else None
+
+    reels_all = []
+    for mid, r in latest_obs.items():
+        cps = snap.get(mid, {})
+        meta = styles.get(r.get("posted_date", ""), {})
+        last_cp = cps.get("7d") or cps.get("48h") or cps.get("24h") or {}
+        reels_all.append({
+            "date": r.get("posted_date", ""),
+            "place": meta.get("place") or (r.get("caption") or "")[:14],
+            "kind": meta.get("kind"),
+            "style": meta.get("style"),
+            "reach": num(r.get("reach")),
+            "views": num(r.get("views")),
+            "watch": ms_to_s(r.get("avg_watch_time")),
+            "skip24": num(cps.get("24h", {}).get("skip_rate_pct")),
+            "skip48": num(cps.get("48h", {}).get("skip_rate_pct")),
+            "skip7d": num(cps.get("7d", {}).get("skip_rate_pct")),
+            "likes": num(r.get("likes")),
+            "saves": num(r.get("saved")),
+            "shares": num(r.get("shares")),
+            "visits": num(last_cp.get("profile_visits")),
+            "newfol": num(last_cp.get("new_followers")),
+            "folpct": num(last_cp.get("follower_pct")),
+            "url": r.get("permalink", ""),
+            "caption": (r.get("caption") or "")[:60],
+        })
+    reels_all.sort(key=lambda x: x["date"], reverse=True)
+
     reels_skip = []
     for r in insights:
         if r.get("checkpoint") != "24h":
@@ -264,6 +307,7 @@ def build_payload() -> dict:
         "ga4_daily": ga4_daily,
         "posts": by_post,
         "reels_skip": reels_skip,
+        "reels_all": reels_all,
         "funnel_acq": funnel_acq,
         "funnel_app": funnel_app,
         "sources": sources,

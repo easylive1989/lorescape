@@ -35,7 +35,8 @@ python3 dashboard/build_metric.py
 ## 內容
 
 KPI 列（本週 vs 前週）、IG 每日觸及、粉絲累積、Reels vs Carousel 觸及
-（對數刻度）、Reels 24h 略過率（依 calendar 的謎/閉 style 上色）、週漏斗
+（對數刻度）、所有 Reels 明細（可排序、可依 style 篩選）、
+Reels 24h 略過率（依 calendar 的謎/閉 style 上色）、週漏斗
 （獲客段與 App 內段分開，見下）、App / Landing 每日活躍、各來源資料新鮮度。
 每張圖有 hover tooltip，主要圖表另附表格檢視。
 

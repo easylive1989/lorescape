@@ -151,6 +151,26 @@
     padding: 9px 12px; margin-top: 13px;
   }
   .foot { color: var(--ink-muted); font-size: 12px; margin-top: 26px; }
+
+  .filters { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 4px; }
+  .filters button {
+    background: var(--surface-1); color: var(--ink-2); font: inherit;
+    font-size: 12.5px; border: 1px solid var(--border); border-radius: 999px;
+    padding: 4px 12px; cursor: pointer;
+  }
+  .filters button:hover { color: var(--ink-1); }
+  .filters button[aria-pressed="true"] {
+    background: var(--s1); border-color: var(--s1); color: #fff; font-weight: 600;
+  }
+  table.sortable th { cursor: pointer; user-select: none; white-space: nowrap; }
+  table.sortable th:hover { color: var(--ink-1); }
+  table.sortable th .arr { color: var(--s1); font-size: 10px; }
+  table.sortable td a { color: var(--s1); text-decoration: none; }
+  table.sortable td a:hover { text-decoration: underline; }
+  .pill {
+    display: inline-block; border-radius: 4px; padding: 1px 6px;
+    font-size: 11px; font-weight: 600; color: #fff;
+  }
 </style>
 </head>
 <body>
@@ -199,6 +219,16 @@
     <div class="chart" id="c-skip"></div>
     <div class="note" id="skip-note"></div>
     <details><summary>表格檢視</summary><div id="t-skip"></div></details>
+  </section>
+
+  <section>
+    <h2>所有 Reels 明細</h2>
+    <p class="sub">每支 Reel 的最終累計數字（<code>ig_posts</code> 追蹤發布後
+      7 天，之後那筆觀察即為最終值）＋ 三個 checkpoint 的略過率。
+      點欄位標題可排序，點景點名開 IG 原文。</p>
+    <div class="filters" id="reel-filters"></div>
+    <div class="chart"><div id="t-reels"></div></div>
+    <div class="note" id="reels-note"></div>
   </section>
 
   <section>
@@ -553,6 +583,99 @@ function table(hostId, cols, rows) {
   host.innerHTML = '';
   host.appendChild(t);
 }
+
+/* ------------------------------------------------------- 所有 Reels 明細 */
+const REEL_COLS = [
+  { k: 'date',   h: '日期',    t: 'text', f: r => md(r.date) },
+  { k: 'place',  h: '景點',    t: 'text',
+    f: r => r.url ? `<a href="${r.url}" target="_blank" rel="noopener">${r.place}</a>`
+                  : r.place },
+  { k: 'kind',   h: '類型',    t: 'text', f: r => r.kind || '—' },
+  { k: 'style',  h: 'style',   t: 'text',
+    f: r => r.style
+      ? `<span class="pill" style="background:${r.style === '謎' ? 'var(--s1)' : 'var(--s2)'}">${r.style}</span>`
+      : '—' },
+  { k: 'reach',  h: '觸及',    t: 'num', f: r => fmtInt(r.reach) },
+  { k: 'views',  h: '觀看',    t: 'num', f: r => fmtInt(r.views) },
+  { k: 'watch',  h: '平均觀看', t: 'num', f: r => r.watch == null ? '—' : r.watch + 's' },
+  { k: 'skip24', h: '略過 24h', t: 'num', f: r => r.skip24 == null ? '—' : r.skip24 + '%' },
+  { k: 'skip48', h: '48h',     t: 'num', f: r => r.skip48 == null ? '—' : r.skip48 + '%' },
+  { k: 'skip7d', h: '7d',      t: 'num', f: r => r.skip7d == null ? '—' : r.skip7d + '%' },
+  { k: 'likes',  h: '讚',      t: 'num', f: r => fmtInt(r.likes) },
+  { k: 'saves',  h: '存',      t: 'num', f: r => fmtInt(r.saves) },
+  { k: 'shares', h: '分享',    t: 'num', f: r => fmtInt(r.shares) },
+  { k: 'visits', h: '檔案瀏覽', t: 'num', f: r => fmtInt(r.visits) },
+  { k: 'newfol', h: '新粉',    t: 'num', f: r => fmtInt(r.newfol) },
+  { k: 'folpct', h: '粉絲比',   t: 'num', f: r => r.folpct == null ? '—' : r.folpct + '%' },
+];
+
+let reelSort = { key: 'date', dir: -1 };
+let reelFilter = 'all';
+
+function renderReels() {
+  const rows = DATA.reels_all.filter(r =>
+    reelFilter === 'all' ? true
+    : reelFilter === 'none' ? !r.style
+    : r.style === reelFilter);
+
+  const col = REEL_COLS.find(c => c.k === reelSort.key);
+  const sorted = [...rows].sort((a, b) => {
+    const x = a[reelSort.key], y = b[reelSort.key];
+    if (x == null && y == null) return 0;
+    if (x == null) return 1;          // 無值一律沉底，不隨排序方向翻轉
+    if (y == null) return -1;
+    if (col.t === 'num') return (x - y) * reelSort.dir;
+    return String(x).localeCompare(String(y), 'zh-Hant') * reelSort.dir;
+  });
+
+  const head = REEL_COLS.map(c => {
+    const on = c.k === reelSort.key;
+    const arr = on ? `<span class="arr">${reelSort.dir === 1 ? '▲' : '▼'}</span>` : '';
+    return `<th data-k="${c.k}">${c.h} ${arr}</th>`;
+  }).join('');
+  const body = sorted.map(r =>
+    '<tr>' + REEL_COLS.map(c => `<td>${c.f(r)}</td>`).join('') + '</tr>').join('');
+
+  const host = document.getElementById('t-reels');
+  host.innerHTML = `<table class="sortable"><thead><tr>${head}</tr></thead>`
+    + `<tbody>${body}</tbody></table>`;
+  host.querySelectorAll('th').forEach(th => th.addEventListener('click', () => {
+    const k = th.dataset.k;
+    // 同一欄再點一次翻轉方向；換欄時數值欄預設由大到小、文字欄由小到大
+    if (reelSort.key === k) reelSort.dir *= -1;
+    else reelSort = { key: k, dir: REEL_COLS.find(c => c.k === k).t === 'num' ? -1 : -1 };
+    renderReels();
+  }));
+
+  const med = arr => {
+    const s = arr.filter(v => v != null).sort((a, b) => a - b);
+    if (!s.length) return null;
+    const h = Math.floor(s.length / 2);
+    return s.length % 2 ? s[h] : (s[h - 1] + s[h]) / 2;
+  };
+  const mr = med(sorted.map(r => r.reach));
+  const mk = med(sorted.map(r => r.skip24));
+  document.getElementById('reels-note').innerHTML =
+    `${sorted.length} 支｜觸及中位 <b>${mr == null ? '—' : fmtInt(mr)}</b>`
+    + `｜24h 略過率中位 <b>${mk == null ? '—' : mk.toFixed(1) + '%'}</b>`
+    + `　<span style="color:var(--ink-muted)">中位數對離群值穩健；本期 8/05 廣島與 8/08 昌德宮為已知離群值。</span>`;
+}
+
+(function reelFilters() {
+  const host = document.getElementById('reel-filters');
+  const opts = [
+    ['all', '全部'], ['謎', '謎型'], ['閉', '閉合型'], ['none', '未標註'],
+  ];
+  host.innerHTML = opts.map(([v, label]) =>
+    `<button data-v="${v}" aria-pressed="${v === 'all'}">${label}</button>`).join('');
+  host.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+    reelFilter = b.dataset.v;
+    host.querySelectorAll('button').forEach(x =>
+      x.setAttribute('aria-pressed', String(x === b)));
+    renderReels();
+  }));
+})();
+renderReels();
 
 /* ------------------------------------------------------------------- 啟動 */
 document.getElementById('meta').textContent =
