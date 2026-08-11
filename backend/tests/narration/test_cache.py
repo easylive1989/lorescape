@@ -179,6 +179,18 @@ def test_narration_get_returns_none_when_client_raises():
     assert repo.get("Q1", "zh-TW", "h1") is None  # never raises
 
 
+def test_narration_get_returns_none_when_stored_row_no_longer_matches_schema():
+    """存量資料的 schema 若跟現在的 NarrationResponse 對不上（例如缺欄位），
+    pydantic 驗證會炸出 ValidationError；get 要當成一般錯誤吞掉、回傳
+    None，讓呼叫端重新生成並覆蓋掉這筆髒資料。"""
+    client = _narration_client_returning(
+        [{"narration": {"place_name": "x"}}]
+    )
+    repo = NarrationCacheRepository(client)
+
+    assert repo.get("Q1", "zh-TW", "h1") is None  # never raises
+
+
 def test_narration_put_upserts_full_response():
     client = MagicMock()
     repo = NarrationCacheRepository(client)

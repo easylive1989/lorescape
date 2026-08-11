@@ -242,6 +242,7 @@ void main() {
     await _givenHome(tester, pushed: pushed);
 
     expect(find.byKey(const Key('home-open-journey')), findsNothing);
+    expect(find.byKey(const Key('home-open-settings')), findsOneWidget);
     expect(pushed, isEmpty);
   });
 

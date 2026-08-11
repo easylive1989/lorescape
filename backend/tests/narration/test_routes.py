@@ -1,11 +1,11 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
-import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from lorescape_backend.auth import AuthedUser, get_token_verifier, require_user
 from lorescape_backend.config import Config
+from lorescape_backend.narration.cache import NarrationCacheRepository
 from lorescape_backend.narration.models import (
     HookItem,
     HooksResponse,
@@ -50,7 +50,6 @@ class _FakeNarrationCache:
 
     def __init__(self) -> None:
         self.store: dict[tuple[str, str, str], NarrationResponse] = {}
-        self.put_calls: int = 0
 
     def get(
         self, place_key: str, language: str, hook_id: str
@@ -64,7 +63,6 @@ class _FakeNarrationCache:
         hook_id: str,
         result: NarrationResponse,
     ) -> None:
-        self.put_calls += 1
         if result.insufficient_source or not result.paragraphs:
             return
         self.store[(place_key, language, hook_id)] = result
@@ -465,19 +463,21 @@ def test_narration_cache_is_language_scoped(gen_narration):
 
 @patch("lorescape_backend.narration.routes.service.generate_narration")
 def test_narration_survives_a_broken_cache(gen_narration):
-    """讀寫都炸掉時，端點仍要正常回傳生成結果。"""
+    """Supabase 整個掛掉（讀寫都炸）時，/narration 仍要正常回傳剛生成的
+    故事——用真正的 NarrationCacheRepository（不是路由自己 try/except），
+    證明吞例外的責任在 repository 這一層，路由本身不用知道快取死活。"""
     gen_narration.return_value = _story(["一", "二"])
 
-    class _BrokenCache:
-        def get(self, place_key, language, hook_id):
-            raise RuntimeError("must be swallowed by the route's repository")
-
-        def put(self, place_key, language, hook_id, result):
-            raise RuntimeError("must be swallowed by the route's repository")
+    broken_client = MagicMock()
+    broken_client.table.side_effect = RuntimeError("supabase down")
+    cache = NarrationCacheRepository(broken_client)
 
     app = _make_app()
-    app.dependency_overrides[get_narration_cache_repository] = _BrokenCache
+    app.dependency_overrides[get_narration_cache_repository] = lambda: cache
     client = TestClient(app)
 
-    with pytest.raises(RuntimeError):
-        client.post("/narration", json=_narration_body())
+    response = client.post("/narration", json=_narration_body())
+
+    assert response.status_code == 200
+    assert response.json()["paragraphs"] == ["一", "二"]
+    gen_narration.assert_called_once()
