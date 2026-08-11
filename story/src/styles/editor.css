@@ -454,3 +454,10 @@
   font-size: 0.85rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
+
+/* 說話者下拉夾在段落列最前面，寬度固定才不會被 textarea 擠掉。 */
+.node-panel__speaker {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  max-width: 6rem;
+}

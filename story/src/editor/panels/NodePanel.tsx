@@ -33,6 +33,12 @@ export function NodePanel(props: {
     onChange({ ...node, paragraphs: node.paragraphs.filter((_, i) => i !== index) })
   const moveParagraph = (index: number, delta: number) =>
     onChange({ ...node, paragraphs: moveItem(node.paragraphs, index, delta) })
+  const setSpeaker = (index: number, characterId: string) =>
+    onChange({
+      ...node,
+      paragraphs: node.paragraphs.map((p, i) =>
+        i !== index ? p : characterId ? { ...p, speaker: characterId } : { text: p.text }),
+    })
 
   // next
   const updateNext = (value: string) => onChange({ ...node, next: value })
@@ -52,18 +58,32 @@ export function NodePanel(props: {
   const updateEndingTitle = (title: string) => onChange({ ...node, ending: { title } })
 
   // cast
-  const updateCast = (index: number, patch: Partial<CastMember>) =>
+  const updateCast = (index: number, patch: Partial<CastMember>) => {
+    const previous = (node.cast ?? [])[index]?.character
+    const nextCharacter = patch.character
     onChange({
       ...node,
       cast: (node.cast ?? []).map((m, i) => (i === index ? { ...m, ...patch } : m)),
+      paragraphs:
+        nextCharacter && previous && nextCharacter !== previous
+          ? node.paragraphs.map((p) =>
+              p.speaker === previous ? { ...p, speaker: nextCharacter } : p)
+          : node.paragraphs,
     })
+  }
   const addCast = () =>
     onChange({
       ...node,
       cast: [...(node.cast ?? []), { character: script.characters[0]?.id ?? '', position: 'center' }],
     })
-  const removeCast = (index: number) =>
-    onChange({ ...node, cast: (node.cast ?? []).filter((_, i) => i !== index) })
+  const removeCast = (index: number) => {
+    const removed = (node.cast ?? [])[index]?.character
+    onChange({
+      ...node,
+      cast: (node.cast ?? []).filter((_, i) => i !== index),
+      paragraphs: node.paragraphs.map((p) => (p.speaker === removed ? { text: p.text } : p)),
+    })
+  }
 
   return (
     <div className="node-panel">
@@ -71,6 +91,19 @@ export function NodePanel(props: {
         <h3>段落</h3>
         {node.paragraphs.map((paragraph, index) => (
           <div className="node-panel__row" key={index}>
+            <select
+              className="node-panel__speaker"
+              aria-label="說話者"
+              value={paragraph.speaker ?? ''}
+              onChange={(e) => setSpeaker(index, e.target.value)}
+            >
+              <option value="">旁白</option>
+              {(node.cast ?? []).map((member) => (
+                <option key={member.character} value={member.character}>
+                  {script.characters.find((c) => c.id === member.character)?.name ?? member.character}
+                </option>
+              ))}
+            </select>
             <textarea
               className="node-panel__textarea"
               value={paragraph.text}

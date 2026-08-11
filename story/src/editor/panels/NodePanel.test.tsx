@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import { NodePanel } from './NodePanel'
 import { demoScript } from '../../test/fixtures'
-import type { ScriptNode } from '../../engine/schema'
+import type { Script, ScriptNode } from '../../engine/schema'
 
 const node = demoScript.nodes[0] // choices 型態，含 cast
 const endingNode = demoScript.nodes[1] // ending 型態
@@ -155,4 +155,66 @@ test('點「更換」展開 AssetPicker，選圖後回傳更新過 background �
   fireEvent.click(thumb)
 
   expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ background: 'scenes/new-bg.png' }))
+})
+
+test('說話者下拉列出旁白與台上角色，選取後寫入 speaker', () => {
+  const onChange = vi.fn()
+  render(<NodePanel script={demoScript} node={node} slug="demo" onChange={onChange} />)
+  const speaker = screen.getAllByRole('combobox', { name: '說話者' })[0]
+  expect(speaker).toHaveValue('')
+  expect(screen.getAllByRole('option', { name: '旁白' })[0]).toBeInTheDocument()
+
+  fireEvent.change(speaker, { target: { value: 'master' } })
+  expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
+    paragraphs: [{ text: node.paragraphs[0].text, speaker: 'master' }, ...node.paragraphs.slice(1)],
+  }))
+})
+
+test('說話者選回旁白時移除 speaker 欄位', () => {
+  const onChange = vi.fn()
+  const withSpeaker: ScriptNode = {
+    ...node,
+    paragraphs: [{ text: '第一段', speaker: 'master' }, ...node.paragraphs.slice(1)],
+  }
+  render(<NodePanel script={demoScript} node={withSpeaker} slug="demo" onChange={onChange} />)
+  fireEvent.change(screen.getAllByRole('combobox', { name: '說話者' })[0], { target: { value: '' } })
+  expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
+    paragraphs: [{ text: '第一段' }, ...node.paragraphs.slice(1)],
+  }))
+  expect(onChange.mock.calls[0][0].paragraphs[0]).not.toHaveProperty('speaker')
+})
+
+test('刪除 cast 成員時清空指向他的段落 speaker', () => {
+  const onChange = vi.fn()
+  const withSpeaker: ScriptNode = {
+    ...node,
+    paragraphs: [{ text: '第一段', speaker: 'master' }, { text: '第二段' }],
+  }
+  render(<NodePanel script={demoScript} node={withSpeaker} slug="demo" onChange={onChange} />)
+  fireEvent.click(screen.getAllByRole('button', { name: '刪除角色' })[0])
+  expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
+    cast: [],
+    paragraphs: [{ text: '第一段' }, { text: '第二段' }],
+  }))
+})
+
+test('抽換 cast 角色時把段落 speaker 一併換過去', () => {
+  const onChange = vi.fn()
+  const twoCharScript: Script = {
+    ...demoScript,
+    characters: [
+      ...demoScript.characters,
+      { id: 'apprentice', name: '學徒', image: 'characters/apprentice/full.png' },
+    ],
+  }
+  const withSpeaker: ScriptNode = {
+    ...node,
+    paragraphs: [{ text: '第一段', speaker: 'master' }, { text: '第二段' }],
+  }
+  render(<NodePanel script={twoCharScript} node={withSpeaker} slug="demo" onChange={onChange} />)
+  fireEvent.change(screen.getAllByRole('combobox', { name: '角色' })[0], { target: { value: 'apprentice' } })
+  expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
+    cast: [{ character: 'apprentice', position: 'center' }],
+    paragraphs: [{ text: '第一段', speaker: 'apprentice' }, { text: '第二段' }],
+  }))
 })
