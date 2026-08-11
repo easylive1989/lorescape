@@ -5,7 +5,6 @@ import Manifesto from "@/components/Manifesto";
 import LocalStories from "@/components/LocalStories";
 import ManyAngles from "@/components/ManyAngles";
 import ExploreNearby from "@/components/ExploreNearby";
-import JourneyJournal from "@/components/JourneyJournal";
 import Trust from "@/components/Trust";
 import FinalCTA from "@/components/FinalCTA";
 import Footer from "@/components/Footer";
@@ -26,7 +25,9 @@ export default function Home({ params }: { params: { locale: string } }) {
         <LocalStories d={d.localStories} />
         <ManyAngles d={d.manyAngles} />
         <ExploreNearby d={d.exploreNearby} />
-        <JourneyJournal d={d.journeyJournal} />
+        {/* <JourneyJournal /> 暫時撤下：App 的書架（旅程手記）功能自
+            2026-08-11 起隱藏（kBookshelfEnabled = false）。元件與 zh/en
+            文案都還在，功能恢復時把 import 與這一行加回來即可。 */}
         <Trust d={d.trust} />
         <FinalCTA d={d.finalCTA} store={d.storeButtons} />
       </main>

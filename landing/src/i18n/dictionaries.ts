@@ -53,6 +53,10 @@ export interface Dict {
     chips: string[]; // 對應 [自然,人文,信仰,城市] 四項
     imageAlt: string;
   };
+  // 目前不 render：App 的書架（旅程手記）功能自 2026-08-11 起隱藏
+  // （frontend 的 kBookshelfEnabled = false）。文案與 JourneyJournal 元件
+  // 都保留，功能一恢復就把 page.tsx 的 <JourneyJournal /> 與 nav 的
+  // 「旅程手記」/「Journey Journal」項目加回去即可。
   journeyJournal: {
     no: string;
     h2: string;
@@ -125,7 +129,6 @@ const zh: Dict = {
       { label: "在地故事", anchor: "#stories" },
       { label: "多種角度", anchor: "#angles" },
       { label: "探索附近", anchor: "#explore" },
-      { label: "旅程手記", anchor: "#journey" },
     ],
     downloadApp: "下載 App",
     switchTo: "EN",
@@ -307,7 +310,6 @@ const en: Dict = {
       { label: "Local Stories", anchor: "#stories" },
       { label: "Many Angles", anchor: "#angles" },
       { label: "Explore Nearby", anchor: "#explore" },
-      { label: "Journey Journal", anchor: "#journey" },
     ],
     downloadApp: "Download App",
     switchTo: "中文",
