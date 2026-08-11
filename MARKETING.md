@@ -20,7 +20,14 @@
   - 提供 2–3 個故事角度讓用戶自選，而非單一制式內容
   - 語音逐句同步高亮，邊聽邊看
   - 每日故事推播，養成每天閱讀世界的習慣
-  - 文化足跡日誌自動整理旅行知識，可匯出 PDF
+- **Currently hidden:** 「文化足跡日誌／旅程手記」與其 PDF 匯出自 2026-08-11 起在
+  App 內隱藏（`kBookshelfEnabled = false`，見
+  `docs/superpowers/specs/2026-08-11-hide-bookshelf-and-cache-narration-design.md`）。
+  書架入口與 `/journey`、`/trip*` 路由都不註冊，`features/export/` 的 PDF 匯出唯一
+  入口在旅程詳情頁，因此一併不可達。程式碼與資料都保留，旗標翻回 `true` 即復活——
+  但在恢復之前，**任何對外文案都不得再提這項功能**。
+  尚待同步：`landing/src/i18n/dictionaries.ts` 的 `journeyJournal` 段（Feature 04
+  與導覽列「旅程手記」/「Journey Journal」錨點）、`README.md:28,40,48`。
 - **Proof points:** 早期階段（App 2026-06 上線），暫不公開量化數字；行銷以上述質化差異化為主，待數據有意義後再補（下載量、故事生成次數、訂閱轉換率）
 - **Source notes:** 所有功能描述來自 README.md 與 landing page copy（landing/src/i18n/）
 
