@@ -14,7 +14,7 @@ class HomeTopBar extends ConsumerWidget {
     required this.query,
     required this.onQueryChanged,
     required this.onSuggestionTap,
-    required this.onOpenJourney,
+    this.onOpenJourney,
     required this.onOpenSettings,
   });
 
@@ -24,7 +24,9 @@ class HomeTopBar extends ConsumerWidget {
   final String query;
   final ValueChanged<String> onQueryChanged;
   final ValueChanged<String> onSuggestionTap;
-  final VoidCallback onOpenJourney;
+
+  /// 書架入口。傳 `null` 代表這顆按鈕整個不出現（見 [kBookshelfEnabled]）。
+  final VoidCallback? onOpenJourney;
   final VoidCallback onOpenSettings;
 
   @override
@@ -77,13 +79,15 @@ class HomeTopBar extends ConsumerWidget {
                   ],
                 ),
               ),
-              _RaisedIconButton(
-                key: const Key('home-open-journey'),
-                icon: Icons.menu_book_outlined,
-                label: 'home.open_journey'.tr(),
-                onPressed: onOpenJourney,
-              ),
-              const SizedBox(width: 8),
+              if (onOpenJourney case final openJourney?) ...[
+                _RaisedIconButton(
+                  key: const Key('home-open-journey'),
+                  icon: Icons.menu_book_outlined,
+                  label: 'home.open_journey'.tr(),
+                  onPressed: openJourney,
+                ),
+                const SizedBox(width: 8),
+              ],
               _RaisedIconButton(
                 key: const Key('home-open-settings'),
                 icon: Icons.settings_outlined,

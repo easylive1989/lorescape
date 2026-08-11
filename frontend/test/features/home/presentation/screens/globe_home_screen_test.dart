@@ -235,16 +235,14 @@ void main() {
     expect(pushed, ['/map?q=']);
   });
 
-  testWidgets('given the globe home, '
-      'when the user taps the shelf button, '
-      'then the journey screen opens', (tester) async {
+  testWidgets('given the bookshelf feature is hidden, '
+      'when the globe home renders its top bar, '
+      'then no shelf button is offered', (tester) async {
     final pushed = <Object?>[];
     await _givenHome(tester, pushed: pushed);
 
-    await tester.tap(find.byKey(const Key('home-open-journey')));
-    await tester.pumpAndSettle();
-
-    expect(pushed, ['/journey']);
+    expect(find.byKey(const Key('home-open-journey')), findsNothing);
+    expect(pushed, isEmpty);
   });
 
   testWidgets('given the globe home, '
