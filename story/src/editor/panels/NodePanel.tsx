@@ -4,6 +4,13 @@ import { AssetPicker } from './AssetPicker'
 
 const MAX_CHOICES = 3
 
+// 站位同時是「有哪些位置」與「新增時按什麼順序挑」的來源。
+const POSITIONS: { value: CastMember['position']; label: string }[] = [
+  { value: 'left', label: '左' },
+  { value: 'center', label: '中' },
+  { value: 'right', label: '右' },
+]
+
 function moveItem<T>(list: T[], index: number, delta: number): T[] {
   const target = index + delta
   if (target < 0 || target >= list.length) return list
@@ -71,11 +78,19 @@ export function NodePanel(props: {
           : node.paragraphs,
     })
   }
-  const addCast = () =>
+  // cast 的角色與站位都必須唯一（validateScript 會擋），所以面板只提供還沒被
+  // 佔用的選項——否則使用者做得出重複狀態，卻要到存檔失敗才知道。
+  const takenCharacters = new Set((node.cast ?? []).map((m) => m.character))
+  const takenPositions = new Set((node.cast ?? []).map((m) => m.position))
+  const freeCharacter = script.characters.find((c) => !takenCharacters.has(c.id))
+  const freePosition = POSITIONS.find((p) => !takenPositions.has(p.value))
+  const addCast = () => {
+    if (!freeCharacter || !freePosition) return
     onChange({
       ...node,
-      cast: [...(node.cast ?? []), { character: script.characters[0]?.id ?? '', position: 'center' }],
+      cast: [...(node.cast ?? []), { character: freeCharacter.id, position: freePosition.value }],
     })
+  }
   const removeCast = (index: number) => {
     const removed = (node.cast ?? [])[index]?.character
     onChange({
@@ -192,23 +207,27 @@ export function NodePanel(props: {
               value={member.character}
               onChange={(e) => updateCast(index, { character: e.target.value })}
             >
-              {script.characters.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
+              {script.characters
+                .filter((c) => c.id === member.character || !takenCharacters.has(c.id))
+                .map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
             </select>
             <select
               aria-label="位置"
               value={member.position}
               onChange={(e) => updateCast(index, { position: e.target.value as CastMember['position'] })}
             >
-              <option value="left">左</option>
-              <option value="center">中</option>
-              <option value="right">右</option>
+              {POSITIONS
+                .filter((p) => p.value === member.position || !takenPositions.has(p.value))
+                .map((p) => (
+                  <option key={p.value} value={p.value}>{p.label}</option>
+                ))}
             </select>
             <button type="button" onClick={() => removeCast(index)}>刪除角色</button>
           </div>
         ))}
-        <button type="button" disabled={script.characters.length === 0} onClick={addCast}>
+        <button type="button" disabled={!freeCharacter || !freePosition} onClick={addCast}>
           新增角色
         </button>
       </section>

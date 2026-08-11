@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import { NodePanel } from './NodePanel'
 import { demoScript } from '../../test/fixtures'
 import type { Script, ScriptNode } from '../../engine/schema'
@@ -107,13 +107,6 @@ test('ending 型態：編輯標題', () => {
   expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ ending: { title: '新標題' } }))
 })
 
-test('cast 新增角色', () => {
-  const onChange = vi.fn()
-  render(<NodePanel script={demoScript} node={node} slug="demo" onChange={onChange} />)
-  fireEvent.click(screen.getByRole('button', { name: '新增角色' }))
-  expect(onChange).toHaveBeenCalled()
-})
-
 test('cast 編輯角色與位置', () => {
   const onChange = vi.fn()
   render(<NodePanel script={demoScript} node={node} slug="demo" onChange={onChange} />)
@@ -130,6 +123,67 @@ test('cast 刪除角色', () => {
   render(<NodePanel script={demoScript} node={node} slug="demo" onChange={onChange} />)
   fireEvent.click(screen.getAllByRole('button', { name: '刪除角色' })[0])
   expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ cast: [] }))
+})
+
+// cast 的角色與站位都必須唯一（validateScript 會擋），所以面板不能讓使用者做出
+// 重複的狀態。以下四個測試用兩個角色的劇本驗證這件事。
+const twoCharScript: Script = {
+  ...demoScript,
+  characters: [
+    ...demoScript.characters,
+    { id: 'apprentice', name: '學徒', image: 'characters/apprentice/full.png' },
+  ],
+}
+
+test('新增角色挑還沒上台的角色與還空著的站位', () => {
+  const onChange = vi.fn()
+  render(<NodePanel script={twoCharScript} node={node} slug="demo" onChange={onChange} />)
+  fireEvent.click(screen.getByRole('button', { name: '新增角色' }))
+  expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
+    cast: [{ character: 'master', position: 'center' }, { character: 'apprentice', position: 'left' }],
+  }))
+})
+
+test('所有角色都上台時「新增角色」停用', () => {
+  const fullNode: ScriptNode = {
+    ...node,
+    cast: [
+      { character: 'master', position: 'center' },
+      { character: 'apprentice', position: 'left' },
+    ],
+  }
+  render(<NodePanel script={twoCharScript} node={fullNode} slug="demo" onChange={() => {}} />)
+  expect(screen.getByRole('button', { name: '新增角色' })).toBeDisabled()
+})
+
+test('角色下拉不列出已被其他 cast 成員佔用的角色', () => {
+  const fullNode: ScriptNode = {
+    ...node,
+    cast: [
+      { character: 'master', position: 'center' },
+      { character: 'apprentice', position: 'left' },
+    ],
+  }
+  render(<NodePanel script={twoCharScript} node={fullNode} slug="demo" onChange={() => {}} />)
+  const options = within(screen.getAllByRole('combobox', { name: '角色' })[0])
+    .getAllByRole('option')
+    .map((o) => o.textContent)
+  expect(options).toEqual(['師傅'])
+})
+
+test('位置下拉不列出已被其他 cast 成員佔用的站位', () => {
+  const fullNode: ScriptNode = {
+    ...node,
+    cast: [
+      { character: 'master', position: 'center' },
+      { character: 'apprentice', position: 'left' },
+    ],
+  }
+  render(<NodePanel script={twoCharScript} node={fullNode} slug="demo" onChange={() => {}} />)
+  const options = within(screen.getAllByRole('combobox', { name: '位置' })[0])
+    .getAllByRole('option')
+    .map((o) => o.textContent)
+  expect(options).toEqual(['中', '右'])
 })
 
 test('無角色可加時「新增角色」停用', () => {

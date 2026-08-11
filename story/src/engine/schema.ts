@@ -52,10 +52,19 @@ export function validateScript(data: unknown): Script {
     if (node.next && !nodeIds.has(node.next)) throw new Error(`節點 ${node.id} 的 next 指向不存在節點：${node.next}`)
     for (const c of node.choices ?? [])
       if (!nodeIds.has(c.to)) throw new Error(`節點 ${node.id} 的選項指向不存在節點：${c.to}`)
-    for (const m of node.cast ?? [])
+    // cast 是「台上站著哪些人」，角色與站位都必須唯一：同一個人不會同時站在兩個
+    // 地方，而兩個 sprite 掛同一個站位會像素對像素完全重合、後者等於看不見。
+    // 下面的 speaker 修復與比對邏輯（含工作台的刪除／抽換）都以角色唯一為前提。
+    const castIds = new Set<string>()
+    const castPositions = new Set<string>()
+    for (const m of node.cast ?? []) {
       if (!charIds.has(m.character)) throw new Error(`節點 ${node.id} 引用未定義角色：${m.character}`)
+      if (castIds.has(m.character)) throw new Error(`節點 ${node.id} 的角色重複上台：${m.character}`)
+      if (castPositions.has(m.position)) throw new Error(`節點 ${node.id} 的站位重複：${m.position}`)
+      castIds.add(m.character)
+      castPositions.add(m.position)
+    }
     // speaker 必須是已定義角色，且必須在台上——泡泡要有錨點，畫外音一律用旁白寫。
-    const castIds = new Set((node.cast ?? []).map((m) => m.character))
     node.paragraphs.forEach((p, i) => {
       if (p.speaker === undefined) return
       if (!charIds.has(p.speaker))

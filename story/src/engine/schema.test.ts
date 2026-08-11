@@ -27,6 +27,25 @@ test('cast 引用未定義角色時 throw', () => {
   expect(() => validateScript(bad)).toThrow(/ghost/)
 })
 
+test('同一節點的 cast 出現重複角色時 throw', () => {
+  const bad = structuredClone(demoScript)
+  bad.nodes[0].cast = [
+    { character: 'master', position: 'left' },
+    { character: 'master', position: 'right' },
+  ]
+  expect(() => validateScript(bad)).toThrow(/重複上台/)
+})
+
+test('同一節點的 cast 出現重複站位時 throw', () => {
+  const bad = structuredClone(demoScript)
+  bad.characters.push({ id: 'apprentice', name: '學徒', image: 'characters/apprentice/full.png' })
+  bad.nodes[0].cast = [
+    { character: 'master', position: 'center' },
+    { character: 'apprentice', position: 'center' },
+  ]
+  expect(() => validateScript(bad)).toThrow(/站位重複/)
+})
+
 test('段落 speaker 不在該節點 cast 內時 throw', () => {
   const bad = structuredClone(demoScript)
   bad.nodes[0].paragraphs[0].speaker = 'master'
