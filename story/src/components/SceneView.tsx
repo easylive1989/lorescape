@@ -50,7 +50,14 @@ export function SceneView({
       {cast.map((member) => {
         const character = characterById.get(member.character)
         return character ? (
-          <CharacterSprite key={character.id} character={character} member={member} slug={slug} />
+          <CharacterSprite
+            key={character.id}
+            character={character}
+            member={member}
+            slug={slug}
+            // 旁白段沒有說話者，誰都不壓暗。
+            dimmed={speakerMember !== undefined && member.character !== speakerMember.character}
+          />
         ) : null
       })}
       {children}

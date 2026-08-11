@@ -59,3 +59,22 @@ test('台上人數決定 --sprite-h', () => {
   rerender(<SceneView script={twoOnStage} state={playing(0)} slug="demo" onAdvance={() => {}} onChoose={() => {}} />)
   expect(container.querySelector<HTMLElement>('.scene')!.style.getPropertyValue('--sprite-h')).toBe('87cqw')
 })
+
+test('對白段只壓暗非說話者，旁白段誰都不壓暗', () => {
+  const twoOnStage = structuredClone(script)
+  twoOnStage.characters.push({ id: 'apprentice', name: '學徒', image: 'characters/apprentice/full.png' })
+  twoOnStage.nodes[0].cast = [
+    { character: 'master', position: 'left' },
+    { character: 'apprentice', position: 'right' },
+  ]
+
+  const { rerender } = render(
+    <SceneView script={twoOnStage} state={playing(1)} slug="demo" onAdvance={() => {}} onChoose={() => {}} />)
+  expect(screen.getByTestId('sprite-master')).not.toHaveClass('is-dimmed')
+  expect(screen.getByTestId('sprite-apprentice')).toHaveClass('is-dimmed')
+
+  rerender(
+    <SceneView script={twoOnStage} state={playing(0)} slug="demo" onAdvance={() => {}} onChoose={() => {}} />)
+  expect(screen.getByTestId('sprite-master')).not.toHaveClass('is-dimmed')
+  expect(screen.getByTestId('sprite-apprentice')).not.toHaveClass('is-dimmed')
+})

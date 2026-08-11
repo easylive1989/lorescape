@@ -13,3 +13,12 @@ test('渲染單張角色圖', () => {
   expect(images[0]).toHaveAttribute('src', assetUrl('demo', master.image))
   expect(images[0]).toHaveClass('sprite__image')
 })
+
+test('dimmed 時掛 is-dimmed class；否則不掛', () => {
+  const { rerender } = render(
+    <CharacterSprite character={master} member={{ character: 'master', position: 'left' }} slug="demo" dimmed />)
+  expect(screen.getByTestId('sprite-master')).toHaveClass('is-dimmed', 'sprite--left')
+  rerender(
+    <CharacterSprite character={master} member={{ character: 'master', position: 'left' }} slug="demo" />)
+  expect(screen.getByTestId('sprite-master')).not.toHaveClass('is-dimmed')
+})

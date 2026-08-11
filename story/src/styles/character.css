@@ -21,6 +21,7 @@
      without this it silently swallows taps meant for them wherever the
      sprite's bounding box overlaps the card. */
   pointer-events: none;
+  transition: filter 0.3s ease;
 }
 
 /* Two characters on stage: shrink both so they can share the width. The
@@ -29,6 +30,11 @@
 .sprite:has(+ .sprite),
 .sprite + .sprite {
   width: 58%;
+}
+
+/* 對白段時壓暗非說話者，與泡泡的尖角一起指出誰在說話。 */
+.sprite.is-dimmed {
+  filter: brightness(0.6);
 }
 
 /* The registered canvas has transparent side margins (the figure fills only
