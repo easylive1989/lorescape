@@ -27,8 +27,11 @@ npm test        # vitest run
 
 一個劇本 = `public/content/<slug>/` 下兩份檔案：
 
-- `script.json`：節點（段落、選項、cast 站位/talking、背景、結局）、
+- `script.json`：節點（段落、選項、cast 站位、背景、結局）、
   角色定義（`id`/`name`/`image`：單張去背全身圖路徑）、`startNode`。
+  段落是 `{ text, speaker? }`：`speaker` 是角色 id 時，對話泡泡從該角色頭上
+  出來、其他人壓暗；省略即旁白，走畫面下方的框。`speaker` 必須在該節點的
+  `cast` 內（`validateScript` 會擋），畫外音一律用旁白寫。
 - `art.json`：素材生成用的風格與角色描述設定。
 
 `public/content/index.json` 是劇本 catalog（slug/title/place/blurb），
@@ -60,10 +63,11 @@ npm run dev
   節點」「刪除節點」；拖曳連線可把某個 `next`／選項改指向另一個既有節點
   （存檔前會先跑 `validateScript`，通過才送出）。刪除仍被其他節點指向的
   節點、或刪除 `startNode` 會被擋下並跳出可關閉的錯誤 toast，不會寫檔。
-- **角色站位／talking**：每個角色是單張去背全身圖（`characters/<id>/full.png`），
+- **角色站位／說話者**：每個角色是單張去背全身圖（`characters/<id>/full.png`），
   不再有骨骼／部件編輯；節點屬性面板可調整每個 cast 成員的站位（左／中／
-  右）與是否為目前說話者，站位的視覺效果交由 `character.css` 的
-  `.sprite--left/center/right` 定位與縮放。
+  右），並在每個段落上選擇說話者（旁白或台上任一角色）。站位的視覺效果交由
+  `character.css` 的 `.sprite--left/center/right` 定位與縮放。刪除或抽換 cast
+  成員時，指向他的段落 `speaker` 會自動清空／改指，避免存檔被驗證擋下。
 - **背景／角色圖素材**：節點屬性面板「背景」與故事設定面板「角色圖」都
   有「更換」按鈕，展開素材選圖器（縮圖列表 + 上傳）。
 - **素材上傳規格化**：背景（`scenes/`）上傳的任意比例圖片，前端用
