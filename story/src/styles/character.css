@@ -80,3 +80,75 @@
     transform: translateY(0) scaleY(1.006);
   }
 }
+
+/* 對話泡泡：錨在 sprite 容器上緣附近。
+   「頭頂」的精確 y 座標程式拿不到——.sprite 是 2:3 容器、圖片 object-fit:
+   contain 貼底，頭在圖裡的高度由構圖決定。可靠的錨點只有容器上緣；因為角色圖
+   規格就是 1024×1536（正好 2:3），容器上緣 ≈ 圖片上緣 ≈ 頭頂附近。
+   泡泡刻意不放進 .sprite：.sprite 有 pointer-events: none，且 breathe 動畫在
+   寫 scaleY，放進去泡泡會跟著抖。 */
+.bubble {
+  position: absolute;
+  /* 高於 .text-card 的 1 */
+  z-index: 2;
+  /* --sprite-h 由 SceneView 依台上人數給（108cqw 單人／87cqw 兩人以上），
+     減 4cqw 讓泡泡底緣略壓進頭頂上方，不會浮太遠。 */
+  bottom: calc(var(--sprite-h, 108cqw) - 4cqw);
+  max-width: 78cqw;
+  padding: 0.75rem 1rem;
+  border-radius: 1rem;
+  background-color: rgba(10, 10, 10, 0.72);
+  color: #f5f5f5;
+  line-height: 1.6;
+  /* 推進的點擊由 .scene 承接，泡泡不吃事件 */
+  pointer-events: none;
+  animation: fade-slide-in 0.3s ease-out both;
+}
+
+.bubble__name {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.75rem;
+  color: rgba(245, 245, 245, 0.6);
+}
+
+.bubble__text {
+  margin: 0;
+}
+
+.bubble--left {
+  left: 4cqw;
+}
+
+.bubble--center {
+  left: 50%;
+  /* 與 .sprite--center 同理：與 transform 分開寫，避免被進場動畫蓋掉 */
+  translate: -50% 0;
+}
+
+.bubble--right {
+  right: 4cqw;
+}
+
+/* 尖角：從泡泡底緣往下指向角色。 */
+.bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid rgba(10, 10, 10, 0.72);
+}
+
+.bubble--left::after {
+  left: 24px;
+}
+
+.bubble--center::after {
+  left: 50%;
+  translate: -50% 0;
+}
+
+.bubble--right::after {
+  right: 24px;
+}
