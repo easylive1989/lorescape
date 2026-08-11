@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
+import 'package:context_app/app/config/feature_flags.dart';
 import 'package:context_app/app/config/lorescape_tokens.dart';
 import 'package:context_app/features/daily_story/domain/models/daily_story.dart';
 import 'package:context_app/features/daily_story/providers.dart';
@@ -166,7 +167,9 @@ class _GlobeHomeScreenState extends ConsumerState<GlobeHomeScreen> {
                       setState(() => _query = '');
                       _openMap(query: value);
                     },
-                    onOpenJourney: () => context.push('/journey'),
+                    onOpenJourney: kBookshelfEnabled
+                        ? () => context.push('/journey')
+                        : null,
                     onOpenSettings: () => context.push('/settings'),
                   ),
                 ),

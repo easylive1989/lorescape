@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:context_app/app/config/feature_flags.dart';
 import 'package:context_app/features/analytics/providers.dart';
 import 'package:context_app/features/explore/domain/models/place.dart';
 import 'package:context_app/features/explore/presentation/screens/explore_screen.dart';
@@ -93,11 +94,14 @@ class RouterConfig {
                 FadeTransition(opacity: animation, child: child),
           ),
         ),
-        GoRoute(
-          path: '/journey',
-          name: 'journey',
-          builder: (context, state) => const JourneyScreen(),
-        ),
+        // 書架整組暫時隱藏；未註冊的 path 會落到下方的 errorBuilder
+        // → RedirectToHome，殘留的 deep link 自動回首頁。
+        if (kBookshelfEnabled)
+          GoRoute(
+            path: '/journey',
+            name: 'journey',
+            builder: (context, state) => const JourneyScreen(),
+          ),
         GoRoute(
           path: '/settings',
           name: 'settings',
@@ -176,37 +180,39 @@ class RouterConfig {
             date: state.pathParameters['date']!,
           ),
         ),
-        GoRoute(
-          path: '/trips',
-          name: 'trips',
-          builder: (context, state) => const TripListScreen(),
-        ),
-        GoRoute(
-          path: '/trip/edit',
-          name: 'trip_create',
-          builder: (context, state) => const TripEditScreen(),
-        ),
-        GoRoute(
-          path: '/trip/edit/:id',
-          name: 'trip_edit',
-          builder: (context, state) {
-            final id = state.pathParameters['id']!;
-            return TripEditScreen(tripId: id);
-          },
-        ),
-        GoRoute(
-          path: '/trip/uncategorized',
-          name: 'trip_uncategorized',
-          builder: (context, state) => const TripDetailScreen(),
-        ),
-        GoRoute(
-          path: '/trip/:id',
-          name: 'trip_detail',
-          builder: (context, state) {
-            final id = state.pathParameters['id']!;
-            return TripDetailScreen(tripId: id);
-          },
-        ),
+        if (kBookshelfEnabled) ...[
+          GoRoute(
+            path: '/trips',
+            name: 'trips',
+            builder: (context, state) => const TripListScreen(),
+          ),
+          GoRoute(
+            path: '/trip/edit',
+            name: 'trip_create',
+            builder: (context, state) => const TripEditScreen(),
+          ),
+          GoRoute(
+            path: '/trip/edit/:id',
+            name: 'trip_edit',
+            builder: (context, state) {
+              final id = state.pathParameters['id']!;
+              return TripEditScreen(tripId: id);
+            },
+          ),
+          GoRoute(
+            path: '/trip/uncategorized',
+            name: 'trip_uncategorized',
+            builder: (context, state) => const TripDetailScreen(),
+          ),
+          GoRoute(
+            path: '/trip/:id',
+            name: 'trip_detail',
+            builder: (context, state) {
+              final id = state.pathParameters['id']!;
+              return TripDetailScreen(tripId: id);
+            },
+          ),
+        ],
       ],
       // A URL that matches no route (e.g. a malformed deep link like
       // `/zh/storybook`) redirects home instead of an error page.
