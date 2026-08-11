@@ -45,10 +45,11 @@ test('choosing 時點 scene 不推進，且渲染選項', async () => {
   expect(screen.queryByTestId('speech-bubble')).not.toBeInTheDocument()
 })
 
-test('台上人數決定 --sprite-h', () => {
+test('台上人數決定 --sprite-h 與 --tail-x', () => {
   const { container, rerender } = render(
     <SceneView script={script} state={playing(0)} slug="demo" onAdvance={() => {}} onChoose={() => {}} />)
   expect(container.querySelector<HTMLElement>('.scene')!.style.getPropertyValue('--sprite-h')).toBe('108cqw')
+  expect(container.querySelector<HTMLElement>('.scene')!.style.getPropertyValue('--tail-x')).toBe('26cqw')
 
   const twoOnStage = structuredClone(script)
   twoOnStage.characters.push({ id: 'apprentice', name: '學徒', image: 'characters/apprentice/full.png' })
@@ -58,6 +59,7 @@ test('台上人數決定 --sprite-h', () => {
   ]
   rerender(<SceneView script={twoOnStage} state={playing(0)} slug="demo" onAdvance={() => {}} onChoose={() => {}} />)
   expect(container.querySelector<HTMLElement>('.scene')!.style.getPropertyValue('--sprite-h')).toBe('87cqw')
+  expect(container.querySelector<HTMLElement>('.scene')!.style.getPropertyValue('--tail-x')).toBe('19cqw')
 })
 
 test('對白段只壓暗非說話者，旁白段誰都不壓暗', () => {

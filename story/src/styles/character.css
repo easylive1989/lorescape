@@ -98,14 +98,22 @@
   /* 高於 .text-card 的 1 */
   z-index: 2;
   /* --sprite-h 由 SceneView 依台上人數給（108cqw 單人／87cqw 兩人以上），
-     減 4cqw 讓泡泡底緣略壓進頭頂上方，不會浮太遠。 */
-  bottom: calc(var(--sprite-h, 108cqw) - 4cqw);
+     泡泡底緣正好貼在 sprite 容器上緣，尖角再往下探 11px 觸到髮線。 */
+  bottom: var(--sprite-h, 108cqw);
+  /* 絕對定位元素的收縮寬度會被 left: 50% 夾成場景的一半，max-width 因此
+     永遠吃不到；width: max-content 才量得到真正的內容寬。
+     min-width 保證短對白的泡泡仍包得住最遠的尖角位置。 */
+  width: max-content;
+  min-width: 30cqw;
   max-width: 78cqw;
   padding: 0.75rem 1rem;
   border-radius: 1rem;
   background-color: rgba(10, 10, 10, 0.72);
   color: #f5f5f5;
   line-height: 1.6;
+  /* 深色泡泡疊在深色場景上會糊成一片，尖角尤其看不見。drop-shadow 描的是
+     整個實心輪廓（含 ::after 的三角形），box-shadow 只描矩形邊框做不到。 */
+  filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.35));
   /* 推進的點擊由 .scene 承接，泡泡不吃事件 */
   pointer-events: none;
   animation: fade-slide-in 0.3s ease-out both;
@@ -140,14 +148,16 @@
 .bubble::after {
   content: '';
   position: absolute;
-  bottom: -8px;
-  border-left: 8px solid transparent;
-  border-right: 8px solid transparent;
-  border-top: 8px solid rgba(10, 10, 10, 0.72);
+  bottom: -11px;
+  border-left: 11px solid transparent;
+  border-right: 11px solid transparent;
+  border-top: 11px solid rgba(10, 10, 10, 0.72);
 }
 
+/* --tail-x 是說話者 sprite 的中心（佔場景寬的比例），由 SceneView 設定；
+   泡泡錨在 4cqw，所以尖角在泡泡內的偏移是兩者之差。 */
 .bubble--left::after {
-  left: 24px;
+  left: calc(var(--tail-x, 26cqw) - 4cqw);
 }
 
 .bubble--center::after {
@@ -156,5 +166,5 @@
 }
 
 .bubble--right::after {
-  right: 24px;
+  right: calc(var(--tail-x, 26cqw) - 4cqw);
 }
