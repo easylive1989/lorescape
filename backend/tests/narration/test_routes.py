@@ -1,5 +1,6 @@
 from unittest.mock import patch
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -12,6 +13,7 @@ from lorescape_backend.narration.models import (
 )
 from lorescape_backend.narration.dependencies import (
     get_hooks_cache_repository,
+    get_narration_cache_repository,
 )
 from lorescape_backend.narration.routes import get_config, router
 
@@ -43,8 +45,34 @@ class _FakeHooksCache:
         self.store[(place_key, language)] = result
 
 
+class _FakeNarrationCache:
+    """In-memory stand-in for NarrationCacheRepository."""
+
+    def __init__(self) -> None:
+        self.store: dict[tuple[str, str, str], NarrationResponse] = {}
+        self.put_calls: int = 0
+
+    def get(
+        self, place_key: str, language: str, hook_id: str
+    ) -> NarrationResponse | None:
+        return self.store.get((place_key, language, hook_id))
+
+    def put(
+        self,
+        place_key: str,
+        language: str,
+        hook_id: str,
+        result: NarrationResponse,
+    ) -> None:
+        self.put_calls += 1
+        if result.insufficient_source or not result.paragraphs:
+            return
+        self.store[(place_key, language, hook_id)] = result
+
+
 def _make_app(
     hooks_cache: _FakeHooksCache | None = None,
+    narration_cache: _FakeNarrationCache | None = None,
 ) -> FastAPI:
     app = FastAPI()
     app.include_router(router)
@@ -54,6 +82,11 @@ def _make_app(
     )
     app.dependency_overrides[get_hooks_cache_repository] = (
         lambda: hooks_cache if hooks_cache is not None else _FakeHooksCache()
+    )
+    app.dependency_overrides[get_narration_cache_repository] = (
+        lambda: narration_cache
+        if narration_cache is not None
+        else _FakeNarrationCache()
     )
     return app
 
@@ -334,3 +367,117 @@ def test_hooks_cache_is_language_scoped(gen_hooks):
 
     assert res.json()["hooks"][0]["id"] == "fresh"  # en cache not reused
     gen_hooks.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# Narration cache behaviour
+# ---------------------------------------------------------------------------
+
+def _story(paragraphs: list[str]) -> NarrationResponse:
+    return NarrationResponse(
+        place_name="亞爾",
+        location="法國普羅旺斯",
+        era="十九世紀末",
+        paragraphs=paragraphs,
+        pull_quote="",
+        insufficient_source=False,
+    )
+
+
+def _narration_body(hook_id: str | None = "h1", language: str = "zh-TW") -> dict:
+    body: dict = {
+        "place_name": "Arles",
+        "location": "Provence",
+        "wikidata_id": "Q48292",
+        "language": language,
+    }
+    if hook_id is not None:
+        body["hook"] = {"id": hook_id, "title": "梵谷", "teaser": "444 天"}
+    return body
+
+
+@patch("lorescape_backend.narration.routes.service.generate_narration")
+def test_narration_cache_miss_generates_then_stores(gen_narration):
+    gen_narration.return_value = _story(["一", "二", "三"])
+    cache = _FakeNarrationCache()
+    client = TestClient(_make_app(narration_cache=cache))
+
+    response = client.post("/narration", json=_narration_body())
+
+    assert response.status_code == 200
+    assert gen_narration.call_count == 1
+    assert cache.store[("Q48292", "zh-TW", "h1")].paragraphs == ["一", "二", "三"]
+
+
+@patch("lorescape_backend.narration.routes.service.generate_narration")
+def test_narration_cache_hit_skips_generation(gen_narration):
+    cache = _FakeNarrationCache()
+    cache.store[("Q48292", "zh-TW", "h1")] = _story(["快取一", "快取二"])
+    client = TestClient(_make_app(narration_cache=cache))
+
+    response = client.post("/narration", json=_narration_body())
+
+    assert response.status_code == 200
+    assert response.json()["paragraphs"] == ["快取一", "快取二"]
+    gen_narration.assert_not_called()
+
+
+@patch("lorescape_backend.narration.routes.service.generate_narration")
+def test_narration_cache_is_scoped_per_hook(gen_narration):
+    gen_narration.return_value = _story(["別的角度"])
+    cache = _FakeNarrationCache()
+    cache.store[("Q48292", "zh-TW", "h1")] = _story(["快取一"])
+    client = TestClient(_make_app(narration_cache=cache))
+
+    response = client.post("/narration", json=_narration_body(hook_id="h2"))
+
+    assert response.status_code == 200
+    assert response.json()["paragraphs"] == ["別的角度"]
+    assert gen_narration.call_count == 1
+
+
+@patch("lorescape_backend.narration.routes.service.generate_narration")
+def test_narration_without_hook_uses_empty_hook_id(gen_narration):
+    gen_narration.return_value = _story(["無鉤子"])
+    cache = _FakeNarrationCache()
+    client = TestClient(_make_app(narration_cache=cache))
+
+    response = client.post("/narration", json=_narration_body(hook_id=None))
+
+    assert response.status_code == 200
+    assert ("Q48292", "zh-TW", "") in cache.store
+
+
+@patch("lorescape_backend.narration.routes.service.generate_narration")
+def test_narration_cache_is_language_scoped(gen_narration):
+    gen_narration.return_value = _story(["English one"])
+    cache = _FakeNarrationCache()
+    cache.store[("Q48292", "zh-TW", "h1")] = _story(["中文一"])
+    client = TestClient(_make_app(narration_cache=cache))
+
+    response = client.post(
+        "/narration", json=_narration_body(language="en")
+    )
+
+    assert response.status_code == 200
+    assert response.json()["paragraphs"] == ["English one"]
+
+
+@patch("lorescape_backend.narration.routes.service.generate_narration")
+def test_narration_survives_a_broken_cache(gen_narration):
+    """讀寫都炸掉時，端點仍要正常回傳生成結果。"""
+    gen_narration.return_value = _story(["一", "二"])
+
+    class _BrokenCache:
+        def get(self, place_key, language, hook_id):
+            raise RuntimeError("must be swallowed by the route's repository")
+
+        def put(self, place_key, language, hook_id, result):
+            raise RuntimeError("must be swallowed by the route's repository")
+
+    app = _make_app()
+    app.dependency_overrides[get_narration_cache_repository] = _BrokenCache
+    client = TestClient(app)
+
+    with pytest.raises(RuntimeError):
+        client.post("/narration", json=_narration_body())
