@@ -1,0 +1,61 @@
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { vi } from 'vitest'
+import { SceneView } from './SceneView'
+import { demoScript } from '../test/fixtures'
+import type { Script } from '../engine/schema'
+import type { PlayState } from '../engine/player'
+
+// 第一段旁白、第二段由 master 說；用於驗證同一節點內兩種段落的切換。
+const script: Script = structuredClone(demoScript)
+script.nodes[0].paragraphs = [{ text: '第一段' }, { text: '第二段', speaker: 'master' }]
+
+const playing = (paragraphIndex: number): PlayState =>
+  ({ nodeId: 'n1', paragraphIndex, status: 'playing' })
+
+test('旁白段渲染下方旁白框，不出現泡泡', () => {
+  render(<SceneView script={script} state={playing(0)} slug="demo" onAdvance={() => {}} onChoose={() => {}} />)
+  expect(screen.getByTestId('text-card')).toHaveTextContent('第一段')
+  expect(screen.queryByTestId('speech-bubble')).not.toBeInTheDocument()
+})
+
+test('對白段渲染角色頭上的泡泡，不出現旁白框', () => {
+  render(<SceneView script={script} state={playing(1)} slug="demo" onAdvance={() => {}} onChoose={() => {}} />)
+  const bubble = screen.getByTestId('speech-bubble')
+  expect(bubble).toHaveTextContent('第二段')
+  expect(bubble).toHaveTextContent('師傅')
+  expect(bubble).toHaveClass('bubble--center')
+  expect(screen.queryByTestId('text-card')).not.toBeInTheDocument()
+})
+
+test('playing 時點 scene 推進', async () => {
+  const onAdvance = vi.fn()
+  render(<SceneView script={script} state={playing(0)} slug="demo" onAdvance={onAdvance} onChoose={() => {}} />)
+  await userEvent.click(screen.getByTestId('scene'))
+  expect(onAdvance).toHaveBeenCalledTimes(1)
+})
+
+test('choosing 時點 scene 不推進，且渲染選項', async () => {
+  const onAdvance = vi.fn()
+  const state: PlayState = { nodeId: 'n1', paragraphIndex: 1, status: 'choosing' }
+  render(<SceneView script={script} state={state} slug="demo" onAdvance={onAdvance} onChoose={() => {}} />)
+  await userEvent.click(screen.getByTestId('scene'))
+  expect(onAdvance).not.toHaveBeenCalled()
+  expect(screen.getByRole('button', { name: '往左' })).toBeInTheDocument()
+  expect(screen.queryByTestId('speech-bubble')).not.toBeInTheDocument()
+})
+
+test('台上人數決定 --sprite-h', () => {
+  const { container, rerender } = render(
+    <SceneView script={script} state={playing(0)} slug="demo" onAdvance={() => {}} onChoose={() => {}} />)
+  expect(container.querySelector<HTMLElement>('.scene')!.style.getPropertyValue('--sprite-h')).toBe('108cqw')
+
+  const twoOnStage = structuredClone(script)
+  twoOnStage.characters.push({ id: 'apprentice', name: '學徒', image: 'characters/apprentice/full.png' })
+  twoOnStage.nodes[0].cast = [
+    { character: 'master', position: 'left' },
+    { character: 'apprentice', position: 'right' },
+  ]
+  rerender(<SceneView script={twoOnStage} state={playing(0)} slug="demo" onAdvance={() => {}} onChoose={() => {}} />)
+  expect(container.querySelector<HTMLElement>('.scene')!.style.getPropertyValue('--sprite-h')).toBe('87cqw')
+})

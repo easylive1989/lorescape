@@ -1,6 +1,6 @@
-export function TextCard({ text, onTap }: { text: string; onTap: () => void }) {
+export function TextCard({ text }: { text: string }) {
   return (
-    <div className="text-card" data-testid="text-card" onClick={onTap}>
+    <div className="text-card" data-testid="text-card">
       <p>{text}</p>
     </div>
   )
