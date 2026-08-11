@@ -62,6 +62,12 @@ test('台上人數決定 --sprite-h 與 --tail-x', () => {
   expect(container.querySelector<HTMLElement>('.scene')!.style.getPropertyValue('--tail-x')).toBe('19cqw')
 })
 
+test('paragraphIndex 越界時退回最後一段，不拋錯', () => {
+  render(<SceneView script={script} state={playing(99)} slug="demo" onAdvance={() => {}} onChoose={() => {}} />)
+  const bubble = screen.getByTestId('speech-bubble')
+  expect(bubble).toHaveTextContent('第二段')
+})
+
 test('對白段只壓暗非說話者，旁白段誰都不壓暗', () => {
   const twoOnStage = structuredClone(script)
   twoOnStage.characters.push({ id: 'apprentice', name: '學徒', image: 'characters/apprentice/full.png' })

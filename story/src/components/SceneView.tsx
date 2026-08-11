@@ -25,7 +25,9 @@ export function SceneView({
   const node = currentNode(script, state)
   const characterById = new Map(script.characters.map((character) => [character.id, character]))
   const cast = node.cast ?? []
-  const paragraph = node.paragraphs[state.paragraphIndex]
+  // 越界的 paragraphIndex（編輯器刪段落後未同步、或存檔進度指向已縮短的節點）
+  // 沒有 error boundary 可接，必須退回最後一段而非讓 index 落空拋錯。
+  const paragraph = node.paragraphs[Math.min(state.paragraphIndex, node.paragraphs.length - 1)]
   // validateScript 保證 speaker 一定在 cast 內，這裡仍取 member 才拿得到站位；
   // 兩者都在才視為對白段，否則退回旁白框。
   const speakerMember = paragraph.speaker
