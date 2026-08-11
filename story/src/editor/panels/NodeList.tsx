@@ -96,7 +96,7 @@ export function NodeList(props: {
             <NodeListItem
               key={node.id}
               id={node.id}
-              summary={node.paragraphs[0]?.slice(0, SUMMARY_LENGTH) ?? ''}
+              summary={node.paragraphs[0]?.text.slice(0, SUMMARY_LENGTH) ?? ''}
               selected={node.id === selectedId}
               isFirst={index === 0}
               isLast={index === script.nodes.length - 1}

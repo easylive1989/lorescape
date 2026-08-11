@@ -16,7 +16,7 @@ test('編輯段落文字回傳新節點', () => {
   const box = screen.getAllByRole('textbox')[0]
   fireEvent.change(box, { target: { value: '新文字' } })
   expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
-    paragraphs: ['新文字', ...node.paragraphs.slice(1)],
+    paragraphs: [{ text: '新文字' }, ...node.paragraphs.slice(1)],
   }))
 })
 
@@ -25,7 +25,7 @@ test('新增與刪除段落', () => {
   render(<NodePanel script={demoScript} node={node} slug="demo" onChange={onChange} />)
   fireEvent.click(screen.getByRole('button', { name: '新增段落' }))
   expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
-    paragraphs: [...node.paragraphs, ''],
+    paragraphs: [...node.paragraphs, { text: '' }],
   }))
 
   fireEvent.click(screen.getAllByRole('button', { name: '刪除段落' })[0])
@@ -114,7 +114,7 @@ test('cast 新增角色', () => {
   expect(onChange).toHaveBeenCalled()
 })
 
-test('cast 編輯角色、位置與說話中', () => {
+test('cast 編輯角色與位置', () => {
   const onChange = vi.fn()
   render(<NodePanel script={demoScript} node={node} slug="demo" onChange={onChange} />)
 
@@ -122,12 +122,6 @@ test('cast 編輯角色、位置與說話中', () => {
   fireEvent.change(position, { target: { value: 'left' } })
   expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
     cast: [{ ...node.cast![0], position: 'left' }],
-  }))
-
-  const talking = screen.getAllByRole('checkbox')[0]
-  fireEvent.click(talking)
-  expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
-    cast: [{ ...node.cast![0], talking: false }],
   }))
 })
 

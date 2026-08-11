@@ -86,7 +86,7 @@ function generateNodeId(script: Script): string {
 }
 
 // 新節點插在 afterId 之後：afterId 原終結轉移到新節點、afterId.next=newId、
-// 新節點繼承 afterId 的 background、paragraphs=['（新段落）']
+// 新節點繼承 afterId 的 background、paragraphs=[{ text: '（新段落）' }]
 export function addNode(script: Script, afterId: string): { script: Script; newId: string } {
   const afterNode = script.nodes.find((n) => n.id === afterId)
   if (!afterNode) throw new Error(`節點不存在：${afterId}`)
@@ -104,7 +104,7 @@ export function addNode(script: Script, afterId: string): { script: Script; newI
   const newNode: ScriptNode = {
     id: newId,
     background: afterNode.background,
-    paragraphs: ['（新段落）'],
+    paragraphs: [{ text: '（新段落）' }],
     ...terminal,
   }
 

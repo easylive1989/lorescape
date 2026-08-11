@@ -14,7 +14,7 @@ describe('StagePreview', () => {
         onParagraphChange={() => {}}
       />,
     )
-    expect(screen.getByText(demoScript.nodes[0].paragraphs[0])).toBeInTheDocument()
+    expect(screen.getByText(demoScript.nodes[0].paragraphs[0].text)).toBeInTheDocument()
   })
 
   test('段落切換器呼叫 onParagraphChange', () => {

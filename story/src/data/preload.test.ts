@@ -10,10 +10,10 @@ const script: Script = {
   startNode: 'n1',
   characters: [],
   nodes: [
-    { id: 'n1', background: 'scenes/n1.png', paragraphs: ['第一段'], choices: [
+    { id: 'n1', background: 'scenes/n1.png', paragraphs: [{ text: '第一段' }], choices: [
       { text: '往左', to: 'end-a' }, { text: '往右', to: 'end-b' }] },
-    { id: 'end-a', background: 'scenes/end-a.png', paragraphs: ['結局A'], ending: { title: '結局A' } },
-    { id: 'end-b', background: 'scenes/end-b.png', paragraphs: ['結局B'], ending: { title: '結局B' } },
+    { id: 'end-a', background: 'scenes/end-a.png', paragraphs: [{ text: '結局A' }], ending: { title: '結局A' } },
+    { id: 'end-b', background: 'scenes/end-b.png', paragraphs: [{ text: '結局B' }], ending: { title: '結局B' } },
   ],
 }
 

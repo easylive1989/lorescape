@@ -13,11 +13,3 @@ test('渲染單張角色圖', () => {
   expect(images[0]).toHaveAttribute('src', assetUrl('demo', master.image))
   expect(images[0]).toHaveClass('sprite__image')
 })
-
-test('talking 時掛 is-talking class；否則不掛', () => {
-  const { rerender } = render(
-    <CharacterSprite character={master} member={{ character: 'master', position: 'left', talking: true }} slug="demo" />)
-  expect(screen.getByTestId('sprite-master')).toHaveClass('is-talking', 'sprite--left')
-  rerender(<CharacterSprite character={master} member={{ character: 'master', position: 'left' }} slug="demo" />)
-  expect(screen.getByTestId('sprite-master')).not.toHaveClass('is-talking')
-})

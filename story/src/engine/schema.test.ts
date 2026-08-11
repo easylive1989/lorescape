@@ -27,6 +27,25 @@ test('cast 引用未定義角色時 throw', () => {
   expect(() => validateScript(bad)).toThrow(/ghost/)
 })
 
+test('段落 speaker 不在該節點 cast 內時 throw', () => {
+  const bad = structuredClone(demoScript)
+  bad.nodes[0].paragraphs[0].speaker = 'master'
+  bad.nodes[0].cast = []
+  expect(() => validateScript(bad)).toThrow(/說話者不在台上/)
+})
+
+test('段落 speaker 指向未定義角色時 throw', () => {
+  const bad = structuredClone(demoScript)
+  bad.nodes[0].paragraphs[0].speaker = 'ghost'
+  expect(() => validateScript(bad)).toThrow(/ghost/)
+})
+
+test('段落 speaker 在 cast 內時通過', () => {
+  const ok = structuredClone(demoScript)
+  ok.nodes[0].paragraphs[0].speaker = 'master'
+  expect(validateScript(ok).nodes[0].paragraphs[0].speaker).toBe('master')
+})
+
 test('catalogSchema 接受合法目錄', () => {
   const valid = { stories: [{ slug: 's', title: 't', place: 'p', blurb: 'b' }] }
   expect(catalogSchema.parse(valid).stories[0].slug).toBe('s')

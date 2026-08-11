@@ -4,8 +4,7 @@ import type { CastMember, Character } from '../engine/schema'
 export function CharacterSprite({ character, member, slug }: {
   character: Character; member: CastMember; slug: string
 }) {
-  const className = ['sprite', `sprite--${member.position}`, member.talking ? 'is-talking' : '']
-    .filter(Boolean).join(' ')
+  const className = ['sprite', `sprite--${member.position}`].join(' ')
   return (
     <div className={className} data-testid={`sprite-${character.id}`}>
       <img

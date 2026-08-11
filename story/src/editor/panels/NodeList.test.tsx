@@ -11,7 +11,7 @@ test('列出節點並可選取', () => {
 
 test('顯示節點首段摘要', () => {
   render(<NodeList script={demoScript} selectedId={null} onSelect={() => {}} onReorder={() => {}} />)
-  expect(screen.getByText(demoScript.nodes[0].paragraphs[0].slice(0, 12), { exact: false })).toBeInTheDocument()
+  expect(screen.getByText(demoScript.nodes[0].paragraphs[0].text.slice(0, 12), { exact: false })).toBeInTheDocument()
 })
 
 test('點選中的節點列會標示選取狀態', () => {

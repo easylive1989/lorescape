@@ -69,7 +69,7 @@ test('addNode 插入並轉移終結（choices 型態節點）', () => {
   const inserted = script.nodes.find((n) => n.id === newId)!
   expect(inserted).toBeTruthy()
   expect(inserted.choices).toEqual(first.choices)
-  expect(inserted.paragraphs).toEqual(['（新段落）'])
+  expect(inserted.paragraphs).toEqual([{ text: '（新段落）' }])
   expect(inserted.background).toBe(first.background)
 })
 

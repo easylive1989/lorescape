@@ -35,7 +35,7 @@ export function SceneView({
       {state.status === 'choosing' && node.choices ? (
         <ChoiceList choices={node.choices} onChoose={onChoose} />
       ) : (
-        <TextCard text={node.paragraphs[state.paragraphIndex]} onTap={onAdvance} />
+        <TextCard text={node.paragraphs[state.paragraphIndex].text} onTap={onAdvance} />
       )}
     </div>
   )

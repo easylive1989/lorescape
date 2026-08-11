@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { CastMember, Choice, Script, ScriptNode } from '../../engine/schema'
+import type { CastMember, Choice, Paragraph, Script, ScriptNode } from '../../engine/schema'
 import { AssetPicker } from './AssetPicker'
 
 const MAX_CHOICES = 3
@@ -23,9 +23,12 @@ export function NodePanel(props: {
   const [showBackgroundPicker, setShowBackgroundPicker] = useState(false)
 
   // 段落
-  const updateParagraph = (index: number, value: string) =>
-    onChange({ ...node, paragraphs: node.paragraphs.map((p, i) => (i === index ? value : p)) })
-  const addParagraph = () => onChange({ ...node, paragraphs: [...node.paragraphs, ''] })
+  const updateParagraph = (index: number, patch: Partial<Paragraph>) =>
+    onChange({
+      ...node,
+      paragraphs: node.paragraphs.map((p, i) => (i === index ? { ...p, ...patch } : p)),
+    })
+  const addParagraph = () => onChange({ ...node, paragraphs: [...node.paragraphs, { text: '' }] })
   const removeParagraph = (index: number) =>
     onChange({ ...node, paragraphs: node.paragraphs.filter((_, i) => i !== index) })
   const moveParagraph = (index: number, delta: number) =>
@@ -70,8 +73,8 @@ export function NodePanel(props: {
           <div className="node-panel__row" key={index}>
             <textarea
               className="node-panel__textarea"
-              value={paragraph}
-              onChange={(e) => updateParagraph(index, e.target.value)}
+              value={paragraph.text}
+              onChange={(e) => updateParagraph(index, { text: e.target.value })}
             />
             <div className="node-panel__row-buttons">
               <button
@@ -169,14 +172,6 @@ export function NodePanel(props: {
               <option value="center">中</option>
               <option value="right">右</option>
             </select>
-            <label className="node-panel__checkbox">
-              <input
-                type="checkbox"
-                checked={member.talking ?? false}
-                onChange={(e) => updateCast(index, { talking: e.target.checked })}
-              />
-              說話中
-            </label>
             <button type="button" onClick={() => removeCast(index)}>刪除角色</button>
           </div>
         ))}
