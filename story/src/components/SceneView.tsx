@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { assetUrl } from '../data/loadScript'
 import { currentNode, type PlayState } from '../engine/player'
 import type { Script } from '../engine/schema'
@@ -39,14 +39,7 @@ export function SceneView({
     <div
       className="scene"
       data-testid="scene"
-      style={{
-        backgroundImage: `url(${assetUrl(slug, node.background)})`,
-        // sprite 高 = 寬 × 1.5，寬是 .scene 寬的 72%（單人）／58%（兩人以上），
-        // 對齊 character.css 的 .sprite 寬度規則。
-        '--sprite-h': cast.length >= 2 ? '87cqw' : '108cqw',
-        // sprite 中心 = left(-10%) + 寬度/2，供泡泡的尖角對準說話者。
-        '--tail-x': cast.length >= 2 ? '19cqw' : '26cqw',
-      } as CSSProperties}
+      style={{ backgroundImage: `url(${assetUrl(slug, node.background)})` }}
       // 對白段沒有下方框可點，推進的點擊區改由整個場景承接。choosing 時不吃
       // 點擊，否則點選項會連帶推進。
       onClick={() => { if (state.status === 'playing') onAdvance() }}

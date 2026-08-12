@@ -24,13 +24,11 @@
   transition: filter 0.3s ease;
 }
 
-/* Two characters on stage: shrink both so they can share the width. The
-   sprites are consecutive first children of .scene, so `:has(+ .sprite)`
-   matches the first of a pair and `+ .sprite` the second. */
-.sprite:has(+ .sprite),
-.sprite + .sprite {
-  width: 58%;
-}
+/* 台上人數不改變 sprite 寬度：同一個角色的大小不該因為旁邊站了人就縮水，
+   那會讓鏡頭距離看起來在跳。曾經有一條「兩人時縮到 58%」的規則防重疊，但實測
+   後發現它防的是容器而不是人——容器是 2:3，角色圖只有 0.34~0.61 寬，contain
+   之後兩側各留一大片空白，所以 72% 時兩人的圖之間仍有間隔，三人也只在手臂處
+   輕微交疊（VN 的常規畫法）。詳見 2026-08-12 的實機量測。 */
 
 /* 對白段時壓暗非說話者，與泡泡的尖角一起指出誰在說話。 */
 .sprite.is-dimmed {
@@ -89,17 +87,20 @@
 
 /* 對話泡泡：錨在 sprite 容器上緣附近。
    「頭頂」的精確 y 座標程式拿不到——.sprite 是 2:3 容器、圖片 object-fit:
-   contain 貼底，頭在圖裡的高度由構圖決定。可靠的錨點只有容器上緣；因為角色圖
-   規格就是 1024×1536（正好 2:3），容器上緣 ≈ 圖片上緣 ≈ 頭頂附近。
+   contain 貼底，頭在圖裡的高度由構圖決定。可靠的錨點只有容器上緣。
    泡泡刻意不放進 .sprite：.sprite 有 pointer-events: none，且 breathe 動畫在
-   寫 scaleY，放進去泡泡會跟著抖。 */
+   寫 scaleY，放進去泡泡會跟著抖。
+
+   下面兩個數字都是從 .sprite 的幾何推出來的，改 .sprite 的 width 或
+   .sprite--left/right 的 -10% 就要一起改：
+   - 容器高 = 寬 × 1.5 = 72 × 1.5 = 108cqw
+   - 容器中心 = -10% + 寬/2 = 26cqw，減去泡泡自身的 4cqw 錨點得尖角偏移 22cqw */
 .bubble {
   position: absolute;
   /* 高於 .text-card 的 1 */
   z-index: 2;
-  /* --sprite-h 由 SceneView 依台上人數給（108cqw 單人／87cqw 兩人以上），
-     泡泡底緣正好貼在 sprite 容器上緣，尖角再往下探 11px 觸到髮線。 */
-  bottom: var(--sprite-h, 108cqw);
+  /* 泡泡底緣正好貼在 sprite 容器上緣，尖角再往下探 11px 觸到髮線。 */
+  bottom: 108cqw;
   /* 絕對定位元素的收縮寬度會被 left: 50% 夾成場景的一半，max-width 因此
      永遠吃不到；width: max-content 才量得到真正的內容寬。
      min-width 保證短對白的泡泡仍包得住最遠的尖角位置。 */
@@ -154,10 +155,10 @@
   border-top: 11px solid rgba(10, 10, 10, 0.72);
 }
 
-/* --tail-x 是說話者 sprite 的中心（佔場景寬的比例），由 SceneView 設定；
-   泡泡錨在 4cqw，所以尖角在泡泡內的偏移是兩者之差。 */
+/* 尖角要落在說話者 sprite 的中心：容器中心在 26cqw、泡泡自身錨在 4cqw，
+   兩者之差就是尖角在泡泡內的偏移。 */
 .bubble--left::after {
-  left: calc(var(--tail-x, 26cqw) - 4cqw);
+  left: 22cqw;
 }
 
 .bubble--center::after {
@@ -166,5 +167,5 @@
 }
 
 .bubble--right::after {
-  right: calc(var(--tail-x, 26cqw) - 4cqw);
+  right: 22cqw;
 }

@@ -45,23 +45,6 @@ test('choosing 時點 scene 不推進，且渲染選項', async () => {
   expect(screen.queryByTestId('speech-bubble')).not.toBeInTheDocument()
 })
 
-test('台上人數決定 --sprite-h 與 --tail-x', () => {
-  const { container, rerender } = render(
-    <SceneView script={script} state={playing(0)} slug="demo" onAdvance={() => {}} onChoose={() => {}} />)
-  expect(container.querySelector<HTMLElement>('.scene')!.style.getPropertyValue('--sprite-h')).toBe('108cqw')
-  expect(container.querySelector<HTMLElement>('.scene')!.style.getPropertyValue('--tail-x')).toBe('26cqw')
-
-  const twoOnStage = structuredClone(script)
-  twoOnStage.characters.push({ id: 'apprentice', name: '學徒', image: 'characters/apprentice/full.png' })
-  twoOnStage.nodes[0].cast = [
-    { character: 'master', position: 'left' },
-    { character: 'apprentice', position: 'right' },
-  ]
-  rerender(<SceneView script={twoOnStage} state={playing(0)} slug="demo" onAdvance={() => {}} onChoose={() => {}} />)
-  expect(container.querySelector<HTMLElement>('.scene')!.style.getPropertyValue('--sprite-h')).toBe('87cqw')
-  expect(container.querySelector<HTMLElement>('.scene')!.style.getPropertyValue('--tail-x')).toBe('19cqw')
-})
-
 test('paragraphIndex 越界時退回最後一段，不拋錯', () => {
   render(<SceneView script={script} state={playing(99)} slug="demo" onAdvance={() => {}} onChoose={() => {}} />)
   const bubble = screen.getByTestId('speech-bubble')

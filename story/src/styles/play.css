@@ -1,7 +1,7 @@
 .scene {
   position: relative;
   /* 對話泡泡要用 cqw 換算 sprite 高度（sprite 高 = 寬 × 1.5，寬是 .scene 寬的
-     72%／58%）。.scene 有 max-width: 480px，用 vw 會在寬螢幕上與它脫節。 */
+     72%）。.scene 有 max-width: 480px，用 vw 會在寬螢幕上與它脫節。 */
   container-type: inline-size;
   /* Edge-hugging sprites overshoot the scene box (left/right: -10%); without
      clipping, that overflow widens the mobile layout viewport and the whole
