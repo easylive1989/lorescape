@@ -154,6 +154,13 @@ intro extract is too short (< 300 chars).
 
 ### Step 3 — Claude writes the stories
 
+**HOOK 硬性檢查（先做這個，不過就重寫）：** zh-TW 第一段與 reel 旁白的第一句
+必須同時具備 ①具名的人或文明 ②不可逆的後果 ③一個數字或極端事件。轉述句
+（「被稱作⋯」「被說成⋯」）、無名代詞開場（「他守了⋯」）、抽象主角（一個音、
+一張臉的稱號）一律退回重寫。依據與實證見 calendar 的「hook 硬性檢查」段
+（8/12 定，28 支樣本：略過率 vs log(views) r = −0.72）。calendar 已指定 hook
+的日子，該 hook 已通過此檢查，直接沿用即可。
+
 **If the calendar assigned a 開場 hook for this date (Step 1):** the zh-TW
 opening — first `paragraph` and the reel narration's first line — must be
 **derived from that hook** (the same visceral, curiosity-gap「人的道德戲劇／
