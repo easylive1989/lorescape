@@ -161,7 +161,14 @@ image / carousel 貼文不做快照，維持 `ig_posts` 的 API 逐日追蹤即�
    6. 使用者當下沒空截圖就跳過，明確告知哪些 checkpoint 會因此留空
       （不回補）。
 
-5. **選點規劃提示**：若本次更新了 `ig` / `ig_posts` 並向使用者做了
+5. **重建數據單頁（每次抓完必做，不要問）**：
+
+       cd <專案根> && python3 dashboard/build_metric.py
+
+   把最新 CSV 內嵌成 `dashboard/out/metric.html`（gitignored，不進 commit）。
+   CSV 更新了但沒重建，使用者雙擊打開看到的還是舊數據。
+
+6. **選點規劃提示**：若本次更新了 `ig` / `ig_posts` 並向使用者做了
    IG 成效分析，結尾提示可接著用 **lorescape-reels-planner** 依最新
    數據規劃或檢核每日景點 Reel 的選點 calendar（下期排程、配比調整、
    期末檢核到期時尤其該提）。
