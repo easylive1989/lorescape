@@ -2361,6 +2361,43 @@ void main() {
         expect(result.endings, story.endings.keys.toSet());
       });
 
+      test('走訪規模符合實測基準', () {
+        // 沒有下限斷言的話，內容被刪掉一整段分歧時這組測試依然全綠。
+        final baseline = walkBaselines[dir]!;
+        expect(result.paths, baseline.paths, reason: '路徑數變了');
+        expect(result.takenOptions.length, baseline.options, reason: '選項數變了');
+        expect(result.branchCount, baseline.branches, reason: '非空 if 分支數變了');
+      });
+
+      test('每個非空 if 分支都至少有一個直接的停頓節點', () {
+        // 前綴判定的前提。若有人寫出 `if (x) { show ... }` 這種只有副作用的分支，
+        // 判定會誤報成走不到——註解擋不住，這條斷言才擋得住。
+        void scan(List<StoryNode> nodes) {
+          for (final node in nodes) {
+            if (node is IfNode) {
+              for (final side in <List<StoryNode>>[node.then, node.orElse]) {
+                if (side.isEmpty) continue;
+                expect(
+                  side.any((n) => n is NarrationNode || n is DialogueNode ||
+                      n is CgNode || n is ChoiceNode),
+                  isTrue,
+                  reason: '這個 if 分支沒有直接的停頓節點，前綴判定會誤報',
+                );
+                scan(side);
+              }
+            } else if (node is ChoiceNode) {
+              for (final option in node.options) {
+                scan(option.then);
+              }
+            }
+          }
+        }
+
+        for (final scene in story.scenes.values) {
+          scan(scene.nodes);
+        }
+      });
+
       test('每個選項至少被走過一次', () {
         final declared = <String>{};
         void scan(String sceneId, List<StoryNode> nodes, List<String> path) {
@@ -2492,7 +2529,53 @@ void main() {
 }
 ```
 
-> `text.characters` 需要 `import 'package:characters/characters.dart';`——`flutter_test` 已傳遞依賴 `characters`，直接 import 即可。把這一行加進檔案開頭。
+> `text.characters` 需要 `import 'package:characters/characters.dart';`。**要在 `pubspec.yaml` 的 `dev_dependencies` 明確宣告 `characters`**——靠 `flutter_test` 的傳遞依賴雖然 import 得到，但過不了 `depend_on_referenced_packages` 這條 lint。
+
+### 兩條讓這組測試「不會空綠」的骨幹斷言
+
+走訪測試最危險的失敗模式不是紅燈，是**全綠但什麼都沒斷言**——那會讓後面所有人以為內容驗過了。上面七條有兩個結構性漏洞必須補：
+
+**（一）逐篇的基準數量。** `declared.difference(taken)` 在 `declared` 為空時也通過；`unreached` 在分支清單為空時也通過。若日後有人從某篇刪掉一整段分歧，這組測試依然全綠。因此每篇要斷言實測基準：
+
+| # | 篇 | 路徑 | 選項 | 非空 if 分支 |
+|---|---|:-:|:-:|:-:|
+| 1 | 港口的外地人 | 128 | 14 | 9 |
+| 2 | 烤爐熄了 | 40 | 11 | 3 |
+| 3 | 井水退了 | 16 | 8 | 4 |
+| 4 | 天上那棵樹 | 20 | 9 | 2 |
+| 5 | 蠟板 | 80 | 13 | 3 |
+| 6 | 上鎖的門 | 32 | 10 | 4 |
+| 7 | 靠不了岸 | 32 | 10 | 2 |
+| 8 | 普特奧利的新房子 | 20 | 9 | 3 |
+| | **合計** | **368** | **84** | **30** |
+
+**（二）已知死碼用 allowlist 雙向斷言，不要用 `skip:`。** `skip:` 關掉的是整條測試，有兩個方向的風險：日後往同一篇新增的死碼會被一起吞掉；而死碼修好之後測試永遠停在 skip，沒有任何訊號提示該把它刪掉。改成：
+
+```dart
+/// 已確認的死碼——劇本裡在任何路徑上都走不到的 if 分支。
+///
+/// 這不是測試問題，是內容問題，等作者決定要不要改（見 task-6-report）。
+/// 用 allowlist 而不是 `skip:`，是為了讓兩個方向都有訊號：多出新的死碼會紅，
+/// 而死碼被修好之後這裡沒刪也會紅。
+const Map<String, Set<String>> knownDeadBranches = <String, Set<String>>{
+  // awareness 有三個無條件 +1（S02/S05/S07），到 S08 必為 3，else 永不成立
+  '01-harbour-stranger': <String>{'S08#6.else.'},
+  // 結局 A 的閘門要 conviction>=2，而 conviction 與 standing 在同三個選擇點互斥
+  '03-the-well-fell': <String>{'E_A#9.then.'},
+  // 結局 A 的閘門要 nerve>=2，nerve 只有兩個來源，兩個都選走 kinship 就上不去
+  '06-the-locked-door': <String>{'E_A#12.then.'},
+};
+```
+
+斷言改成：
+
+```dart
+        final known = knownDeadBranches[dir] ?? const <String>{};
+        expect(unreached.toSet().difference(known), isEmpty,
+            reason: '出現新的死碼——這些 if 分支在任何路徑上都進不去');
+        expect(known.difference(unreached.toSet()), isEmpty,
+            reason: '這些死碼已經走得到了，請從 knownDeadBranches 刪掉');
+```
 
 - [ ] **Step 2: 跑測試**
 
