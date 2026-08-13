@@ -2691,14 +2691,20 @@ def remove_background(src: pathlib.Path):
 
     alpha = Image.fromarray(np.where(reachable, 0, 255).astype(np.uint8), mode='L')
     alpha = _close_bites(alpha)
-    out = Image.fromarray(np.dstack([np.asarray(img), np.asarray(alpha)]), mode='RGBA')
+    alpha = _fill_interior(np.asarray(alpha).astype(int))
+    out = Image.fromarray(np.dstack([np.asarray(img), alpha]), mode='RGBA')
     # 1px 羽化：去背邊緣會有一圈灰，模糊 alpha 讓它過渡掉。
     out.putalpha(out.getchannel('A').filter(ImageFilter.GaussianBlur(radius=1.0)))
     return out
 
 
-# 閉運算的半徑（px）。r=7 會填掉寬度 14px 以內的凹陷。
-CLOSE_RADIUS = 7
+# 閉運算的半徑（px）。r=4 會填掉寬度 8px 以內的凹陷。
+#
+# **不要調大。** 實測掃過 r=1..9：r=5 起會橋接尼基亞斯手臂與軀幹之間的縫隙，
+# 把那塊真實背景封成 3,150–3,461px 的孤島（四張表情都中）。r=4 是唯一同時
+# 「填掉祭司咬痕」與「不碰真實縫隙」的窗口——祭司在 r=4 已填入 12,247px，
+# 達到 r=7 的 92%。
+CLOSE_RADIUS = 4
 
 
 def _close_bites(alpha):
@@ -2707,13 +2713,43 @@ def _close_bites(alpha):
     祭司的米白僧袍在右肩下緣的陰影剛好貼近背景灰，泛洪會沿著那裡鑽進布料，
     留下幾道深入的鋸齒——遊戲內縮到 0.72H 仍有 8–15px 寬，看起來像袍子破了。
 
-    為什麼安全：實測 44 張，閉運算後主體佔比的**最大增幅是 0.91 個百分點**，
-    而且正好落在出問題的 priest 三張；其餘中位數只填 933px。沒有任何一張的
-    輪廓被大幅改動，代表手臂與身體之間那類真實空隙沒有被糊起來。
+    ⚠️ 閉運算的危險不在「多填了多少主體像素」（那個量很小、看指標會誤判安全），
+    而在**它可能把一條真實的背景縫隙從中間夾斷**。判斷安全與否要看
+    「有多少原本連通的背景被封成孤島」，不是看主體佔比增加多少。
     """
     binary = alpha.point(lambda v: 255 if v > 127 else 0)
     size = CLOSE_RADIUS * 2 + 1
     return binary.filter(ImageFilter.MaxFilter(size)).filter(ImageFilter.MinFilter(size))
+
+
+def _fill_interior(alpha_array):
+    """透明區域只有**與畫面邊界連通**的才算背景，其餘填實。
+
+    這是把泛洪本來就依賴的那條不變式，在閉運算之後重新套一次——閉運算會把
+    咬痕的「頸部」填掉，讓殘骸變成不再連通邊界的孤島。
+
+    實測 r=4 下的孤島有兩類：祭司袍子上的咬痕殘骸（1,006–1,706px，正是要清掉
+    的），以及莎爾維婭與特婭耳環圈裡的縫隙（555px／107px，遊戲內約 2px，
+    填掉等於耳環變實心，看不出來）。兩類都填是對的取捨。
+    """
+    transparent = alpha_array <= 127
+    height, width = transparent.shape
+    reachable = np.zeros((height, width), dtype=bool)
+    reachable[0, :] |= transparent[0, :]
+    reachable[-1, :] |= transparent[-1, :]
+    reachable[:, 0] |= transparent[:, 0]
+    reachable[:, -1] |= transparent[:, -1]
+    while True:
+        grown = reachable.copy()
+        grown[1:, :] |= reachable[:-1, :]
+        grown[:-1, :] |= reachable[1:, :]
+        grown[:, 1:] |= reachable[:, :-1]
+        grown[:, :-1] |= reachable[:, 1:]
+        grown &= transparent
+        if grown.sum() == reachable.sum():
+            break
+        reachable = grown
+    return np.where(reachable, 0, 255).astype(np.uint8)
 
 
 def _background_colour(pixels):
