@@ -82,8 +82,12 @@ export function NodePanel(props: {
   const setSpeaker = (index: number, characterId: string) =>
     onChange({
       ...node,
-      paragraphs: node.paragraphs.map((p, i) =>
-        i !== index ? p : characterId ? { ...p, speaker: characterId } : { text: p.text }),
+      paragraphs: node.paragraphs.map((p, i) => {
+        if (i !== index) return p
+        if (characterId) return { ...p, speaker: characterId }
+        const { speaker: _speaker, ...rest } = p
+        return rest
+      }),
     })
 
   // next

@@ -317,3 +317,15 @@ test('選段落的顯示條件會寫進 when', () => {
   fireEvent.change(screen.getAllByLabelText('顯示條件')[0], { target: { value: '!sealed' } })
   expect(onChange.mock.calls[0][0].paragraphs[0].when).toBe('!sealed')
 })
+
+test('說話者選回旁白時只移除 speaker，不動到同一段的 when', () => {
+  const onChange = vi.fn()
+  const withSpeakerAndWhen: ScriptNode = {
+    ...node,
+    paragraphs: [{ text: '第一段', speaker: 'master', when: 'sealed' }, ...node.paragraphs.slice(1)],
+  }
+  render(<NodePanel script={demoScript} node={withSpeakerAndWhen} slug="demo" onChange={onChange} />)
+  fireEvent.change(screen.getAllByRole('combobox', { name: '說話者' })[0], { target: { value: '' } })
+  expect(onChange.mock.calls[0][0].paragraphs[0]).not.toHaveProperty('speaker')
+  expect(onChange.mock.calls[0][0].paragraphs[0].when).toBe('sealed')
+})
