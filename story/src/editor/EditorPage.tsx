@@ -81,6 +81,13 @@ function EditorWorkspace({ slug }: { slug: string }) {
     if (Object.keys(catalogPatch).length > 0) updateCatalogEntry(catalogPatch)
   }
 
+  // flag 切換讓可見段落變少時，paragraphIndex 停在舊位置會讓預覽的「第 n/m 段」
+  // 倒掛（n > m），所以切 flag 一併把段落索引歸零。
+  const handlePreviewFlagsChange = (next: string[]) => {
+    setPreviewFlags(next)
+    setParagraphIndex(0)
+  }
+
   const handleCharacterImage = (relPath: string) => {
     if (!script || !imagePickerCharId) return
     updateScript({
@@ -146,7 +153,7 @@ function EditorWorkspace({ slug }: { slug: string }) {
                 paragraphIndex={paragraphIndex}
                 onParagraphChange={setParagraphIndex}
                 flags={previewFlags}
-                onFlagsChange={setPreviewFlags}
+                onFlagsChange={handlePreviewFlagsChange}
               />
             ) : (
               <h2>{script.title}</h2>
