@@ -32,6 +32,10 @@ npm test        # vitest run
   段落是 `{ text, speaker? }`：`speaker` 是角色 id 時，對話泡泡從該角色頭上
   出來、其他人壓暗；省略即旁白，走畫面下方的框。`speaker` 必須在該節點的
   `cast` 內（`validateScript` 會擋），畫外音一律用旁白寫。
+  段落與選項都可以帶 `when`（`flag` 或 `!flag`）決定要不要出現；選項可以帶
+  `set: string[]`，選到時把 flag 記進進度。`validateScript` 會擋：`when` 參照
+  沒有任何選項 `set` 過的 flag、節點沒有任何無條件段落、有選項的節點無條件
+  選項少於兩個。flag 只增不減，存進 localStorage 的進度會帶著它。
 - `art.json`：素材生成用的風格與角色描述設定。
 
 `public/content/index.json` 是劇本 catalog（slug/title/place/blurb），
@@ -68,6 +72,8 @@ npm run dev
   右），並在每個段落上選擇說話者（旁白或台上任一角色）。站位的視覺效果交由
   `character.css` 的 `.sprite--left/center/right` 定位與縮放。刪除或抽換 cast
   成員時，指向他的段落 `speaker` 會自動清空／改指，避免存檔被驗證擋下。
+- **flag 與顯示條件**：選項可設定 `set`（逗號分隔），段落與選項都可挑
+  「顯示條件」。中欄預覽下方有一排 flag 開關，用來切換預覽的 flag 狀態。
 - **背景／角色圖素材**：節點屬性面板「背景」與故事設定面板「角色圖」都
   有「更換」按鈕，展開素材選圖器（縮圖列表 + 上傳）。
 - **素材上傳規格化**：背景（`scenes/`）上傳的任意比例圖片，前端用
