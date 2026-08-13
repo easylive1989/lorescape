@@ -4,7 +4,8 @@
 用法：
     python3 vn/tool/import_pack.py [--webp] [--no-cache]
 
-立繪去背在 Task 7 接進 process_asset()（見 remove_background()）；表情差分對齊留給 Task 8。
+立繪去背見 remove_background()；表情差分對齊（Task 8）見 align_to_base()，
+兩者串接於 process_sprites()。
 """
 import argparse, collections, hashlib, json, pathlib, shutil, sys
 from PIL import Image, ImageFilter
@@ -163,6 +164,113 @@ def _cache_key(src: pathlib.Path) -> str:
     return hashlib.md5(src.read_bytes() + stamp).hexdigest()
 
 
+# 對齊搜尋範圍。菲勒蒙的基底取景較近，需要縮小才對得上（進度與交接 §3）。
+SCALE_RANGE = [0.88 + 0.02 * i for i in range(13)]   # 0.88 … 1.12
+SHIFT_LIMIT = 72                                      # px，於 1/4 解析度上為 18
+
+
+# 對齊分數的下限。低於它就不套用對齊——那種分數代表素材本身有問題
+# （畫錯人、畫錯時代），硬套對齊只會把它變得更歪。
+ALIGN_MIN_SCORE = 0.95
+
+# 已知有問題的立繪：分數過低是**素材問題**，不是對齊失敗。
+#
+# 用 allowlist 而不是默默跳過，是為了讓兩個方向都有訊號：多出新的壞素材會紅，
+# 而素材被重出修好之後這裡沒刪也會紅（與 Task 6 的 knownDeadBranches 同一套路）。
+KNOWN_BAD_SPRITES = {
+    # 十九世紀海軍軍官制服，時代錯置。用在 07-cannot-land S01/S02 共 5 處。
+    'officer_hard.png': '時代錯置：19 世紀海軍軍官',
+    # 以下三張與別的角色位元組相同，是表情差分被指到了別人的臉。
+    'hylas_scared.png': '錯掛：實為盧奇烏斯（≡ master_impatient）',
+    'orestes_urgent.png': '錯掛：實為忒亞（≡ thea_afraid）',
+    'survivor_sharp.png': '錯掛：實為普林尼（≡ pliny_labored）',
+}
+
+
+def _score(a, b):
+    """正規化互相關。兩張同尺寸的 numpy 陣列。"""
+    a = a - a.mean()
+    b = b - b.mean()
+    denom = np.sqrt((a * a).sum() * (b * b).sum())
+    return float((a * b).sum() / denom) if denom else -1.0
+
+
+def align_to_base(base_rgba, variant_rgba):
+    """把 variant 縮放 + 平移對到 base，回傳 (對齊後的 RGBA, 參數)。
+
+    表情差分是 image-to-image 從基底生成的，兩者整體構圖高度相關，因此在
+    1/4 解析度上窮舉縮放與平移、取正規化互相關分數最高的組合即可對齊——
+    不需要規範原定的臉部特徵點偵測（環境沒有臉部偵測可用）。
+    """
+    w, h = base_rgba.size
+
+    # **比 alpha 剪影，不要比灰階亮度。**
+    #
+    # 差分的原始畫布尺寸不一定與基底相同（實測 4 張是 1023×1537、officer_hard
+    # 是 1122×1402，其餘 39 張才是 1024×1536）。把差分貼到基底尺寸的畫布上時，
+    # 邊緣會留下一圈墊底色，而 `convert('L')` 丟掉 alpha 只看 RGB——那圈邊在
+    # 互相關裡是極強的人造對比，分數整個被它主導。實測灰階法會把
+    # nikias_watchful 評成 0.38 並挑出 scale 0.90 的錯誤解，把一張本來就對齊
+    # 的圖弄歪 132px。
+    #
+    # alpha 對此免疫：透明區的值是 0，與畫布留白同值，沒有人造邊。改用 alpha
+    # 之後 24/28 個差分都是 score ≥ 0.978、scale 1.00、位移 (0,0)。
+    def silhouette(image):
+        return np.asarray(image.getchannel('A').resize((w // 4, h // 4))).astype(np.float32)
+
+    base_small = silhouette(base_rgba)
+
+    best = (-1.0, 1.0, 0, 0)
+    for scale in SCALE_RANGE:
+        scaled = variant_rgba.resize((int(w * scale), int(h * scale)))
+        canvas = Image.new('RGBA', (w, h))
+        canvas.paste(scaled, ((w - scaled.width) // 2, (h - scaled.height) // 2))
+        small = silhouette(canvas)
+        for dy in range(-SHIFT_LIMIT // 4, SHIFT_LIMIT // 4 + 1, 2):
+            for dx in range(-SHIFT_LIMIT // 4, SHIFT_LIMIT // 4 + 1, 2):
+                shifted = np.roll(np.roll(small, dy, axis=0), dx, axis=1)
+                score = _score(base_small, shifted)
+                if score > best[0]:
+                    best = (score, scale, dx * 4, dy * 4)
+
+    score, scale, dx, dy = best
+    if score < ALIGN_MIN_SCORE:
+        # 分數這麼低不是「沒對齊」，是「這兩張根本不是同一個人／同一個時代」。
+        # 硬套搜尋出來的最佳解只會把它縮放平移到更歪的位置——實測就發生過。
+        # 原樣貼進基底畫布，尺寸統一但內容不動。
+        out = Image.new('RGBA', (w, h))
+        out.paste(variant_rgba, ((w - variant_rgba.width) // 2, (h - variant_rgba.height) // 2))
+        return out, {'scale': 1.0, 'dx': 0, 'dy': 0, 'score': round(score, 4), 'skipped': True}
+    scaled = variant_rgba.resize((int(w * scale), int(h * scale)))
+    out = Image.new('RGBA', (w, h))
+    out.paste(scaled, ((w - scaled.width) // 2 + dx, (h - scaled.height) // 2 + dy))
+    return out, {'scale': round(scale, 3), 'dx': dx, 'dy': dy, 'score': round(score, 4),
+                 'skipped': False}
+
+
+def write_align_review(name: str, base, before, after) -> None:
+    """三聯圖：基底 / 對齊前 / 對齊後，各自疊在基底輪廓上看偏移。"""
+    REVIEW.mkdir(parents=True, exist_ok=True)
+    def overlay(img):
+        # 少數來源圖的畫布尺寸跟基底差 1px（甚至更多，如 officer_hard 是
+        # 1122x1402），「對齊前」單純貼原圖看飄移，尺寸不同就置左上角裁貼，
+        # 不縮放——縮放會混淆「畫布尺寸不同」與「真的位置飄移」兩件事。
+        if img.size != base.size:
+            padded = Image.new('RGBA', base.size)
+            padded.paste(img, (0, 0))
+            img = padded
+        canvas = Image.new('RGB', base.size, (18, 18, 18))
+        canvas.paste(Image.new('RGB', base.size, (60, 90, 140)), (0, 0), base)
+        canvas.paste(Image.new('RGB', base.size, (220, 90, 60)), (0, 0),
+                     img.getchannel('A').point(lambda v: v // 2))
+        return canvas
+    canvas = Image.new('RGB', (base.width * 3, base.height))
+    canvas.paste(base.convert('RGB'), (0, 0))
+    canvas.paste(overlay(before), (base.width, 0))
+    canvas.paste(overlay(after), (base.width * 2, 0))
+    canvas.resize((canvas.width // 4, canvas.height // 4)).save(REVIEW / f'align_{name}')
+
+
 def write_review(name: str, before, after) -> None:
     """把去背前後拼成一張對照圖，人工驗收用。"""
     REVIEW.mkdir(parents=True, exist_ok=True)
@@ -234,7 +342,9 @@ def import_pack(webp: bool = False, use_cache: bool = True) -> dict:
 
     picked = collect_assets(story_dirs)
     for (kind, name), src_path in sorted(picked.items()):
-        process_asset(kind, src_path, OUT / 'assets' / kind / name, webp, use_cache)
+        if kind == 'backgrounds':
+            shutil.copyfile(src_path, OUT / 'assets/backgrounds' / name)
+    process_sprites(picked, use_cache)
 
     entries.sort(key=lambda e: e['order'])
     pack = {'id': 'pompeii_79', 'title': PACK_TITLE, 'place': PACK_PLACE,
@@ -247,20 +357,63 @@ def import_pack(webp: bool = False, use_cache: bool = True) -> dict:
     return pack
 
 
-def process_asset(kind: str, src: pathlib.Path, dest: pathlib.Path,
-                  webp: bool, use_cache: bool) -> None:
-    if kind != 'sprites':
-        shutil.copyfile(src, dest)   # 背景不去背
-        return
+# 對齊演算法的版本號。**改動 align_to_base() 的行為時要手動 +1。**
+# 對齊快取鍵要綁「差分的去背快取鍵 ＋ 基底的去背快取鍵 ＋ 這個版本號」——
+# 理由與 _cache_key() 一樣：只綁來源圖的話，調了 SCALE_RANGE 或 SHIFT_LIMIT
+# 卻忘記加 --no-cache，就會靜默吐出用舊參數對齊的舊結果。
+ALIGN_PIPELINE_VERSION = 2
+
+
+def process_sprites(picked, use_cache: bool) -> None:
+    """先全部去背，再把差分對齊到同角色的 _neutral 基底。
+
+    對齊需要同角色的基底一起在手上比對，不能像背景那樣逐檔獨立處理，
+    所以改由這裡在收齊所有立繪的去背結果後統一對齊。
+    """
     CACHE.mkdir(parents=True, exist_ok=True)
-    cached = CACHE / f'{_cache_key(src)}_cutout.png'
-    if use_cache and cached.exists():
-        shutil.copyfile(cached, dest)
-        return
-    cutout = remove_background(src)
-    cutout.save(cached)
-    shutil.copyfile(cached, dest)
-    write_review(src.name, Image.open(src), cutout)
+    cutouts = {}
+    for (kind, name), src in sorted(picked.items()):
+        if kind != 'sprites':
+            continue
+        key = _cache_key(src)
+        cached = CACHE / f'{key}_cutout.png'
+        if not (use_cache and cached.exists()):
+            cutout = remove_background(src)
+            cutout.save(cached)
+            write_review(src.name, Image.open(src), cutout)
+        cutouts[name] = (Image.open(cached).convert('RGBA'), key)
+
+    # 對齊結果的參數（含 skipped 與否）額外存一份 manifest，讓測試能查「哪些
+    # 素材被判定分數過低而跳過對齊」，不必為了問這件事重新跑一次對齊。
+    manifest = {}
+    for name, (img, key) in sorted(cutouts.items()):
+        character = name.rsplit('_', 1)[0]
+        base_name = f'{character}_neutral.png'
+        dest = OUT / 'assets/sprites' / name
+        if name == base_name or base_name not in cutouts:
+            img.save(dest)
+            continue
+        base, base_key = cutouts[base_name]
+        align_key = hashlib.md5(
+            f'{key}:{base_key}:{ALIGN_PIPELINE_VERSION}'.encode()).hexdigest()
+        aligned_cache = CACHE / f'{align_key}_aligned.png'
+        params_cache = CACHE / f'{align_key}_aligned.json'
+        if use_cache and aligned_cache.exists() and params_cache.exists():
+            shutil.copyfile(aligned_cache, dest)
+            params = json.loads(params_cache.read_text(encoding='utf-8'))
+        else:
+            aligned, params = align_to_base(base, img)
+            aligned.save(aligned_cache)
+            aligned.save(dest)
+            params_cache.write_text(json.dumps(params), encoding='utf-8')
+            write_align_review(name, base, img, aligned)
+            print(f'  對齊 {name}: {params}')
+        manifest[name] = params
+
+    REVIEW.mkdir(parents=True, exist_ok=True)
+    (REVIEW / 'align_manifest.json').write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + '\n',
+        encoding='utf-8')
 
 
 if __name__ == '__main__':

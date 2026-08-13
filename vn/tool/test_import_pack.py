@@ -97,6 +97,9 @@ def test_genuine_gaps_are_not_bridged():
     import numpy as np
     for path in sorted((OUT / 'assets/sprites').glob('nikias_*.png')):
         alpha = np.asarray(Image.open(path).convert('RGBA').getchannel('A')).astype(int)
+        # canary：框座標是硬編碼的 1536x1024 畫布，尺寸假設被打破時要看到清楚
+        # 的失敗訊息，不要變成難懂的 nan（Task 8 對齊差分後仍然是這個畫布）。
+        assert alpha.shape == (1536, 1024), f'{path.name} 畫布尺寸不是預期的 1536x1024：{alpha.shape}'
         gap = alpha[1250:1500, 150:280] <= 127
         # 實測四張表情都是 13.0–13.7%；被夾斷後會掉到 3% 左右。
         assert gap.mean() > 0.08, f'{path.name} 的手臂縫隙被填掉了：{gap.mean():.3f}'
@@ -109,3 +112,46 @@ def test_backgrounds_stay_opaque():
     if img.mode == 'RGBA':
         import numpy as np
         assert np.asarray(img)[:, :, 3].min() == 255, '背景不該被去背'
+
+
+def test_expression_variants_align_with_base():
+    from PIL import Image
+    import numpy as np
+
+    def head_box(path):
+        """回傳不透明像素的外框（left, top, right, bottom）。"""
+        a = np.asarray(Image.open(path))[:, :, 3] > 128
+        rows, cols = np.where(a)
+        return cols.min(), rows.min(), cols.max(), rows.max()
+
+    for character in ('vibia', 'nikias', 'philemon'):
+        base = head_box(OUT / f'assets/sprites/{character}_neutral.png')
+        for variant in sorted((OUT / 'assets/sprites').glob(f'{character}_*.png')):
+            if variant.name.endswith('_neutral.png'):
+                continue
+            box = head_box(variant)
+            # 頭頂位置與整體寬度對齊到 12px 以內，切表情才不會跳
+            assert abs(box[1] - base[1]) <= 12, f'{variant.name} 頭頂差 {box[1] - base[1]}px'
+            assert abs((box[2] - box[0]) - (base[2] - base[0])) <= 24, \
+                f'{variant.name} 寬度差太多'
+
+
+def test_known_bad_sprites_matches_actual_skips():
+    """`KNOWN_BAD_SPRITES` 是 allowlist，兩個方向都要對得上（同 Task 6 的
+    knownDeadBranches 套路）：
+
+    - 實際被跳過對齊的素材 − allowlist ＝ 空，否則有新的壞素材沒被記錄。
+    - allowlist − 實際被跳過對齊的素材 ＝ 空，否則有素材重出修好了，
+      allowlist 卻沒跟著刪，會讓人誤以為它還是壞的。
+    """
+    sys.path.insert(0, str(pathlib.Path(__file__).parent))
+    from import_pack import KNOWN_BAD_SPRITES
+
+    manifest = json.loads((ROOT / 'vn/tool/_review/align_manifest.json').read_text(encoding='utf-8'))
+    actually_skipped = {name for name, params in manifest.items() if params.get('skipped')}
+    known_bad = set(KNOWN_BAD_SPRITES)
+
+    assert actually_skipped - known_bad == set(), \
+        f'出現新的壞素材，還沒記進 KNOWN_BAD_SPRITES：{actually_skipped - known_bad}'
+    assert known_bad - actually_skipped == set(), \
+        f'這些素材已經對得上了，請從 KNOWN_BAD_SPRITES 刪掉：{known_bad - actually_skipped}'
