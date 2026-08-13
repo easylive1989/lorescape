@@ -2648,7 +2648,7 @@ Expected: FAIL — `img.mode == 'RGB'`
 
 - [ ] **Step 3: 實作去背**
 
-在 `vn/tool/import_pack.py` 加入（並在檔案頂端 `from PIL import Image, ImageFilter` / `import numpy as np`）：
+在 `vn/tool/import_pack.py` 加入（並在檔案頂端 `import collections` / `from PIL import Image, ImageFilter` / `import numpy as np`）：
 
 ```python
 CACHE = ROOT / 'writer/創作/龐貝/美術測試/_processed'
@@ -2669,12 +2669,7 @@ def remove_background(src: pathlib.Path):
     pixels = np.asarray(img).astype(np.int16)
     h, w, _ = pixels.shape
 
-    # 以四個角落的中位數當背景色，比單一角落穩。
-    corners = np.concatenate([
-        pixels[0:8, 0:8].reshape(-1, 3), pixels[0:8, -8:].reshape(-1, 3),
-        pixels[-8:, 0:8].reshape(-1, 3), pixels[-8:, -8:].reshape(-1, 3),
-    ])
-    bg = np.median(corners, axis=0)
+    bg = _background_colour(pixels)
     similar = (np.abs(pixels - bg).max(axis=2) <= BG_TOLERANCE)
 
     # 從邊界泛洪（4 連通的 BFS，用 numpy 的逐列擴張代替遞迴）
@@ -2700,6 +2695,29 @@ def remove_background(src: pathlib.Path):
     blurred = out.getchannel('A').filter(ImageFilter.GaussianBlur(radius=1.0))
     out.putalpha(blurred)
     return out
+
+
+def _background_colour(pixels):
+    """取邊界像素的**眾數**當背景色。
+
+    不要用「四角中位數」——這批立繪是半身像，人物的衣服延伸到畫面下緣，
+    **下面兩角取到的是人物本身**。實測 vibia_neutral 的下緣兩角是 (91,80,55)
+    與 (84,74,47)，那是她的橄欖綠斗篷；混進中位數會把背景估成 (135,129,112)，
+    與真正的背景 (150,149,148) 差了 37，超過容差，於是泛洪從邊界長不出去、
+    幾乎沒去到背景。
+
+    眾數則對「人物佔掉一部分邊界」免疫：實測 44 張，背景色都是邊界的最大宗
+    （佔 56–72%），且沒有任何一張的人物碰到上緣。
+    """
+    height, width, _ = pixels.shape
+    border = np.concatenate([
+        pixels[0:4, :].reshape(-1, 3), pixels[height - 4:, :].reshape(-1, 3),
+        pixels[:, 0:4].reshape(-1, 3), pixels[:, width - 4:].reshape(-1, 3),
+    ])
+    # 量化到 /8 再數，避免 JPEG 式雜訊把同一個顏色拆成幾十種。
+    quantised = border // 8
+    counts = collections.Counter(map(tuple, quantised))
+    return np.array(counts.most_common(1)[0][0]) * 8 + 4
 
 
 def write_review(name: str, before, after) -> None:
@@ -2749,6 +2767,8 @@ EOF
 ```
 
 **停在這裡，把 `vn/tool/_review/cutout_vibia_neutral.png` 給 user 看過再往下。** 洋紅底上若有灰邊或人物缺角，調 `BG_TOLERANCE`（灰邊 → 調高；缺角 → 調低）後重看。
+
+> **實測基準**（`BG_TOLERANCE = 26` ＋ 眾數背景色）：透明比例落在 34–42%，人物中軸由上到下完全保留。若你的結果離這個區間很遠，先懷疑背景色估錯了，不要急著動容差——**容差能補的是雜訊，補不了採樣點選錯**。
 
 - [ ] **Step 5: 全跑並驗收**
 
