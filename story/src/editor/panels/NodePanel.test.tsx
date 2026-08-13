@@ -273,6 +273,18 @@ test('抽換 cast 角色時把段落 speaker 一併換過去', () => {
   }))
 })
 
+test('刪除 cast 成員時只移除 speaker，保留同段落的 when', () => {
+  const onChange = vi.fn()
+  const withSpeakerAndWhen: ScriptNode = {
+    ...node,
+    paragraphs: [{ text: '第一段', speaker: 'master', when: 'sealed' }, { text: '第二段' }],
+  }
+  render(<NodePanel script={demoScript} node={withSpeakerAndWhen} slug="demo" onChange={onChange} />)
+  fireEvent.click(screen.getAllByRole('button', { name: '刪除角色' })[0])
+  expect(onChange.mock.calls[0][0].paragraphs[0]).not.toHaveProperty('speaker')
+  expect(onChange.mock.calls[0][0].paragraphs[0].when).toBe('sealed')
+})
+
 test('可以編輯選項要設定的 flag', async () => {
   const onChange = vi.fn()
   const node = demoScript.nodes[0]

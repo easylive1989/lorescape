@@ -139,7 +139,11 @@ export function NodePanel(props: {
     onChange({
       ...node,
       cast: (node.cast ?? []).filter((_, i) => i !== index),
-      paragraphs: node.paragraphs.map((p) => (p.speaker === removed ? { text: p.text } : p)),
+      paragraphs: node.paragraphs.map((p) => {
+        if (p.speaker !== removed) return p
+        const { speaker: _speaker, ...rest } = p
+        return rest
+      }),
     })
   }
 
