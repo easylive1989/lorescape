@@ -272,3 +272,72 @@ test('抽換 cast 角色時把段落 speaker 一併換過去', () => {
     paragraphs: [{ text: '第一段', speaker: 'apprentice' }, { text: '第二段' }],
   }))
 })
+
+test('刪除 cast 成員時只移除 speaker，保留同段落的 when', () => {
+  const onChange = vi.fn()
+  const withSpeakerAndWhen: ScriptNode = {
+    ...node,
+    paragraphs: [{ text: '第一段', speaker: 'master', when: 'sealed' }, { text: '第二段' }],
+  }
+  render(<NodePanel script={demoScript} node={withSpeakerAndWhen} slug="demo" onChange={onChange} />)
+  fireEvent.click(screen.getAllByRole('button', { name: '刪除角色' })[0])
+  expect(onChange.mock.calls[0][0].paragraphs[0]).not.toHaveProperty('speaker')
+  expect(onChange.mock.calls[0][0].paragraphs[0].when).toBe('sealed')
+})
+
+test('可以編輯選項要設定的 flag', async () => {
+  const onChange = vi.fn()
+  const node = demoScript.nodes[0]
+  render(<NodePanel script={demoScript} node={node} slug="demo" onChange={onChange} />)
+  const input = screen.getAllByLabelText('設定 flag')[0]
+  fireEvent.change(input, { target: { value: 'sealed, warned' } })
+  expect(onChange).toHaveBeenCalledWith(
+    expect.objectContaining({
+      choices: [
+        expect.objectContaining({ set: ['sealed', 'warned'] }),
+        expect.objectContaining({ text: '往右' }),
+      ],
+    }),
+  )
+})
+
+test('清空 flag 輸入會移除 set 欄位', () => {
+  const onChange = vi.fn()
+  const node = structuredClone(demoScript.nodes[0])
+  node.choices![0].set = ['sealed']
+  render(<NodePanel script={demoScript} node={node} slug="demo" onChange={onChange} />)
+  fireEvent.change(screen.getAllByLabelText('設定 flag')[0], { target: { value: '' } })
+  expect(onChange.mock.calls[0][0].choices[0]).not.toHaveProperty('set')
+})
+
+test('段落的顯示條件下拉列出劇本內所有 flag 的正反兩版', () => {
+  const script = structuredClone(demoScript)
+  script.nodes[0].choices![0].set = ['sealed']
+  render(
+    <NodePanel script={script} node={script.nodes[0]} slug="demo" onChange={() => {}} />,
+  )
+  const select = screen.getAllByLabelText('顯示條件')[0]
+  expect([...select.querySelectorAll('option')].map((o) => o.textContent))
+    .toEqual(['無條件', 'sealed', '!sealed'])
+})
+
+test('選段落的顯示條件會寫進 when', () => {
+  const onChange = vi.fn()
+  const script = structuredClone(demoScript)
+  script.nodes[0].choices![0].set = ['sealed']
+  render(<NodePanel script={script} node={script.nodes[0]} slug="demo" onChange={onChange} />)
+  fireEvent.change(screen.getAllByLabelText('顯示條件')[0], { target: { value: '!sealed' } })
+  expect(onChange.mock.calls[0][0].paragraphs[0].when).toBe('!sealed')
+})
+
+test('說話者選回旁白時只移除 speaker，不動到同一段的 when', () => {
+  const onChange = vi.fn()
+  const withSpeakerAndWhen: ScriptNode = {
+    ...node,
+    paragraphs: [{ text: '第一段', speaker: 'master', when: 'sealed' }, ...node.paragraphs.slice(1)],
+  }
+  render(<NodePanel script={demoScript} node={withSpeakerAndWhen} slug="demo" onChange={onChange} />)
+  fireEvent.change(screen.getAllByRole('combobox', { name: '說話者' })[0], { target: { value: '' } })
+  expect(onChange.mock.calls[0][0].paragraphs[0]).not.toHaveProperty('speaker')
+  expect(onChange.mock.calls[0][0].paragraphs[0].when).toBe('sealed')
+})

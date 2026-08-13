@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { CastMember, Choice, Paragraph, Script, ScriptNode } from '../../engine/schema'
+import { declaredFlags } from '../../engine/schema'
 import { AssetPicker } from './AssetPicker'
 
 const MAX_CHOICES = 3
@@ -29,6 +30,44 @@ export function NodePanel(props: {
   const { script, node, slug, onChange } = props
   const [showBackgroundPicker, setShowBackgroundPicker] = useState(false)
 
+  // 下拉選項＝劇本內所有被 set 過的 flag 的正反兩版。沒有 flag 時只剩「無條件」。
+  const conditions = declaredFlags(script).flatMap((flag) => [flag, `!${flag}`])
+
+  const setParagraphWhen = (index: number, condition: string) =>
+    onChange({
+      ...node,
+      paragraphs: node.paragraphs.map((p, i) => {
+        if (i !== index) return p
+        if (condition) return { ...p, when: condition }
+        const { when: _when, ...rest } = p
+        return rest
+      }),
+    })
+
+  const setChoiceWhen = (index: number, condition: string) =>
+    onChange({
+      ...node,
+      choices: (node.choices ?? []).map((c, i) => {
+        if (i !== index) return c
+        if (condition) return { ...c, when: condition }
+        const { when: _when, ...rest } = c
+        return rest
+      }),
+    })
+
+  const setChoiceFlags = (index: number, raw: string) => {
+    const flags = raw.split(',').map((s) => s.trim()).filter(Boolean)
+    onChange({
+      ...node,
+      choices: (node.choices ?? []).map((c, i) => {
+        if (i !== index) return c
+        if (flags.length) return { ...c, set: flags }
+        const { set: _set, ...rest } = c
+        return rest
+      }),
+    })
+  }
+
   // 段落
   const updateParagraph = (index: number, patch: Partial<Paragraph>) =>
     onChange({
@@ -43,8 +82,12 @@ export function NodePanel(props: {
   const setSpeaker = (index: number, characterId: string) =>
     onChange({
       ...node,
-      paragraphs: node.paragraphs.map((p, i) =>
-        i !== index ? p : characterId ? { ...p, speaker: characterId } : { text: p.text }),
+      paragraphs: node.paragraphs.map((p, i) => {
+        if (i !== index) return p
+        if (characterId) return { ...p, speaker: characterId }
+        const { speaker: _speaker, ...rest } = p
+        return rest
+      }),
     })
 
   // next
@@ -96,7 +139,11 @@ export function NodePanel(props: {
     onChange({
       ...node,
       cast: (node.cast ?? []).filter((_, i) => i !== index),
-      paragraphs: node.paragraphs.map((p) => (p.speaker === removed ? { text: p.text } : p)),
+      paragraphs: node.paragraphs.map((p) => {
+        if (p.speaker !== removed) return p
+        const { speaker: _speaker, ...rest } = p
+        return rest
+      }),
     })
   }
 
@@ -119,6 +166,17 @@ export function NodePanel(props: {
                 </option>
               ))}
             </select>
+            <label>
+              顯示條件
+              <select
+                aria-label="顯示條件"
+                value={paragraph.when ?? ''}
+                onChange={(e) => setParagraphWhen(index, e.target.value)}
+              >
+                <option value="">無條件</option>
+                {conditions.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </label>
             <textarea
               className="node-panel__textarea"
               value={paragraph.text}
@@ -178,6 +236,26 @@ export function NodePanel(props: {
                     <option key={n.id} value={n.id}>{n.id}</option>
                   ))}
                 </select>
+                <label>
+                  設定 flag
+                  <input
+                    aria-label="設定 flag"
+                    value={(choice.set ?? []).join(', ')}
+                    placeholder="逗號分隔，如 sealed, warned"
+                    onChange={(e) => setChoiceFlags(index, e.target.value)}
+                  />
+                </label>
+                <label>
+                  顯示條件
+                  <select
+                    aria-label="顯示條件"
+                    value={choice.when ?? ''}
+                    onChange={(e) => setChoiceWhen(index, e.target.value)}
+                  >
+                    <option value="">無條件</option>
+                    {conditions.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </label>
                 <button type="button" onClick={() => removeChoice(index)}>刪除選項</button>
               </div>
             ))}

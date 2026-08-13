@@ -43,6 +43,8 @@ function EditorWorkspace({ slug }: { slug: string }) {
   // Task 16：左欄「節點／結構」分頁——結構分頁顯示 GraphView（React Flow 節點圖）
   const [leftTab, setLeftTab] = useState<'nodes' | 'graph'>('nodes')
   const [paragraphIndex, setParagraphIndex] = useState(0)
+  // 中欄舞台預覽的 flag 開關狀態——不隨劇本存檔，純粹讓編輯者切換預覽情境
+  const [previewFlags, setPreviewFlags] = useState<string[]>([])
   // 故事屬性面板的角色圖換檔——StoryPanel 只負責通知「要換哪個角色的圖」，
   // 實際開哪個 AssetPicker、選完怎麼落盤都由 EditorPage 這層統籌（多角色共用一個 picker）
   const [imagePickerCharId, setImagePickerCharId] = useState<string | null>(null)
@@ -77,6 +79,13 @@ function EditorWorkspace({ slug }: { slug: string }) {
     if (patch.title !== undefined) catalogPatch.title = patch.title
     if (patch.place !== undefined) catalogPatch.place = patch.place
     if (Object.keys(catalogPatch).length > 0) updateCatalogEntry(catalogPatch)
+  }
+
+  // flag 切換讓可見段落變少時，paragraphIndex 停在舊位置會讓預覽的「第 n/m 段」
+  // 倒掛（n > m），所以切 flag 一併把段落索引歸零。
+  const handlePreviewFlagsChange = (next: string[]) => {
+    setPreviewFlags(next)
+    setParagraphIndex(0)
   }
 
   const handleCharacterImage = (relPath: string) => {
@@ -143,6 +152,8 @@ function EditorWorkspace({ slug }: { slug: string }) {
                 nodeId={previewNodeId}
                 paragraphIndex={paragraphIndex}
                 onParagraphChange={setParagraphIndex}
+                flags={previewFlags}
+                onFlagsChange={handlePreviewFlagsChange}
               />
             ) : (
               <h2>{script.title}</h2>

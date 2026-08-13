@@ -4,7 +4,7 @@ import { loadScript, assetUrl } from '../data/loadScript'
 import { preloadNode } from '../data/preload'
 import { saveProgress, loadProgress, clearProgress } from '../data/progress'
 import { trackEvent } from '../data/analytics'
-import { initState, advance, choose as choosePlayer, currentNode, type PlayState } from '../engine/player'
+import { initState, advance, choose as choosePlayer, currentNode, visibleChoices, type PlayState } from '../engine/player'
 import type { Script } from '../engine/schema'
 import { SceneView } from '../components/SceneView'
 import { EndingView } from '../components/EndingView'
@@ -106,7 +106,8 @@ export function PlayPage() {
           onAdvance={() => setState(advance(script, state))}
           onChoose={(i) => {
             const node = currentNode(script, state)
-            const text = node.choices?.[i]?.text
+            // 追蹤送的是玩家實際點了第幾個（可見索引），與 JSON 裡的位置可能不同。
+            const text = visibleChoices(node, state.flags)[i]?.text
             trackEvent(slug, 'choice_made', { node: node.id, index: i, text })
             setState(choosePlayer(script, state, i))
           }}
