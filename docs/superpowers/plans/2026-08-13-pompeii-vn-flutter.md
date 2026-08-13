@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 新開獨立 Flutter 專案 `vn/`，在 Flutter Web 上播放 `writer/創作/龐貝/` 已完成的 8 篇視覺小說（73 場、2,380 節點、24 結局、57 張美術），並移除舊的 `story/` React SPA。
+**Goal:** 新開獨立 Flutter 專案 `vn/`，在 Flutter Web 上播放 `writer/創作/龐貝/` 已完成的 8 篇視覺小說（73 場、2,380 節點、24 結局、60 張美術），並移除舊的 `story/` React SPA。
 
 **Architecture:** 純 Dart 執行器（節點指標 ＝ 呼叫堆疊的投影）＋ Flutter 直式版面。所有程式碼收在 `lib/src/visual_novel/`，`domain/` 零 Flutter 依賴，`providers.dart` 是唯一對外介面——這一包日後整包搬進 `frontend/lib/features/visual_novel/`。素材由 `tool/import_pack.py` 從 writer vault 匯入（去背、對齊、去重）。
 
@@ -24,7 +24,7 @@
 
 ## 版控決定：素材不進 git
 
-去重後仍有 **57 張 PNG、約 137 MB**。這是**從 writer vault 可完整重生**的二進位檔，進 git 會永久撐大 repo。因此：
+去重後仍有 **60 張 PNG、約 133 MB**。這是**從 writer vault 可完整重生**的二進位檔，進 git 會永久撐大 repo。因此：
 
 - `vn/.gitignore` 排除 `assets/content/**/assets/**`（圖檔）
 - **進版控**：`story.json` ×8、`pack.json`、`tool/import_pack.py`（合計約 330 KB 純文字）
@@ -189,6 +189,7 @@ git commit -m "feat(vn): Flutter 專案骨架，鎖 3.38.5 對齊 frontend"
 
 **Files:**
 - Create: `vn/tool/import_pack.py`
+- Modify: `vn/pubspec.yaml`（Step 5 補 assets 宣告）
 - Test: `vn/tool/test_import_pack.py`
 
 **Interfaces:**
@@ -225,7 +226,7 @@ def test_import_produces_eight_stories_and_dedup_assets():
     pack = json.loads((OUT / 'pack.json').read_text(encoding='utf-8'))
     assert len(pack['stories']) == 8
     assert [s['order'] for s in pack['stories']] == list(range(1, 9))
-    # 116 份重複參照去重成 57 張唯一檔
+    # 116 份重複參照，依檔名去重成 60 個檔案（其中 57 個內容互異）
     bgs = list((OUT / 'assets/backgrounds').glob('*.png'))
     sprites = list((OUT / 'assets/sprites').glob('*.png'))
     assert len(bgs) == 16, len(bgs)      # 15 背景 + cg_column_rising
@@ -396,13 +397,13 @@ du -sh assets/content/pompeii-79
 git status --short vn/assets | head
 ```
 
-Expected: 測試 PASS；`du` 約 137 MB；`git status` **不應列出任何 .png**（.gitignore 生效）。
+Expected: 測試 PASS；`du` 約 133 MB；`git status` **不應列出任何 .png**（.gitignore 生效）。
 
 - [ ] **Step 6: Commit**
 
 ```bash
 git add vn/tool/ vn/assets/content/pompeii-79/pack.json vn/assets/content/pompeii-79/stories/
-git commit -m "feat(vn): 匯入腳本與 8 篇劇本，素材去重 116→57 張"
+git commit -m "feat(vn): 匯入腳本與 8 篇劇本，素材去重 116→60 張"
 ```
 
 ---
