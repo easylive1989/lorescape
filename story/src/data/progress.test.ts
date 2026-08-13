@@ -2,7 +2,7 @@ import { beforeEach, expect, test } from 'vitest'
 import { saveProgress, loadProgress, clearProgress } from './progress'
 import type { PlayState } from '../engine/player'
 
-const state: PlayState = { nodeId: 'n1', paragraphIndex: 1, status: 'playing', flags: [] }
+const state: PlayState = { nodeId: 'n1', paragraphIndex: 1, status: 'playing', flags: ['sealed'] }
 
 beforeEach(() => {
   localStorage.clear()
@@ -52,4 +52,27 @@ test('clear 後回 null', () => {
   saveProgress('demo', state)
   clearProgress('demo')
   expect(loadProgress('demo')).toBeNull()
+})
+
+test('舊存檔沒有 flags 時補成空陣列', () => {
+  localStorage.setItem(
+    'story-progress:demo',
+    JSON.stringify({ nodeId: 'n1', paragraphIndex: 1, status: 'playing' }),
+  )
+  expect(loadProgress('demo')).toEqual({
+    nodeId: 'n1', paragraphIndex: 1, status: 'playing', flags: [],
+  })
+})
+
+test('flags 型別不對時補成空陣列', () => {
+  localStorage.setItem(
+    'story-progress:demo',
+    JSON.stringify({ nodeId: 'n1', paragraphIndex: 1, status: 'playing', flags: 'sealed' }),
+  )
+  expect(loadProgress('demo')?.flags).toEqual([])
+})
+
+test('合法 flags 原樣載入', () => {
+  saveProgress('demo', state)
+  expect(loadProgress('demo')?.flags).toEqual(['sealed'])
 })

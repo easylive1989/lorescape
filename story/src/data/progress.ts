@@ -20,6 +20,11 @@ function isPlayState(value: unknown): value is PlayState {
   )
 }
 
+// 正規化 flags：若為有效的字串陣列則保留，否則補成空陣列
+function normalizeFlags(value: unknown): string[] {
+  return Array.isArray(value) && value.every((v) => typeof v === 'string') ? value : []
+}
+
 export function saveProgress(slug: string, state: PlayState): void {
   try {
     localStorage.setItem(storageKey(slug), JSON.stringify(state))
@@ -33,7 +38,10 @@ export function loadProgress(slug: string): PlayState | null {
   if (!raw) return null
   try {
     const parsed: unknown = JSON.parse(raw)
-    return isPlayState(parsed) ? parsed : null
+    if (!isPlayState(parsed)) return null
+    // 正規化在這裡做，呼叫端永遠拿得到合法的 flags。舊存檔因此會走 !flag 那
+    // 一支——那份存檔本來就不含這個資訊，無法還原。
+    return { ...parsed, flags: normalizeFlags((parsed as Record<string, unknown>).flags) }
   } catch {
     return null
   }
