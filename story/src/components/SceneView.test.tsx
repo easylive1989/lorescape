@@ -11,7 +11,7 @@ const script: Script = structuredClone(demoScript)
 script.nodes[0].paragraphs = [{ text: '第一段' }, { text: '第二段', speaker: 'master' }]
 
 const playing = (paragraphIndex: number): PlayState =>
-  ({ nodeId: 'n1', paragraphIndex, status: 'playing' })
+  ({ nodeId: 'n1', paragraphIndex, status: 'playing', flags: [] })
 
 test('旁白段渲染下方旁白框，不出現泡泡', () => {
   render(<SceneView script={script} state={playing(0)} slug="demo" onAdvance={() => {}} onChoose={() => {}} />)
@@ -37,7 +37,7 @@ test('playing 時點 scene 推進', async () => {
 
 test('choosing 時點 scene 不推進，且渲染選項', async () => {
   const onAdvance = vi.fn()
-  const state: PlayState = { nodeId: 'n1', paragraphIndex: 1, status: 'choosing' }
+  const state: PlayState = { nodeId: 'n1', paragraphIndex: 1, status: 'choosing', flags: [] }
   render(<SceneView script={script} state={state} slug="demo" onAdvance={onAdvance} onChoose={() => {}} />)
   await userEvent.click(screen.getByTestId('scene'))
   expect(onAdvance).not.toHaveBeenCalled()

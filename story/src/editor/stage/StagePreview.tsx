@@ -21,6 +21,7 @@ export function StagePreview(props: {
     nodeId: node.id,
     paragraphIndex,
     status: showChoices ? 'choosing' : 'playing',
+    flags: [],
   }
 
   return (
