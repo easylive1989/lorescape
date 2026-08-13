@@ -4,9 +4,11 @@
 用法：
     python3 vn/tool/import_pack.py [--webp] [--no-cache]
 
-本階段只做「複製與去重」。去背與對齊在 Task 6 / Task 7 接進 process_sprite()。
+立繪去背在 Task 7 接進 process_asset()（見 remove_background()）；表情差分對齊留給 Task 8。
 """
-import argparse, hashlib, json, pathlib, shutil, sys
+import argparse, collections, hashlib, json, pathlib, shutil, sys
+from PIL import Image, ImageFilter
+import numpy as np
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 SRC = ROOT / 'writer/創作/龐貝/stories'
@@ -15,6 +17,85 @@ OUT = ROOT / 'vn/assets/content/pompeii-79'
 PACK_TITLE = '龐貝 79'
 PACK_PLACE = '龐貝'
 PACK_BLURB = '同一座城，同一場災難，八個人各自的最後一個選擇。'
+
+CACHE = ROOT / 'writer/創作/龐貝/美術測試/_processed'
+REVIEW = ROOT / 'vn/tool/_review'
+
+# 灰底判定的容差。AI 出的平灰底其實有輕微雜訊，純等值比對會留下一圈麻點。
+BG_TOLERANCE = 26
+
+
+def remove_background(src: pathlib.Path):
+    """平灰底 → alpha。只從四邊界往內泛洪，避免把人物內部的灰色一起吃掉。
+
+    為什麼是泛洪而不是「所有接近灰的像素都設透明」：維比婭的斗篷是灰綠色、
+    多個角色有灰白頭髮，用顏色判定會在人物身上打洞。泛洪只吃「與邊界連通」
+    的區域，人物內部再灰也不會被碰到。
+    """
+    img = Image.open(src).convert('RGB')
+    pixels = np.asarray(img).astype(np.int16)
+    h, w, _ = pixels.shape
+
+    bg = _background_colour(pixels)
+    similar = (np.abs(pixels - bg).max(axis=2) <= BG_TOLERANCE)
+
+    # 從邊界泛洪（4 連通的 BFS，用 numpy 的逐列擴張代替遞迴）
+    reachable = np.zeros((h, w), dtype=bool)
+    reachable[0, :] |= similar[0, :]
+    reachable[-1, :] |= similar[-1, :]
+    reachable[:, 0] |= similar[:, 0]
+    reachable[:, -1] |= similar[:, -1]
+    while True:
+        grown = reachable.copy()
+        grown[1:, :] |= reachable[:-1, :]
+        grown[:-1, :] |= reachable[1:, :]
+        grown[:, 1:] |= reachable[:, :-1]
+        grown[:, :-1] |= reachable[:, 1:]
+        grown &= similar
+        if grown.sum() == reachable.sum():
+            break
+        reachable = grown
+
+    alpha = np.where(reachable, 0, 255).astype(np.uint8)
+    out = Image.fromarray(np.dstack([np.asarray(img), alpha]), mode='RGBA')
+    # 1px 羽化：去背邊緣會有一圈灰，模糊 alpha 讓它過渡掉。
+    blurred = out.getchannel('A').filter(ImageFilter.GaussianBlur(radius=1.0))
+    out.putalpha(blurred)
+    return out
+
+
+def _background_colour(pixels):
+    """取邊界像素的**眾數**當背景色。
+
+    不要用「四角中位數」——這批立繪是半身像，人物的衣服延伸到畫面下緣，
+    **下面兩角取到的是人物本身**。實測 vibia_neutral 的下緣兩角是 (91,80,55)
+    與 (84,74,47)，那是她的橄欖綠斗篷；混進中位數會把背景估成 (135,129,112)，
+    與真正的背景 (150,149,148) 差了 37，超過容差，於是泛洪從邊界長不出去、
+    幾乎沒去到背景。
+
+    眾數則對「人物佔掉一部分邊界」免疫：實測 44 張，背景色都是邊界的最大宗
+    （佔 56–72%），且沒有任何一張的人物碰到上緣。
+    """
+    height, width, _ = pixels.shape
+    border = np.concatenate([
+        pixels[0:4, :].reshape(-1, 3), pixels[height - 4:, :].reshape(-1, 3),
+        pixels[:, 0:4].reshape(-1, 3), pixels[:, width - 4:].reshape(-1, 3),
+    ])
+    # 量化到 /8 再數，避免 JPEG 式雜訊把同一個顏色拆成幾十種。
+    quantised = border // 8
+    counts = collections.Counter(map(tuple, quantised))
+    return np.array(counts.most_common(1)[0][0]) * 8 + 4
+
+
+def write_review(name: str, before, after) -> None:
+    """把去背前後拼成一張對照圖，人工驗收用。"""
+    REVIEW.mkdir(parents=True, exist_ok=True)
+    checker = Image.new('RGB', after.size, (220, 60, 160))  # 洋紅底，殘留的灰會很明顯
+    checker.paste(after, (0, 0), after)
+    canvas = Image.new('RGB', (before.width * 2, before.height))
+    canvas.paste(before.convert('RGB'), (0, 0))
+    canvas.paste(checker, (before.width, 0))
+    canvas.resize((canvas.width // 3, canvas.height // 3)).save(REVIEW / f'cutout_{name}')
 
 
 def slug_of(meta_id: str) -> str:
@@ -92,8 +173,19 @@ def import_pack(webp: bool = False, use_cache: bool = True) -> dict:
 
 def process_asset(kind: str, src: pathlib.Path, dest: pathlib.Path,
                   webp: bool, use_cache: bool) -> None:
-    """本階段原樣複製。Task 6 在此接去背，Task 7 接對齊。"""
-    shutil.copyfile(src, dest)
+    if kind != 'sprites':
+        shutil.copyfile(src, dest)   # 背景不去背
+        return
+    CACHE.mkdir(parents=True, exist_ok=True)
+    digest = hashlib.md5(src.read_bytes()).hexdigest()
+    cached = CACHE / f'{digest}_cutout.png'
+    if use_cache and cached.exists():
+        shutil.copyfile(cached, dest)
+        return
+    cutout = remove_background(src)
+    cutout.save(cached)
+    shutil.copyfile(cached, dest)
+    write_review(src.name, Image.open(src), cutout)
 
 
 if __name__ == '__main__':

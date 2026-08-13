@@ -32,3 +32,27 @@ def test_every_referenced_asset_exists():
         for char in s['characters'].values():
             for filename in (char.get('sprites') or {}).values():
                 assert (OUT / 'assets/sprites' / filename).exists(), filename
+
+def test_sprites_have_alpha_and_opaque_subject():
+    from PIL import Image
+    import numpy as np
+    img = Image.open(OUT / 'assets/sprites/vibia_neutral.png')
+    assert img.mode == 'RGBA', img.mode
+    a = np.asarray(img)[:, :, 3]
+    # 四角應該全透明（那是被去掉的灰底）
+    assert a[0, 0] == 0 and a[0, -1] == 0, '左右上角沒去乾淨'
+    # 中央偏下應該是人物，全不透明
+    h, w = a.shape
+    assert a[int(h * 0.6), int(w * 0.5)] == 255, '人物被啃掉了'
+    # 透明佔比要落在合理區間——太低表示沒去到，太高表示啃過頭
+    ratio = float((a == 0).mean())
+    assert 0.10 < ratio < 0.70, f'透明佔比異常：{ratio:.2f}'
+
+
+def test_backgrounds_stay_opaque():
+    from PIL import Image
+    img = Image.open(OUT / 'assets/backgrounds/bg_harbour.png')
+    assert img.mode in ('RGB', 'RGBA')
+    if img.mode == 'RGBA':
+        import numpy as np
+        assert np.asarray(img)[:, :, 3].min() == 255, '背景不該被去背'
