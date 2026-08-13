@@ -128,8 +128,14 @@ def _background_colour(pixels):
     與真正的背景 (150,149,148) 差了 37，超過容差，於是泛洪從邊界長不出去、
     幾乎沒去到背景。
 
-    眾數則對「人物佔掉一部分邊界」免疫：實測 44 張，背景色都是邊界的最大宗
-    （佔 56–72%），且沒有任何一張的人物碰到上緣。
+    眾數對「人物佔掉一部分邊界」免疫：實測 44 張，背景色都是邊界的**最大宗**
+    （相對多數 18.5–84.6%，不是絕對多數），且沒有任何一張的人物碰到上緣。
+
+    佔比最低的 philemon_neutral 只有 18.5%，是因為它的背景本身有雜訊，被 /8
+    量化拆成四個相鄰 bin（合計約 53%）。它仍然能正確去背——真正的安全網是
+    「相對多數勝出 ＋ 容差夠寬，把相鄰的量化 bin 一起吃進來」，**不是**
+    「背景要過半」。日後有人排查新素材去背失敗，不要往「背景佔比為何偏低」
+    這個方向找，那不是原因。
     """
     height, width, _ = pixels.shape
     border = np.concatenate([
@@ -140,6 +146,21 @@ def _background_colour(pixels):
     quantised = border // 8
     counts = collections.Counter(map(tuple, quantised))
     return np.array(counts.most_common(1)[0][0]) * 8 + 4
+
+
+# 去背演算法的版本號。**改動 remove_background() 的行為時要手動 +1。**
+PIPELINE_VERSION = 1
+
+
+def _cache_key(src: pathlib.Path) -> str:
+    """快取鍵要綁「來源圖 ＋ 演算法參數 ＋ 版本號」，不能只綁來源圖。
+
+    只綁來源圖的話，調了 BG_TOLERANCE 或 CLOSE_RADIUS 卻忘記加 `--no-cache`，
+    就會靜默命中舊 hash、吐出用舊參數跑出來的舊結果，而且不會有任何警告。
+    這一版的三輪修正全都是「來源圖沒變、演算法變了」，正是這個坑的形狀。
+    """
+    stamp = f'{BG_TOLERANCE}:{CLOSE_RADIUS}:{PIPELINE_VERSION}'.encode()
+    return hashlib.md5(src.read_bytes() + stamp).hexdigest()
 
 
 def write_review(name: str, before, after) -> None:
@@ -232,8 +253,7 @@ def process_asset(kind: str, src: pathlib.Path, dest: pathlib.Path,
         shutil.copyfile(src, dest)   # 背景不去背
         return
     CACHE.mkdir(parents=True, exist_ok=True)
-    digest = hashlib.md5(src.read_bytes()).hexdigest()
-    cached = CACHE / f'{digest}_cutout.png'
+    cached = CACHE / f'{_cache_key(src)}_cutout.png'
     if use_cache and cached.exists():
         shutil.copyfile(cached, dest)
         return
