@@ -114,6 +114,30 @@ def test_backgrounds_stay_opaque():
         assert np.asarray(img)[:, :, 3].min() == 255, '背景不該被去背'
 
 
+def test_skipped_sprites_are_untouched():
+    """被 skip 的立繪必須**一個像素都沒被動過**。
+
+    先前的寫法會把它貼進基底畫布以統一尺寸，結果比基底寬的 officer_hard
+    （1122×1402）左右各被裁掉一塊，損失 2.45% 的主體。統一尺寸本身沒有必要
+    ——Flutter 端依高度縮放。
+    """
+    sys.path.insert(0, str(pathlib.Path(__file__).parent))
+    from import_pack import remove_background
+    from PIL import Image
+    import numpy as np
+    manifest = json.loads((ROOT / 'vn/tool/_review/align_manifest.json').read_text(encoding='utf-8'))
+    skipped = [name for name, params in manifest.items() if params.get('skipped')]
+    assert skipped, 'manifest 裡沒有任何 skipped 條目，這條測試等於沒驗到東西'
+    for name in skipped:
+        source = next(iter(sorted(
+            (ROOT / 'writer/創作/龐貝/stories').glob(f'*/assets/sprites/{name}'))))
+        cutout = remove_background(source)
+        output = Image.open(OUT / 'assets/sprites' / name).convert('RGBA')
+        assert output.size == cutout.size, f'{name} 尺寸被改了：{cutout.size} → {output.size}'
+        opaque = lambda im: int((np.asarray(im)[:, :, 3] > 127).sum())
+        assert opaque(output) == opaque(cutout), f'{name} 有不透明內容被裁掉'
+
+
 def test_expression_variants_align_with_base():
     from PIL import Image
     import numpy as np

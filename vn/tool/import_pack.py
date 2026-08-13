@@ -237,10 +237,15 @@ def align_to_base(base_rgba, variant_rgba):
     if score < ALIGN_MIN_SCORE:
         # 分數這麼低不是「沒對齊」，是「這兩張根本不是同一個人／同一個時代」。
         # 硬套搜尋出來的最佳解只會把它縮放平移到更歪的位置——實測就發生過。
-        # 原樣貼進基底畫布，尺寸統一但內容不動。
-        out = Image.new('RGBA', (w, h))
-        out.paste(variant_rgba, ((w - variant_rgba.width) // 2, (h - variant_rgba.height) // 2))
-        return out, {'scale': 1.0, 'dx': 0, 'dy': 0, 'score': round(score, 4), 'skipped': True}
+        #
+        # **原封不動回傳，連畫布都不要正規化。** 貼進基底畫布看似無害，實際上
+        # 會裁掉比基底寬的圖：officer_hard 是 1122×1402，置中貼進 1024×1536
+        # 會左裁 49px、右裁 27px，實測損失 20,491 個不透明像素（主體的
+        # 2.45%，左邊那塊是大腿）。「skipped」就該是字面意義的沒被動過。
+        #
+        # 尺寸不一致不影響播放：Flutter 端是 `BoxFit.fitHeight` 依高度縮放。
+        return variant_rgba, {'scale': 1.0, 'dx': 0, 'dy': 0,
+                              'score': round(score, 4), 'skipped': True}
     scaled = variant_rgba.resize((int(w * scale), int(h * scale)))
     out = Image.new('RGBA', (w, h))
     out.paste(scaled, ((w - scaled.width) // 2 + dx, (h - scaled.height) // 2 + dy))
@@ -361,7 +366,7 @@ def import_pack(webp: bool = False, use_cache: bool = True) -> dict:
 # 對齊快取鍵要綁「差分的去背快取鍵 ＋ 基底的去背快取鍵 ＋ 這個版本號」——
 # 理由與 _cache_key() 一樣：只綁來源圖的話，調了 SCALE_RANGE 或 SHIFT_LIMIT
 # 卻忘記加 --no-cache，就會靜默吐出用舊參數對齊的舊結果。
-ALIGN_PIPELINE_VERSION = 2
+ALIGN_PIPELINE_VERSION = 3
 
 
 def process_sprites(picked, use_cache: bool) -> None:
