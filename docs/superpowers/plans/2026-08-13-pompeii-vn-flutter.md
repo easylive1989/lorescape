@@ -2628,8 +2628,61 @@ def test_sprites_have_alpha_and_opaque_subject():
     h, w = a.shape
     assert a[int(h * 0.6), int(w * 0.5)] == 255, '人物被啃掉了'
     # 透明佔比要落在合理區間——太低表示沒去到，太高表示啃過頭
+    # 實測 44 張落在 0.337–0.508，區間取 0.25–0.60 留一點餘裕但不至於形同虛設。
     ratio = float((a == 0).mean())
-    assert 0.10 < ratio < 0.70, f'透明佔比異常：{ratio:.2f}'
+    assert 0.25 < ratio < 0.60, f'透明佔比異常：{ratio:.2f}'
+
+
+def _interior_islands(alpha):
+    """回傳「不與畫面邊界連通的透明像素數」——會透出背景的破洞。"""
+    import numpy as np
+    transparent = alpha <= 127
+    h, w = transparent.shape
+    reach = np.zeros((h, w), dtype=bool)
+    reach[0, :] |= transparent[0, :]
+    reach[-1, :] |= transparent[-1, :]
+    reach[:, 0] |= transparent[:, 0]
+    reach[:, -1] |= transparent[:, -1]
+    while True:
+        grown = reach.copy()
+        grown[1:, :] |= reach[:-1, :]
+        grown[:-1, :] |= reach[1:, :]
+        grown[:, 1:] |= reach[:, :-1]
+        grown[:, :-1] |= reach[:, 1:]
+        grown &= transparent
+        if grown.sum() == reach.sum():
+            break
+        reach = grown
+    return int((transparent & ~reach).sum())
+
+
+def test_no_interior_holes():
+    """閉運算會把咬痕的頸部填掉、讓殘骸變成孤島，_fill_interior 負責收拾。
+
+    孤島 ＝ 人物身上會透出背景的破洞，一個都不該留。
+    """
+    from PIL import Image
+    import numpy as np
+    for path in sorted((OUT / 'assets/sprites').glob('*.png')):
+        alpha = np.asarray(Image.open(path).convert('RGBA').getchannel('A')).astype(int)
+        assert _interior_islands(alpha) == 0, f'{path.name} 有內部破洞'
+
+
+def test_genuine_gaps_are_not_bridged():
+    """尼基亞斯手臂與軀幹之間的縫隙不得被閉運算夾斷。
+
+    這是 CLOSE_RADIUS 從 7 降到 4 的原因。**這個回歸在「透明比例」上量不到**
+    ——r=7 時尼基亞斯的主體佔比只多 0.16 個百分點，看起來完全安全，實際上
+    那條縫隙已經被從中間夾斷、上半段封成 3,150px 的孤島，再被 _fill_interior
+    填實。只有量特定區域的拓樸才抓得到。
+    """
+    from PIL import Image
+    import numpy as np
+    for path in sorted((OUT / 'assets/sprites').glob('nikias_*.png')):
+        alpha = np.asarray(Image.open(path).convert('RGBA').getchannel('A')).astype(int)
+        gap = alpha[1250:1500, 150:280] <= 127
+        # 實測四張表情都是 13.0–13.7%；被夾斷後會掉到 3% 左右。
+        assert gap.mean() > 0.08, f'{path.name} 的手臂縫隙被填掉了：{gap.mean():.3f}'
 
 
 def test_backgrounds_stay_opaque():
@@ -2752,6 +2805,21 @@ def _fill_interior(alpha_array):
     return np.where(reachable, 0, 255).astype(np.uint8)
 
 
+# 去背演算法的版本號。**改動 remove_background() 的行為時要手動 +1。**
+PIPELINE_VERSION = 1
+
+
+def _cache_key(src: pathlib.Path) -> str:
+    """快取鍵要綁「來源圖 ＋ 演算法參數 ＋ 版本號」，不能只綁來源圖。
+
+    只綁來源圖的話，調了 BG_TOLERANCE 或 CLOSE_RADIUS 卻忘記加 `--no-cache`，
+    就會靜默命中舊 hash、吐出用舊參數跑出來的舊結果，而且不會有任何警告。
+    這一版的三輪修正全都是「來源圖沒變、演算法變了」，正是這個坑的形狀。
+    """
+    stamp = f'{BG_TOLERANCE}:{CLOSE_RADIUS}:{PIPELINE_VERSION}'.encode()
+    return hashlib.md5(src.read_bytes() + stamp).hexdigest()
+
+
 def _background_colour(pixels):
     """取邊界像素的**眾數**當背景色。
 
@@ -2761,8 +2829,14 @@ def _background_colour(pixels):
     與真正的背景 (150,149,148) 差了 37，超過容差，於是泛洪從邊界長不出去、
     幾乎沒去到背景。
 
-    眾數則對「人物佔掉一部分邊界」免疫：實測 44 張，背景色都是邊界的最大宗
-    （佔 56–72%），且沒有任何一張的人物碰到上緣。
+    眾數對「人物佔掉一部分邊界」免疫：實測 44 張，背景色都是邊界的**最大宗**
+    （相對多數 18.5–84.6%，不是絕對多數），且沒有任何一張的人物碰到上緣。
+
+    佔比最低的 philemon_neutral 只有 18.5%，是因為它的背景本身有雜訊，被 /8
+    量化拆成四個相鄰 bin（合計約 53%）。它仍然能正確去背——真正的安全網是
+    「相對多數勝出 ＋ 容差夠寬，把相鄰的量化 bin 一起吃進來」，**不是**
+    「背景要過半」。日後有人排查新素材去背失敗，不要往「背景佔比為何偏低」
+    這個方向找，那不是原因。
     """
     height, width, _ = pixels.shape
     border = np.concatenate([
@@ -2795,8 +2869,7 @@ def process_asset(kind: str, src: pathlib.Path, dest: pathlib.Path,
         shutil.copyfile(src, dest)   # 背景不去背
         return
     CACHE.mkdir(parents=True, exist_ok=True)
-    digest = hashlib.md5(src.read_bytes()).hexdigest()
-    cached = CACHE / f'{digest}_cutout.png'
+    cached = CACHE / f'{_cache_key(src)}_cutout.png'
     if use_cache and cached.exists():
         shutil.copyfile(cached, dest)
         return
