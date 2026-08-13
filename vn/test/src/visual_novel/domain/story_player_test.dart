@@ -1,17 +1,23 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lorescape_vn/src/visual_novel/data/story_json_parser.dart';
+import 'package:lorescape_vn/src/visual_novel/domain/cursor.dart';
 import 'package:lorescape_vn/src/visual_novel/domain/play_state.dart';
 import 'package:lorescape_vn/src/visual_novel/domain/story.dart';
 import 'package:lorescape_vn/src/visual_novel/domain/story_player.dart';
 
-Story build(Map<String, dynamic> scenes, {Map<String, dynamic>? variables}) {
+Story build(
+  Map<String, dynamic> scenes, {
+  Map<String, dynamic>? variables,
+  Map<String, dynamic>? characters,
+}) {
   return parseStory(<String, dynamic>{
     'meta': <String, dynamic>{
       'id': 'test', 'pack': 'p', 'order': 1, 'title': 't',
       'subtitle': '', 'estimatedMinutes': 1, 'locale': 'zh-Hant',
     },
     'variables': variables ?? <String, dynamic>{},
-    'characters': <String, dynamic>{'a': <String, dynamic>{'name': '甲', 'sprites': null}},
+    'characters': characters ??
+        <String, dynamic>{'a': <String, dynamic>{'name': '甲', 'sprites': null}},
     'backgrounds': <String, dynamic>{'bg': 'bg.png'},
     'missingAssets': <dynamic>[],
     'start': 'S01',
@@ -154,6 +160,133 @@ void main() {
     });
   });
 
+  group('規格明列、但最容易無聲壞掉的邊界', () {
+    test('if 不成立且沒有 else 時，往下一個節點走（22/26 個 if 屬此類）', () {
+      final story = build(
+        <String, dynamic>{
+          'S01': scene(<dynamic>[
+            <String, dynamic>{
+              't': 'if',
+              'cond': <String, dynamic>{'var': 'v', 'op': '>=', 'value': 9},
+              'then': <dynamic>[<String, dynamic>{'t': 'n', 'text': '不該出現'}],
+            },
+            <String, dynamic>{'t': 'n', 'text': '後面'},
+          ], isEnding: true, endingId: 'A'),
+        },
+        variables: <String, dynamic>{
+          'v': <String, dynamic>{'label': 'v', 'initial': 0, 'min': 0, 'max': 4},
+        },
+      );
+      final state = initState(story);
+      expect((currentNode(story, state) as NarrationNode).text, '後面');
+      expect(state.cursor.toTokens(), <String>['1'],
+          reason: '空分支不得 push，否則 _listAt 拿到空陣列會誤觸「整場走完」而提前跳場');
+    });
+
+    test('show 的 sprite 為 null 是 stage no-op', () {
+      final story = build(<String, dynamic>{
+        'S01': scene(<dynamic>[
+          <String, dynamic>{'t': 'show', 'who': 'a', 'sprite': null},
+          <String, dynamic>{'t': 'n', 'text': '一'},
+        ], isEnding: true, endingId: 'A'),
+      });
+      expect(initState(story).stage, isEmpty);
+    });
+
+    test('bgm 節點帶 id: null 會把 bgmId 清成 null', () {
+      final story = build(<String, dynamic>{
+        'S01': <String, dynamic>{
+          'title': '場', 'background': 'bg', 'bgm': 'sea',
+          'isEnding': true, 'endingId': 'A',
+          'nodes': <dynamic>[
+            <String, dynamic>{'t': 'n', 'text': '一'},
+            <String, dynamic>{'t': 'bgm', 'id': null},
+            <String, dynamic>{'t': 'n', 'text': '二'},
+          ],
+        },
+      });
+      var state = initState(story);
+      expect(state.bgmId, 'sea');
+      state = advance(story, state);
+      expect(state.bgmId, isNull);
+    });
+
+    test('連續 pop 兩層之後，外層的 index 正確 +1', () {
+      final story = build(
+        <String, dynamic>{
+          'S01': scene(<dynamic>[
+            <String, dynamic>{
+              't': 'choice',
+              'options': <dynamic>[
+                <String, dynamic>{
+                  'text': '甲',
+                  'then': <dynamic>[
+                    <String, dynamic>{
+                      't': 'if',
+                      'cond': <String, dynamic>{'var': 'v', 'op': '>=', 'value': 0},
+                      'then': <dynamic>[<String, dynamic>{'t': 'n', 'text': '最內層'}],
+                    },
+                  ],
+                },
+                <String, dynamic>{'text': '乙', 'goto': 'S01'},
+              ],
+            },
+            <String, dynamic>{'t': 'n', 'text': '匯流'},
+          ], isEnding: true, endingId: 'A'),
+        },
+        variables: <String, dynamic>{
+          'v': <String, dynamic>{'label': 'v', 'initial': 0, 'min': 0, 'max': 4},
+        },
+      );
+      var state = choose(story, initState(story), 0);
+      expect((currentNode(story, state) as NarrationNode).text, '最內層');
+      expect(state.cursor.toTokens(), <String>['0', 'opt0', '0', 'then', '0']);
+      state = advance(story, state);
+      expect((currentNode(story, state) as NarrationNode).text, '匯流');
+      expect(state.cursor.toTokens(), <String>['1']);
+    });
+
+    test('d 切表情保留該角色的濾鏡與台上位置', () {
+      final story = build(<String, dynamic>{
+        'S01': scene(<dynamic>[
+          <String, dynamic>{'t': 'show', 'who': 'a', 'sprite': 'neutral',
+              'filter': 'memory_desaturate'},
+          <String, dynamic>{'t': 'show', 'who': 'b', 'sprite': 'neutral'},
+          <String, dynamic>{'t': 'n', 'text': '一'},
+          <String, dynamic>{'t': 'd', 'who': 'a', 'sprite': 'wry', 'text': '二'},
+        ], isEnding: true, endingId: 'A'),
+        }, characters: <String, dynamic>{
+          'a': <String, dynamic>{'name': '甲', 'sprites': <String, dynamic>{'neutral': 'a.png', 'wry': 'aw.png'}},
+          'b': <String, dynamic>{'name': '乙', 'sprites': <String, dynamic>{'neutral': 'b.png'}},
+        });
+      final state = advance(story, initState(story));
+      expect(state.stage.map((s) => s.who), <String>['a', 'b'],
+          reason: '換表情不得改變左右站位');
+      expect(state.stage.first.sprite, 'wry');
+      expect(state.stage.first.filter, 'memory_desaturate',
+          reason: '換表情不得把 show 設定的濾鏡洗掉');
+    });
+
+    test('advance 在 choosing 時不動作', () {
+      final story = build(<String, dynamic>{
+        'S01': scene(<dynamic>[
+          <String, dynamic>{
+            't': 'choice',
+            'options': <dynamic>[
+              <String, dynamic>{'text': '甲', 'goto': 'S02'},
+              <String, dynamic>{'text': '乙', 'goto': 'S02'},
+            ],
+          },
+        ]),
+        'S02': scene(<dynamic>[<String, dynamic>{'t': 'n', 'text': '二'}],
+            isEnding: true, endingId: 'A'),
+      });
+      final state = initState(story);
+      expect(advance(story, state).cursor.toTokens(), state.cursor.toTokens());
+      expect(advance(story, state).status, PlayStatus.choosing);
+    });
+  });
+
   group('resume', () {
     test('存檔停在選項上時，讀回來要是 choosing 而不是 playing', () {
       final story = build(<String, dynamic>{
@@ -171,7 +304,7 @@ void main() {
       });
       // 模擬讀檔：SaveData.toPlayState() 一律回 playing
       final fromSave = initState(story).copyWith(status: PlayStatus.playing);
-      expect(resume(story, fromSave).status, PlayStatus.choosing);
+      expect(resume(story, fromSave)!.status, PlayStatus.choosing);
     });
 
     test('存檔停在旁白上時維持 playing', () {
@@ -179,7 +312,36 @@ void main() {
         'S01': scene(<dynamic>[<String, dynamic>{'t': 'n', 'text': '一'}],
             isEnding: true, endingId: 'A'),
       });
-      expect(resume(story, initState(story)).status, PlayStatus.playing);
+      expect(resume(story, initState(story))!.status, PlayStatus.playing);
+    });
+
+    test('結局場的越界游標還原成 ended 並帶回 endingId，不得 RangeError', () {
+      final story = build(<String, dynamic>{
+        'S01': scene(<dynamic>[<String, dynamic>{'t': 'n', 'text': '一'}],
+            isEnding: true, endingId: 'A'),
+      });
+      // 結局狀態的游標必然越界——_settle 只在越界時才回傳 ended。
+      final atEnd = initState(story).copyWith(
+        cursor: Cursor.atSceneStart('S01').withLastIndex(1),
+        status: PlayStatus.playing,
+      );
+      final restored = resume(story, atEnd)!;
+      expect(restored.status, PlayStatus.ended);
+      expect(restored.endingId, 'A');
+    });
+
+    test('路徑對不上現在的劇本時回 null，讓呼叫端退回開頭', () {
+      final story = build(<String, dynamic>{
+        'S01': scene(<dynamic>[<String, dynamic>{'t': 'n', 'text': '一'}],
+            isEnding: true, endingId: 'A'),
+      });
+      final stale = initState(story).copyWith(
+        cursor: Cursor.fromTokens('S01', <String>['0', 'then', '0']),
+      );
+      expect(resume(story, stale), isNull, reason: 'S01[0] 是旁白，沒有 then 分支');
+      expect(resume(story, initState(story).copyWith(
+        cursor: Cursor.atSceneStart('S99'),
+      )), isNull, reason: '場不存在');
     });
   });
 

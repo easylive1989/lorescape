@@ -46,9 +46,11 @@ List<VisibleOption> visibleOptions(ChoiceNode node, Map<String, Object?> vars) =
         if (node.options[i].cond?.evaluate(vars) ?? true) VisibleOption(i, node.options[i]),
     ];
 
-/// 游標往前一格，再套用副作用節點直到停下。`ended` 之後呼叫是 no-op。
+/// 游標往前一格，再套用副作用節點直到停下。
 PlayState advance(Story story, PlayState state) {
-  if (state.status == PlayStatus.ended) return state;
+  // choosing 時推進會靜默跳過整個選擇、不套用任何選項的 vars——那是最難查的一
+  // 種 bug（玩家的選擇無聲消失）。這裡直接擋掉，不倚賴 UI 自律。
+  if (state.status != PlayStatus.playing) return state;
   return _settle(story, _moveNext(story, state));
 }
 
@@ -56,11 +58,39 @@ PlayState advance(Story story, PlayState state) {
 /// 一律回 playing），但游標可能正停在一個 choice 上。那種情況下把 status 當成
 /// playing 會讓 UI 不畫選項、而點擊直接 advance 過去——玩家的選擇被無聲跳過。
 /// 因此 status 一律由「游標指著什麼節點」重算。
-PlayState resume(Story story, PlayState restored) {
-  final node = currentNode(story, restored);
-  return restored.copyWith(
-    status: node is ChoiceNode ? PlayStatus.choosing : PlayStatus.playing,
-  );
+PlayState? resume(Story story, PlayState restored) {
+  if (!_cursorResolvable(story, restored.cursor)) return null;
+  // 交給 _settle 重算：它本來就負責「走到下一個會停頓的節點」與「場走完了要跳
+  // 場還是結束」。讀檔與播放因此走同一條路，不會有第二套狀態推導邏輯。
+  return _settle(story, restored);
+}
+
+/// 游標的每一層都要對得上現在的劇本結構。**最後一層允許越界**——那是「這個場
+/// 走完了」的合法狀態（結局狀態的游標必然越界），由 _settle 處理成跳場或結局。
+bool _cursorResolvable(Story story, Cursor cursor) {
+  final scene = story.scenes[cursor.sceneId];
+  if (scene == null) return false;
+  var list = scene.nodes;
+  for (var i = 0; i < cursor.path.length; i++) {
+    final step = cursor.path[i];
+    final isLast = i == cursor.path.length - 1;
+    if (step.index < 0 || step.index >= list.length) return isLast;
+    if (isLast) return true;
+    final node = list[step.index];
+    final branch = step.branch;
+    if (branch == 'then' && node is IfNode) {
+      list = node.then;
+    } else if (branch == 'else' && node is IfNode) {
+      list = node.orElse;
+    } else if (branch != null && branch.startsWith('opt') && node is ChoiceNode) {
+      final index = int.tryParse(branch.substring(3));
+      if (index == null || index >= node.options.length) return false;
+      list = node.options[index].then;
+    } else {
+      return false;
+    }
+  }
+  return true;
 }
 
 /// 玩家選了 choice 節點裡第 [visibleIndex] 個可見選項。
@@ -138,10 +168,13 @@ Map<String, Object?> _applyVars(
 
 PlayState _enterScene(Story story, PlayState state, String sceneId) {
   final scene = _scene(story, sceneId);
+  // 場沒有宣告 bgm ＝ **未指定，沿用上一場**，不是停止播放。劇本要靜下來時是明
+  // 寫 `bgm: "silence"` 的（多場在用）；若把「沒有欄位」當成停止，8 篇的結局場
+  // 會全部無聲進場，而 01 篇的 E_A 明明寫了 `bgm: "sea"`。停止只由 `bgm` 節點
+  // 帶 `id: null` 觸發。
   return state.copyWith(
     cursor: Cursor.atSceneStart(sceneId),
     bgmId: scene.bgm,
-    clearBgm: scene.bgm == null,
     status: PlayStatus.playing,
   );
 }
@@ -179,10 +212,10 @@ PlayState _settle(Story story, PlayState state) {
     final node = list[current.cursor.last.index];
     switch (node) {
       case NarrationNode() || DialogueNode() || CgNode():
-        // d 會順帶切表情：把該角色的立繪換成新的 sprite。
+        // 規範 §3.3：`d` 的 sprite 存在時「同時切換該角色表情並顯示」。
         if (node is DialogueNode && node.sprite != null) {
           current = current.copyWith(
-            stage: _withSprite(current.stage, node.who, node.sprite!, null),
+            stage: _switchExpression(current.stage, node.who, node.sprite!),
           );
         }
         return current.copyWith(status: PlayStatus.playing);
@@ -191,7 +224,7 @@ PlayState _settle(Story story, PlayState state) {
       case ShowNode(:final who, :final sprite, :final filter):
         // sprite 為 null ＝ 無立繪角色登場，台上沒有東西要加。
         if (sprite != null) {
-          current = current.copyWith(stage: _withSprite(current.stage, who, sprite, filter));
+          current = current.copyWith(stage: _showSprite(current.stage, who, sprite, filter));
         }
       case HideNode():
         current = current.copyWith(stage: const <SpriteOnStage>[]);
@@ -218,16 +251,37 @@ PlayState _settle(Story story, PlayState state) {
   }
 }
 
-List<SpriteOnStage> _withSprite(
+/// `show`：設定某角色的立繪與濾鏡。既有角色**原位取代**，新角色才 append。
+List<SpriteOnStage> _showSprite(
   List<SpriteOnStage> stage,
   String who,
   String sprite,
   String? filter,
 ) {
-  final next = <SpriteOnStage>[
-    for (final s in stage)
-      if (s.who != who) s,
-  ];
-  next.add(SpriteOnStage(who: who, sprite: sprite, filter: filter));
+  final next = <SpriteOnStage>[...stage];
+  final at = next.indexWhere((s) => s.who == who);
+  final entry = SpriteOnStage(who: who, sprite: sprite, filter: filter);
+  if (at < 0) {
+    next.add(entry);
+  } else {
+    next[at] = entry;
+  }
+  return next;
+}
+
+/// `d` 切表情：**只換表情**，保留該角色現有的濾鏡與台上位置。
+///
+/// 兩個都是實際會被看見的：8 篇裡唯一一次 `show ... filter: memory_desaturate`
+/// （08/S04）之後 vibia 還會講帶 sprite 的台詞，濾鏡若被洗掉，那整段回憶就失去
+/// 視覺區隔；而「移除再 append」會讓雙人同台的兩人在對話中途左右對調
+/// （07/S02、07/S03 各一次）。
+List<SpriteOnStage> _switchExpression(List<SpriteOnStage> stage, String who, String sprite) {
+  final next = <SpriteOnStage>[...stage];
+  final at = next.indexWhere((s) => s.who == who);
+  if (at < 0) {
+    next.add(SpriteOnStage(who: who, sprite: sprite));
+  } else {
+    next[at] = SpriteOnStage(who: who, sprite: sprite, filter: next[at].filter);
+  }
   return next;
 }
