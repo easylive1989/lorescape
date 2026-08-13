@@ -92,6 +92,25 @@ test('條件不成立時該段不出現，索引落在另一段', () => {
   expect(screen.getByTestId('text-card')).toHaveTextContent('沒封才有的一段')
 })
 
+test('可見段落為 0 時退回節點原始第一段，不拋錯', () => {
+  // mid 節點的段落全部改成帶 when 且傳入的 flags 讓它們全部不成立——這是還沒經過
+  // validateScript 的狀態（該規則本會擋下這種節點），刻意不呼叫 validateScript，
+  // 直接用物件字面值組出這個劇本，模擬工作台預覽會踩到的未驗證狀態。
+  const noVisibleScript: Script = {
+    ...flagScript,
+    nodes: flagScript.nodes.map((n) =>
+      n.id === 'mid' ? { ...n, paragraphs: [{ text: '只有這段', when: 'never-set' }] } : n),
+  }
+  render(
+    <SceneView
+      script={noVisibleScript} slug="flags"
+      state={{ nodeId: 'mid', paragraphIndex: 0, status: 'playing', flags: [] }}
+      onAdvance={() => {}} onChoose={() => {}}
+    />,
+  )
+  expect(screen.getByTestId('text-card')).toHaveTextContent('只有這段')
+})
+
 test('條件選項依 flags 出現或消失', () => {
   const { rerender } = render(
     <SceneView
