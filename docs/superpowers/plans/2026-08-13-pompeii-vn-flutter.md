@@ -875,10 +875,10 @@ Map<String, Set<String>> _missingAssets(List<dynamic>? json) {
     final map = entry as Map<String, dynamic>;
     // 多數 entry 用複數 `ids` 陣列，但 08-the-new-house 的 filter 那筆用單數
     // `id`。兩種都收進同一個 Set，不要求資料端統一——劇本是既成事實。
-    final ids = <String>[
-      ...((map['ids'] as List<dynamic>?) ?? const <dynamic>[]).cast<String>(),
-      if (map['id'] is String) map['id'] as String,
-    ];
+    // 兩者皆缺時 `as String` 會對 null 丟 TypeError——刻意讓它吵，
+    // 靜默略過會讓一整類缺件無聲消失。
+    final ids = (map['ids'] as List<dynamic>?)?.cast<String>() ??
+        <String>[map['id'] as String];
     result.putIfAbsent(map['type'] as String, () => <String>{}).addAll(ids);
   }
   return result;
