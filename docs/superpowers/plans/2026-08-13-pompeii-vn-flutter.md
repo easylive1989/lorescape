@@ -2397,8 +2397,17 @@ void main() {
                 ('else', node.orElse),
               ]) {
                 if (side.$2.isEmpty) continue;
-                final key = '$sceneId#${<String>[...here, side.$1, '0'].join('.')}';
-                if (!result.readKeys.contains(key)) unreached.add(key);
+                // 判定「這個分支走到了沒」要看**有沒有任何已讀鍵落在它底下**，
+                // 不能只看 `.then.0`。readKeys 只記錄游標停下來的位置，而分支的
+                // 第一個節點若是 show／sfx 這種不停頓的型別，游標永遠不會停在
+                // `.0` 上——實測 8 篇有 4 個分支正是如此（01/S07、01/E_C、
+                // 05/S06、08/S04），用 `.0` 判定會全部誤報成走不到。
+                // 前綴比對是可靠的：實測沒有任何分支是純副作用節點，每個分支
+                // 內都至少有一個會停頓的節點。
+                final prefix = '$sceneId#${<String>[...here, side.$1].join('.')}.';
+                if (!result.readKeys.any((key) => key.startsWith(prefix))) {
+                  unreached.add(prefix);
+                }
                 scan(sceneId, side.$2, <String>[...here, side.$1]);
               }
             } else if (node is ChoiceNode) {
