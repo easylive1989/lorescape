@@ -2972,8 +2972,26 @@ SCALE_RANGE = [0.88 + 0.02 * i for i in range(13)]   # 0.88 … 1.12
 SHIFT_LIMIT = 72                                      # px，於 1/4 解析度上為 18
 
 
+# 對齊分數的下限。低於它就不套用對齊——那種分數代表素材本身有問題
+# （畫錯人、畫錯時代），硬套對齊只會把它變得更歪。
+ALIGN_MIN_SCORE = 0.95
+
+# 已知有問題的立繪：分數過低是**素材問題**，不是對齊失敗。
+#
+# 用 allowlist 而不是默默跳過，是為了讓兩個方向都有訊號：多出新的壞素材會紅，
+# 而素材被重出修好之後這裡沒刪也會紅（與 Task 6 的 knownDeadBranches 同一套路）。
+KNOWN_BAD_SPRITES = {
+    # 十九世紀海軍軍官制服，時代錯置。用在 07-cannot-land S01/S02 共 5 處。
+    'officer_hard.png': '時代錯置：19 世紀海軍軍官',
+    # 以下三張與別的角色位元組相同，是表情差分被指到了別人的臉。
+    'hylas_scared.png': '錯掛：實為盧奇烏斯（≡ master_impatient）',
+    'orestes_urgent.png': '錯掛：實為忒亞（≡ thea_afraid）',
+    'survivor_sharp.png': '錯掛：實為普林尼（≡ pliny_labored）',
+}
+
+
 def _score(a, b):
-    """正規化互相關。兩張同尺寸的灰階 numpy 陣列。"""
+    """正規化互相關。兩張同尺寸的 numpy 陣列。"""
     a = a - a.mean()
     b = b - b.mean()
     denom = np.sqrt((a * a).sum() * (b * b).sum())
@@ -2986,14 +3004,29 @@ def align_to_base(base_rgba, variant_rgba):
     先在 1/4 解析度粗搜縮放與平移，再於全解析度做 ±4px 細修。
     """
     w, h = base_rgba.size
-    base_small = np.asarray(base_rgba.convert('L').resize((w // 4, h // 4))).astype(np.float32)
+
+    # **比 alpha 剪影，不要比灰階亮度。**
+    #
+    # 差分的原始畫布尺寸不一定與基底相同（實測 4 張是 1023×1537、officer_hard
+    # 是 1122×1402，其餘 39 張才是 1024×1536）。把差分貼到基底尺寸的畫布上時，
+    # 邊緣會留下一圈墊底色，而 `convert('L')` 丟掉 alpha 只看 RGB——那圈邊在
+    # 互相關裡是極強的人造對比，分數整個被它主導。實測灰階法會把
+    # nikias_watchful 評成 0.38 並挑出 scale 0.90 的錯誤解，把一張本來就對齊
+    # 的圖弄歪 132px。
+    #
+    # alpha 對此免疫：透明區的值是 0，與畫布留白同值，沒有人造邊。改用 alpha
+    # 之後 24/28 個差分都是 score ≥ 0.978、scale 1.00、位移 (0,0)。
+    def silhouette(image):
+        return np.asarray(image.getchannel('A').resize((w // 4, h // 4))).astype(np.float32)
+
+    base_small = silhouette(base_rgba)
 
     best = (-1.0, 1.0, 0, 0)
     for scale in SCALE_RANGE:
         scaled = variant_rgba.resize((int(w * scale), int(h * scale)))
         canvas = Image.new('RGBA', (w, h))
         canvas.paste(scaled, ((w - scaled.width) // 2, (h - scaled.height) // 2))
-        small = np.asarray(canvas.convert('L').resize((w // 4, h // 4))).astype(np.float32)
+        small = silhouette(canvas)
         for dy in range(-SHIFT_LIMIT // 4, SHIFT_LIMIT // 4 + 1, 2):
             for dx in range(-SHIFT_LIMIT // 4, SHIFT_LIMIT // 4 + 1, 2):
                 shifted = np.roll(np.roll(small, dy, axis=0), dx, axis=1)
@@ -3001,11 +3034,19 @@ def align_to_base(base_rgba, variant_rgba):
                 if score > best[0]:
                     best = (score, scale, dx * 4, dy * 4)
 
-    _score_value, scale, dx, dy = best
+    score, scale, dx, dy = best
+    if score < ALIGN_MIN_SCORE:
+        # 分數這麼低不是「沒對齊」，是「這兩張根本不是同一個人／同一個時代」。
+        # 硬套搜尋出來的最佳解只會把它縮放平移到更歪的位置——實測就發生過。
+        # 原樣貼進基底畫布，尺寸統一但內容不動。
+        out = Image.new('RGBA', (w, h))
+        out.paste(variant_rgba, ((w - variant_rgba.width) // 2, (h - variant_rgba.height) // 2))
+        return out, {'scale': 1.0, 'dx': 0, 'dy': 0, 'score': round(score, 4), 'skipped': True}
     scaled = variant_rgba.resize((int(w * scale), int(h * scale)))
     out = Image.new('RGBA', (w, h))
     out.paste(scaled, ((w - scaled.width) // 2 + dx, (h - scaled.height) // 2 + dy))
-    return out, {'scale': round(scale, 3), 'dx': dx, 'dy': dy, 'score': round(best[0], 4)}
+    return out, {'scale': round(scale, 3), 'dx': dx, 'dy': dy, 'score': round(score, 4),
+                 'skipped': False}
 
 
 def write_align_review(name: str, base, before, after) -> None:
