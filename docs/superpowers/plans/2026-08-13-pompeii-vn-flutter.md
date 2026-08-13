@@ -99,26 +99,16 @@ dev_dependencies:
   flutter_lints: ^5.0.0
 ```
 
-並在 `flutter:` 區段宣告素材目錄（Task 2 會填入內容，先宣告不影響 build）：
+`flutter:` 區段**這個 task 先不要宣告 assets**：
 
 ```yaml
 flutter:
   uses-material-design: true
-  assets:
-    - assets/content/pompeii-79/
-    - assets/content/pompeii-79/assets/backgrounds/
-    - assets/content/pompeii-79/assets/sprites/
-    - assets/content/pompeii-79/stories/01-harbour-stranger/
-    - assets/content/pompeii-79/stories/02-the-oven-went-out/
-    - assets/content/pompeii-79/stories/03-the-well-fell/
-    - assets/content/pompeii-79/stories/04-the-tree-in-the-sky/
-    - assets/content/pompeii-79/stories/05-the-tablets/
-    - assets/content/pompeii-79/stories/06-the-locked-door/
-    - assets/content/pompeii-79/stories/07-cannot-land/
-    - assets/content/pompeii-79/stories/08-the-new-house/
 ```
 
-> Flutter 的 assets 宣告**不遞迴**，每個目錄都要單獨列一行。
+> **為什麼不先宣告**：Flutter 對不存在的 asset 目錄會在 build／test 時報
+> `No file or variants found for asset`，而素材要到 Task 2 才產生。
+> 宣告放在 Task 2 Step 5，那時目錄才真的存在。
 
 - [ ] **Step 3: 複製 lint 設定與寫 .gitignore**
 
@@ -377,15 +367,36 @@ if __name__ == '__main__':
 Run: `cd /Users/paulwu/Documents/PLRepo/lorescape && python3 -m pytest vn/tool/test_import_pack.py -v`
 Expected: 4 PASS
 
-- [ ] **Step 5: 確認 Flutter 讀得到素材**
+- [ ] **Step 5: 宣告 assets 並確認 Flutter 讀得到**
+
+素材目錄現在才真的存在，這時候才把 `vn/pubspec.yaml` 的 `flutter:` 區段補成：
+
+```yaml
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/content/pompeii-79/
+    - assets/content/pompeii-79/assets/backgrounds/
+    - assets/content/pompeii-79/assets/sprites/
+    - assets/content/pompeii-79/stories/01-harbour-stranger/
+    - assets/content/pompeii-79/stories/02-the-oven-went-out/
+    - assets/content/pompeii-79/stories/03-the-well-fell/
+    - assets/content/pompeii-79/stories/04-the-tree-in-the-sky/
+    - assets/content/pompeii-79/stories/05-the-tablets/
+    - assets/content/pompeii-79/stories/06-the-locked-door/
+    - assets/content/pompeii-79/stories/07-cannot-land/
+    - assets/content/pompeii-79/stories/08-the-new-house/
+```
+
+> Flutter 的 assets 宣告**不遞迴**，每個目錄都要單獨列一行。
 
 ```bash
-cd vn && fvm flutter pub get && fvm flutter analyze --fatal-infos
+cd vn && fvm flutter pub get && fvm flutter test && fvm flutter analyze --fatal-infos
 du -sh assets/content/pompeii-79
 git status --short vn/assets | head
 ```
 
-Expected: `du` 約 137 MB；`git status` **不應列出任何 .png**（.gitignore 生效）。
+Expected: 測試 PASS；`du` 約 137 MB；`git status` **不應列出任何 .png**（.gitignore 生效）。
 
 - [ ] **Step 6: Commit**
 
@@ -1970,9 +1981,9 @@ void walk(Story story, PlayState state, WalkResult result, int budget) {
       fail('${story.meta.id}：步數超過預算，可能有無窮迴圈於 ${current.cursor.readKey}');
     }
     current.vars.forEach((key, value) {
-      if (value is num) {
-        result.maxima[key] = value > (result.maxima[key] ?? value) ? value : result.maxima[key]!;
-      }
+      if (value is! num) return;
+      final seen = result.maxima[key];
+      if (seen == null || value > seen) result.maxima[key] = value;
     });
 
     if (current.status == PlayStatus.ended) {
