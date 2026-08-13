@@ -2935,6 +2935,29 @@ git commit -m "feat(vn): 立繪去背——邊界泛洪避免吃掉人物身上�
 在 `vn/tool/test_import_pack.py` 追加：
 
 ```python
+def test_skipped_sprites_are_untouched():
+    """被 skip 的立繪必須**一個像素都沒被動過**。
+
+    先前的寫法會把它貼進基底畫布以統一尺寸，結果比基底寬的 officer_hard
+    （1122×1402）左右各被裁掉一塊，損失 2.45% 的主體。統一尺寸本身沒有必要
+    ——Flutter 端依高度縮放。
+    """
+    import json
+    from PIL import Image
+    import numpy as np
+    manifest = json.loads((ROOT / 'vn/tool/_review/align_manifest.json').read_text())
+    skipped = [name for name, params in manifest.items() if params.get('skipped')]
+    assert skipped, 'manifest 裡沒有任何 skipped 條目，這條測試等於沒驗到東西'
+    for name in skipped:
+        source = next(iter(sorted(
+            (ROOT / 'writer/創作/龐貝/stories').glob(f'*/assets/sprites/{name}'))))
+        cutout = remove_background(source)
+        output = Image.open(OUT / 'assets/sprites' / name).convert('RGBA')
+        assert output.size == cutout.size, f'{name} 尺寸被改了：{cutout.size} → {output.size}'
+        opaque = lambda im: int((np.asarray(im)[:, :, 3] > 127).sum())
+        assert opaque(output) == opaque(cutout), f'{name} 有不透明內容被裁掉'
+
+
 def test_expression_variants_align_with_base():
     from PIL import Image
     import numpy as np
@@ -3038,10 +3061,15 @@ def align_to_base(base_rgba, variant_rgba):
     if score < ALIGN_MIN_SCORE:
         # 分數這麼低不是「沒對齊」，是「這兩張根本不是同一個人／同一個時代」。
         # 硬套搜尋出來的最佳解只會把它縮放平移到更歪的位置——實測就發生過。
-        # 原樣貼進基底畫布，尺寸統一但內容不動。
-        out = Image.new('RGBA', (w, h))
-        out.paste(variant_rgba, ((w - variant_rgba.width) // 2, (h - variant_rgba.height) // 2))
-        return out, {'scale': 1.0, 'dx': 0, 'dy': 0, 'score': round(score, 4), 'skipped': True}
+        #
+        # **原封不動回傳，連畫布都不要正規化。** 貼進基底畫布看似無害，實際上
+        # 會裁掉比基底寬的圖：officer_hard 是 1122×1402，置中貼進 1024×1536
+        # 會左裁 49px、右裁 27px，實測損失 20,491 個不透明像素（主體的 2.45%，
+        # 左邊那塊是大腿）。「skipped」就該是字面意義的沒被動過。
+        #
+        # 尺寸不一致不影響播放：Flutter 端是 `BoxFit.fitHeight` 依高度縮放。
+        return variant_rgba, {'scale': 1.0, 'dx': 0, 'dy': 0,
+                              'score': round(score, 4), 'skipped': True}
     scaled = variant_rgba.resize((int(w * scale), int(h * scale)))
     out = Image.new('RGBA', (w, h))
     out.paste(scaled, ((w - scaled.width) // 2 + dx, (h - scaled.height) // 2 + dy))
