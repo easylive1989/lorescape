@@ -84,8 +84,8 @@ test('有進度時可選「從頭開始」清存檔並重新開始', async () =>
   renderPlay()
   await userEvent.click(await screen.findByRole('button', { name: '從頭開始' }))
   expect(screen.getByText('第一段')).toBeInTheDocument()
-  expect(localStorage.getItem('story-progress:demo')).toBe(
-    JSON.stringify({ nodeId: 'n1', paragraphIndex: 0, status: 'playing' }),
+  expect(JSON.parse(localStorage.getItem('story-progress:demo')!)).toEqual(
+    { nodeId: 'n1', paragraphIndex: 0, status: 'playing', flags: [] },
   )
 })
 

@@ -2,7 +2,7 @@ import { beforeEach, expect, test } from 'vitest'
 import { saveProgress, loadProgress, clearProgress } from './progress'
 import type { PlayState } from '../engine/player'
 
-const state: PlayState = { nodeId: 'n1', paragraphIndex: 1, status: 'playing' }
+const state: PlayState = { nodeId: 'n1', paragraphIndex: 1, status: 'playing', flags: [] }
 
 beforeEach(() => {
   localStorage.clear()
