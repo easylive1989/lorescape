@@ -343,6 +343,51 @@ void main() {
         cursor: Cursor.atSceneStart('S99'),
       )), isNull, reason: '場不存在');
     });
+
+    test('巢狀層越界回 null——不得被當成「整場走完」而傳送到結局', () {
+      final story = build(<String, dynamic>{
+        'S01': scene(<dynamic>[
+          <String, dynamic>{
+            't': 'choice',
+            'options': <dynamic>[
+              <String, dynamic>{
+                'text': '甲',
+                'then': <dynamic>[<String, dynamic>{'t': 'n', 'text': '裡面'}],
+              },
+              <String, dynamic>{'text': '乙', 'goto': 'S01'},
+            ],
+          },
+        ], isEnding: true, endingId: 'A'),
+      });
+      // 模擬劇本改版：舊存檔停在 opt0.then 的 index 4，新版那串只剩 1 個節點。
+      final stale = initState(story).copyWith(
+        cursor: Cursor.fromTokens('S01', <String>['0', 'opt0', '4']),
+        status: PlayStatus.playing,
+      );
+      expect(resume(story, stale), isNull);
+    });
+
+    test('竄改成負的選項索引也要回 null，不得 RangeError', () {
+      final story = build(<String, dynamic>{
+        'S01': scene(<dynamic>[
+          <String, dynamic>{
+            't': 'choice',
+            'options': <dynamic>[
+              <String, dynamic>{
+                'text': '甲',
+                'then': <dynamic>[<String, dynamic>{'t': 'n', 'text': '裡面'}],
+              },
+              <String, dynamic>{'text': '乙', 'goto': 'S01'},
+            ],
+          },
+        ], isEnding: true, endingId: 'A'),
+      });
+      final tampered = initState(story).copyWith(
+        cursor: Cursor.fromTokens('S01', <String>['0', 'opt-1', '0']),
+        status: PlayStatus.playing,
+      );
+      expect(resume(story, tampered), isNull);
+    });
   });
 
   group('visibleOptions', () {

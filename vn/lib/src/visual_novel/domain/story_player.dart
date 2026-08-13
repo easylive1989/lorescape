@@ -65,8 +65,17 @@ PlayState? resume(Story story, PlayState restored) {
   return _settle(story, restored);
 }
 
-/// 游標的每一層都要對得上現在的劇本結構。**最後一層允許越界**——那是「這個場
-/// 走完了」的合法狀態（結局狀態的游標必然越界），由 _settle 處理成跳場或結局。
+/// 游標的每一層都要對得上現在的劇本結構。
+///
+/// **只有「單層且越界」才放行**——那是「這個場走完了」的合法狀態（結局狀態的
+/// 游標必然越界），由 `_settle` 處理成跳場或結局。
+///
+/// 巢狀層越界則一律回 false。理由：`_settle` 的越界分支預設「越界 ＝ 這個場的
+/// 根陣列走完了」，這個前提只在正常播放時成立——`_moveNext` 會先把巢狀層 pop
+/// 掉，交到 `_settle` 手上的越界游標必然只剩一層。`resume` 餵的是任意存檔游標，
+/// 前提就破了：劇本 v1 的 `opt0.then` 有 5 個節點、玩家存在 index 4，v2 縮成 2
+/// 個，若放行，玩家一開檔就會被判成走完該場——是結局場就直接傳送到結局，有
+/// `next` 就跳過整場剩下的內容。回 `null` 讓呼叫端退回開頭遠比這乾淨。
 bool _cursorResolvable(Story story, Cursor cursor) {
   final scene = story.scenes[cursor.sceneId];
   if (scene == null) return false;
@@ -74,7 +83,9 @@ bool _cursorResolvable(Story story, Cursor cursor) {
   for (var i = 0; i < cursor.path.length; i++) {
     final step = cursor.path[i];
     final isLast = i == cursor.path.length - 1;
-    if (step.index < 0 || step.index >= list.length) return isLast;
+    if (step.index < 0 || step.index >= list.length) {
+      return isLast && cursor.path.length == 1;
+    }
     if (isLast) return true;
     final node = list[step.index];
     final branch = step.branch;
@@ -83,8 +94,10 @@ bool _cursorResolvable(Story story, Cursor cursor) {
     } else if (branch == 'else' && node is IfNode) {
       list = node.orElse;
     } else if (branch != null && branch.startsWith('opt') && node is ChoiceNode) {
+      // 負索引也要擋：竄改過的存檔給 'opt-1' 時 tryParse 回 -1、過得了上界檢查，
+      // 然後在這個「用來防崩潰」的函式裡丟 RangeError。
       final index = int.tryParse(branch.substring(3));
-      if (index == null || index >= node.options.length) return false;
+      if (index == null || index < 0 || index >= node.options.length) return false;
       list = node.options[index].then;
     } else {
       return false;
