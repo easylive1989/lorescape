@@ -75,8 +75,13 @@ export function NodePanel(props: {
       paragraphs: node.paragraphs.map((p, i) => (i === index ? { ...p, ...patch } : p)),
     })
   const addParagraph = () => onChange({ ...node, paragraphs: [...node.paragraphs, { text: '' }] })
-  const removeParagraph = (index: number) =>
+  // 段落刪到剩 0 段時，舞台預覽會取不到任何段落——schema 也保證每個節點至少
+  // 一段（`paragraphs` 是 min(1)），所以最後一段不給刪。按鈕另外會 disabled，
+  // 這裡是資料端的守門。
+  const removeParagraph = (index: number) => {
+    if (node.paragraphs.length <= 1) return
     onChange({ ...node, paragraphs: node.paragraphs.filter((_, i) => i !== index) })
+  }
   const moveParagraph = (index: number, delta: number) =>
     onChange({ ...node, paragraphs: moveItem(node.paragraphs, index, delta) })
   const setSpeaker = (index: number, characterId: string) =>
@@ -199,7 +204,13 @@ export function NodePanel(props: {
               >
                 ↓
               </button>
-              <button type="button" onClick={() => removeParagraph(index)}>刪除段落</button>
+              <button
+                type="button"
+                disabled={node.paragraphs.length <= 1}
+                onClick={() => removeParagraph(index)}
+              >
+                刪除段落
+              </button>
             </div>
           </div>
         ))}

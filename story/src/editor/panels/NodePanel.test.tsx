@@ -34,6 +34,16 @@ test('新增與刪除段落', () => {
   }))
 })
 
+test('只剩一段時不給刪——刪光了舞台預覽會取不到段落', () => {
+  const onChange = vi.fn()
+  const single: ScriptNode = { ...nextNode, paragraphs: [{ text: '唯一的一段' }] }
+  render(<NodePanel script={demoScript} node={single} slug="demo" onChange={onChange} />)
+  const button = screen.getByRole('button', { name: '刪除段落' })
+  expect(button).toBeDisabled()
+  fireEvent.click(button)
+  expect(onChange).not.toHaveBeenCalled()
+})
+
 test('段落可用↓與下一段落交換順序', () => {
   const onChange = vi.fn()
   render(<NodePanel script={demoScript} node={node} slug="demo" onChange={onChange} />)
