@@ -10,17 +10,34 @@ import 'package:lorescape_vn/src/visual_novel/domain/story_player.dart';
 
 const String packRoot = 'assets/content/pompeii-79';
 
-/// 「每個 if 的 then 與非空 else 都走得到」在窮舉後對這 3 篇回報了真正走不到的
-/// 分支（結構上不可能成立，不是測試方法論誤報——另外 4 個誤報已改用前綴比對
-/// 修正，見下方 scan 內的判定式）。依規範不能放寬測試或改劇本，這裡先標記
-/// skip，待 user 確認後再處理；判定證據記錄於 task-6-report.md。
-const Map<String, String> _ifBranchSkipReasons = <String, String>{
-  '01-harbour-stranger': '真死碼待 user 判斷：S08#6.else. — awareness 在抵達 S08 前已於 '
-      'S02/S05/S07 無條件各 +1，抵達時必為 3，else 文字「我很快就睡著了。」結構上走不到。',
-  '03-the-well-fell': '真死碼待 user 判斷：E_A#9.then. — 結局 A 的路徑上 standing 最高只到 1，'
-      '需要 2 才顯示的「還有幾個是認得我的……」結構上走不到（standing 能到 2~3 的路徑全部通向結局 B/C）。',
-  '06-the-locked-door': '真死碼待 user 判斷：E_A#12.then. — 結局 A 的路徑上 kinship 最高只到 2，'
-      '需要 3 才顯示的「奧瑞斯特斯把我推到前面……」結構上走不到（kinship 能到 3~4 的路徑全部通向結局 B/C）。',
+/// 已確認的死碼——劇本裡在任何路徑上都走不到的 if 分支。
+///
+/// 這不是測試問題，是內容問題，等作者決定要不要改（見 task-6-report）。
+/// 用 allowlist 而不是 `skip:`，是為了讓兩個方向都有訊號：多出新的死碼會紅，
+/// 而死碼被修好之後這裡沒刪也會紅。
+const Map<String, Set<String>> knownDeadBranches = <String, Set<String>>{
+  // awareness 有三個無條件 +1（S02/S05/S07），到 S08 必為 3，else 永不成立
+  '01-harbour-stranger': <String>{'S08#6.else.'},
+  // 結局 A 的閘門要 conviction>=2，而 conviction 與 standing 在同三個選擇點互斥
+  '03-the-well-fell': <String>{'E_A#9.then.'},
+  // 結局 A 的閘門要 nerve>=2，nerve 只有兩個來源，兩個都選走 kinship 就上不去
+  '06-the-locked-door': <String>{'E_A#12.then.'},
+};
+
+/// 逐篇窮舉的基準（路徑數、選項覆蓋數、非空 if 分支數）。存在的理由是補上
+/// 「內容被整段刪掉時測試依然全綠」這個洞——`declared.difference(taken)` 與
+/// `unreached` 這類集合斷言在集合為空時也會通過，只有跟實測基準比對才擋得住
+/// 分歧被誤刪。數字來自 task-6-report.md 記錄的實測結果。
+const Map<String, ({int paths, int options, int branches})> walkBaselines =
+    <String, ({int paths, int options, int branches})>{
+  '01-harbour-stranger': (paths: 128, options: 14, branches: 9),
+  '02-the-oven-went-out': (paths: 40, options: 11, branches: 3),
+  '03-the-well-fell': (paths: 16, options: 8, branches: 4),
+  '04-the-tree-in-the-sky': (paths: 20, options: 9, branches: 2),
+  '05-the-tablets': (paths: 80, options: 13, branches: 3),
+  '06-the-locked-door': (paths: 32, options: 10, branches: 4),
+  '07-cannot-land': (paths: 32, options: 10, branches: 2),
+  '08-the-new-house': (paths: 20, options: 9, branches: 3),
 };
 
 List<Map<String, String>> loadPackEntries() {
@@ -43,6 +60,32 @@ final class WalkResult {
   final Set<String> readKeys = <String>{};
   final Set<String> takenOptions = <String>{}; // '<readKey>#opt<n>'
   final Map<String, num> maxima = <String, num>{};
+
+  /// 走到結局的次數（＝窮舉出的路徑數）。
+  int paths = 0;
+
+  /// 劇本結構裡非空 if 分支的數量（見 [countNonEmptyIfBranches]）。
+  int branchCount = 0;
+}
+
+/// 掃描整篇劇本，數出結構上非空的 if 分支數（`then`／`else` 各自算一個，
+/// 只要陣列不是空的就算，跟走訪路徑無關）。用來填 [WalkResult.branchCount]，
+/// 也是「走訪規模符合實測基準」那條測試比對的其中一個數字。
+int countNonEmptyIfBranches(List<StoryNode> nodes) {
+  var count = 0;
+  for (final node in nodes) {
+    if (node is IfNode) {
+      if (node.then.isNotEmpty) count++;
+      if (node.orElse.isNotEmpty) count++;
+      count += countNonEmptyIfBranches(node.then);
+      count += countNonEmptyIfBranches(node.orElse);
+    } else if (node is ChoiceNode) {
+      for (final option in node.options) {
+        count += countNonEmptyIfBranches(option.then);
+      }
+    }
+  }
+  return count;
 }
 
 /// 深度優先窮舉所有選擇組合。單篇上界 3^7 = 2,187 條路徑，跑得完。
@@ -60,6 +103,7 @@ void walk(Story story, PlayState state, WalkResult result, int budget) {
     });
 
     if (current.status == PlayStatus.ended) {
+      result.paths++;
       result.endings.add(current.endingId!);
       return;
     }
@@ -100,10 +144,51 @@ void main() {
         story = loadStory(dir);
         result = WalkResult();
         walk(story, initState(story), result, 20000);
+        for (final scene in story.scenes.values) {
+          result.branchCount += countNonEmptyIfBranches(scene.nodes);
+        }
       });
 
       test('三個結局全部可達', () {
         expect(result.endings, story.endings.keys.toSet());
+      });
+
+      test('走訪規模符合實測基準', () {
+        // 沒有下限斷言的話，內容被刪掉一整段分歧時這組測試依然全綠。
+        final baseline = walkBaselines[dir]!;
+        expect(result.paths, baseline.paths, reason: '路徑數變了');
+        expect(result.takenOptions.length, baseline.options, reason: '選項數變了');
+        expect(result.branchCount, baseline.branches, reason: '非空 if 分支數變了');
+      });
+
+      test('每個非空 if 分支都至少有一個直接的停頓節點', () {
+        // 前綴判定的前提。若有人寫出 `if (x) { show ... }` 這種只有副作用的分支，
+        // 判定會誤報成走不到——註解擋不住，這條斷言才擋得住。
+        void scan(List<StoryNode> nodes) {
+          for (final node in nodes) {
+            if (node is IfNode) {
+              for (final side in <List<StoryNode>>[node.then, node.orElse]) {
+                if (side.isEmpty) continue;
+                expect(
+                  side.any(
+                    (n) => n is NarrationNode || n is DialogueNode || n is CgNode || n is ChoiceNode,
+                  ),
+                  isTrue,
+                  reason: '這個 if 分支沒有直接的停頓節點，前綴判定會誤報',
+                );
+                scan(side);
+              }
+            } else if (node is ChoiceNode) {
+              for (final option in node.options) {
+                scan(option.then);
+              }
+            }
+          }
+        }
+
+        for (final scene in story.scenes.values) {
+          scan(scene.nodes);
+        }
       });
 
       test('每個選項至少被走過一次', () {
@@ -134,7 +219,7 @@ void main() {
         );
       });
 
-      test('每個 if 的 then 與非空 else 都走得到', skip: _ifBranchSkipReasons[dir], () {
+      test('每個 if 的 then 與非空 else 都走得到', () {
         final unreached = <String>[];
         void scan(String sceneId, List<StoryNode> nodes, List<String> path) {
           for (var i = 0; i < nodes.length; i++) {
@@ -170,7 +255,17 @@ void main() {
         for (final scene in story.scenes.values) {
           scan(scene.id, scene.nodes, const <String>[]);
         }
-        expect(unreached, isEmpty, reason: '這些 if 分支在任何路徑上都進不去');
+        final known = knownDeadBranches[dir] ?? const <String>{};
+        expect(
+          unreached.toSet().difference(known),
+          isEmpty,
+          reason: '出現新的死碼——這些 if 分支在任何路徑上都進不去',
+        );
+        expect(
+          known.difference(unreached.toSet()),
+          isEmpty,
+          reason: '這些死碼已經走得到了，請從 knownDeadBranches 刪掉',
+        );
       });
 
       test('變數不超過宣告的上限', () {
