@@ -461,3 +461,18 @@
   align-self: flex-start;
   max-width: 6rem;
 }
+
+/* Task 6：舞台預覽的 flag 開關——切換預覽狀態用，劇本沒有 flag 時不渲染 */
+.stage-frame__flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+.stage-frame__flags label {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}

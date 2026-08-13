@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { SceneView } from '../../components/SceneView'
-import type { PlayState } from '../../engine/player'
-import type { Script } from '../../engine/schema'
+import { visibleParagraphs, type PlayState } from '../../engine/player'
+import { declaredFlags, type Script } from '../../engine/schema'
 
 export function StagePreview(props: {
   script: Script
@@ -9,11 +9,14 @@ export function StagePreview(props: {
   nodeId: string
   paragraphIndex: number
   onParagraphChange(index: number): void
+  flags: string[]
+  onFlagsChange(next: string[]): void
   children?: ReactNode
 }) {
-  const { script, slug, nodeId, paragraphIndex, onParagraphChange, children } = props
+  const { script, slug, nodeId, paragraphIndex, onParagraphChange, flags, onFlagsChange, children } = props
   const node = script.nodes.find((n) => n.id === nodeId) ?? script.nodes[0]
-  const total = node.paragraphs.length
+  // 段落總數要算可見的，否則切了 flag 之後「第 n/m 段」會對不上畫面。
+  const total = visibleParagraphs(node, flags).length
   const isLast = paragraphIndex >= total - 1
   const showChoices = isLast && !!node.choices
 
@@ -21,8 +24,12 @@ export function StagePreview(props: {
     nodeId: node.id,
     paragraphIndex,
     status: showChoices ? 'choosing' : 'playing',
-    flags: [],
+    flags,
   }
+  const allFlags = declaredFlags(script)
+
+  const toggle = (flag: string) =>
+    onFlagsChange(flags.includes(flag) ? flags.filter((f) => f !== flag) : [...flags, flag])
 
   return (
     <div className="stage-frame">
@@ -56,6 +63,21 @@ export function StagePreview(props: {
           ›
         </button>
       </div>
+      {allFlags.length > 0 && (
+        <div className="stage-frame__flags">
+          {allFlags.map((flag) => (
+            <label key={flag}>
+              <input
+                type="checkbox"
+                aria-label={flag}
+                checked={flags.includes(flag)}
+                onChange={() => toggle(flag)}
+              />
+              {flag}
+            </label>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
