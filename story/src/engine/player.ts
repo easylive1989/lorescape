@@ -53,5 +53,5 @@ export function choose(script: Script, state: PlayState, index: number): PlaySta
   // 不同而失效。flag 只增不減，沒有 unset。
   const flags = [...state.flags]
   for (const flag of target.set ?? []) if (!flags.includes(flag)) flags.push(flag)
-  return { nodeId: target.to, paragraphIndex: 0, status: 'playing', flags }
+  return { ...state, nodeId: target.to, paragraphIndex: 0, status: 'playing', flags }
 }
