@@ -1389,6 +1389,7 @@ StoryNode currentNode(Story story, PlayState state);
 PlayState advance(Story story, PlayState state);
 List<VisibleOption> visibleOptions(ChoiceNode node, Map<String, Object?> vars);
 PlayState choose(Story story, PlayState state, int visibleIndex);
+PlayState resume(Story story, PlayState restored);   // 讀檔後重算 status
 
 final class VisibleOption { const VisibleOption(this.index, this.option);
                             final int index; final ChoiceOption option; }
@@ -1400,6 +1401,7 @@ final class VisibleOption { const VisibleOption(this.index, this.option);
 - **`show` 的 `sprite` 為 `null` 時是 stage no-op**（無立繪角色登場的敘事標記，沒有圖要畫）。因此 `SpriteOnStage.sprite` 維持非 nullable，`SpriteLayer` 不必處理 null。
 - `add` 後的值夾在該變數宣告的 `min`／`max` 之間；**未宣告的變數不夾**。
 - 走完場的根陣列 → 依 `next` 跳下一場；`isEnding` → `status: ended`。兩者皆無 → 丟 `StateError`（那是資料錯誤，要炸給測試看到）。
+- **`resume` 是讀檔專用**：`SaveData` 不存 `status`，`toPlayState()` 一律回 `playing`。若存檔停在 `choice` 節點上，那個 `playing` 是錯的——UI 不會畫選項，而點擊會呼叫 `advance()` 把整個選擇跳過。`resume` 依「游標指著什麼節點」重算 status。**任何從存檔還原的路徑都必須經過它。**
 
 - [ ] **Step 1: 寫失敗的測試**
 
@@ -1562,6 +1564,35 @@ void main() {
             isEnding: true, endingId: 'A'),
       });
       expect(initState(story).status, PlayStatus.choosing);
+    });
+  });
+
+  group('resume', () {
+    test('存檔停在選項上時，讀回來要是 choosing 而不是 playing', () {
+      final story = build(<String, dynamic>{
+        'S01': scene(<dynamic>[
+          <String, dynamic>{
+            't': 'choice',
+            'options': <dynamic>[
+              <String, dynamic>{'text': '甲', 'goto': 'S02'},
+              <String, dynamic>{'text': '乙', 'goto': 'S02'},
+            ],
+          },
+        ]),
+        'S02': scene(<dynamic>[<String, dynamic>{'t': 'n', 'text': '二'}],
+            isEnding: true, endingId: 'A'),
+      });
+      // 模擬讀檔：SaveData.toPlayState() 一律回 playing
+      final fromSave = initState(story).copyWith(status: PlayStatus.playing);
+      expect(resume(story, fromSave).status, PlayStatus.choosing);
+    });
+
+    test('存檔停在旁白上時維持 playing', () {
+      final story = build(<String, dynamic>{
+        'S01': scene(<dynamic>[<String, dynamic>{'t': 'n', 'text': '一'}],
+            isEnding: true, endingId: 'A'),
+      });
+      expect(resume(story, initState(story)).status, PlayStatus.playing);
     });
   });
 
@@ -1751,6 +1782,17 @@ List<VisibleOption> visibleOptions(ChoiceNode node, Map<String, Object?> vars) =
 PlayState advance(Story story, PlayState state) {
   if (state.status == PlayStatus.ended) return state;
   return _settle(story, _moveNext(story, state));
+}
+
+/// 讀檔還原用。存檔只記 cursor 與 vars，不記 status（`SaveData.toPlayState()`
+/// 一律回 playing），但游標可能正停在一個 choice 上。那種情況下把 status 當成
+/// playing 會讓 UI 不畫選項、而點擊直接 advance 過去——玩家的選擇被無聲跳過。
+/// 因此 status 一律由「游標指著什麼節點」重算。
+PlayState resume(Story story, PlayState restored) {
+  final node = currentNode(story, restored);
+  return restored.copyWith(
+    status: node is ChoiceNode ? PlayStatus.choosing : PlayStatus.playing,
+  );
 }
 
 PlayState choose(Story story, PlayState state, int visibleIndex) {
@@ -3161,7 +3203,10 @@ class PlayController extends FamilyNotifier<PlayState, String> {
   PlayState build(String storyId) {
     final story = ref.watch(storyProvider(storyId)).requireValue;
     final saved = ref.read(saveStoreProvider).loadSave(storyId);
-    final initial = saved == null ? player.initState(story) : saved.toPlayState();
+    // 讀檔一律經過 resume：存檔沒記 status，停在選項上的存檔若當成 playing，
+    // 點一下就會把那個選擇跳過。
+    final initial =
+        saved == null ? player.initState(story) : player.resume(story, saved.toPlayState());
     _persist(storyId, initial);
     return initial;
   }
