@@ -422,7 +422,7 @@ git commit -m "feat(vn): 匯入腳本與 8 篇劇本，素材去重 116→60 張
 sealed class StoryNode
 final class NarrationNode extends StoryNode { final String text; final String? style; }
 final class DialogueNode  extends StoryNode { final String who, text; final String? sprite; }
-final class ShowNode      extends StoryNode { final String who, sprite; final String? filter; }
+final class ShowNode      extends StoryNode { final String who; final String? sprite, filter; }
 final class HideNode      extends StoryNode
 final class SfxNode       extends StoryNode { final String id; }
 final class BgmNode       extends StoryNode { final String? id; }
@@ -606,9 +606,13 @@ final class DialogueNode extends StoryNode {
 }
 
 final class ShowNode extends StoryNode {
-  const ShowNode({required this.who, required this.sprite, this.filter});
+  const ShowNode({required this.who, this.sprite, this.filter});
   final String who;
-  final String sprite;
+
+  /// null ＝ 無立繪角色登場（`characters[who].sprites == null` 的路人）。
+  /// 真實資料有 4 處：03/S01 婦人、06/S04 男人、08/S02 陶匠、08/S04 挖掘者。
+  /// 這是敘事標記，沒有圖要畫——執行器把它當 stage no-op。
+  final String? sprite;
   final String? filter;
 }
 
@@ -869,7 +873,12 @@ Map<String, Set<String>> _missingAssets(List<dynamic>? json) {
   final result = <String, Set<String>>{};
   for (final entry in json ?? const <dynamic>[]) {
     final map = entry as Map<String, dynamic>;
-    final ids = (map['ids'] as List<dynamic>).cast<String>();
+    // 多數 entry 用複數 `ids` 陣列，但 08-the-new-house 的 filter 那筆用單數
+    // `id`。兩種都收進同一個 Set，不要求資料端統一——劇本是既成事實。
+    final ids = <String>[
+      ...((map['ids'] as List<dynamic>?) ?? const <dynamic>[]).cast<String>(),
+      if (map['id'] is String) map['id'] as String,
+    ];
     result.putIfAbsent(map['type'] as String, () => <String>{}).addAll(ids);
   }
   return result;
@@ -900,7 +909,7 @@ StoryNode _node(Map<String, dynamic> json) {
       ),
     'show' => ShowNode(
         who: json['who'] as String,
-        sprite: json['sprite'] as String,
+        sprite: json['sprite'] as String?,
         filter: json['filter'] as String?,
       ),
     'hide' => const HideNode(),
@@ -1388,6 +1397,7 @@ final class VisibleOption { const VisibleOption(this.index, this.option);
 **行為契約**（後續 UI 與走訪測試都依賴這些）：
 - `cursor` 在 `playing` / `choosing` 時**一定**指向會停頓的節點（`n` / `d` / `cg` / `choice`）。
 - 副作用節點（`sfx` / `bgm` / `add` / `set` / `show` / `hide`）不停頓，套用後自動往下走。
+- **`show` 的 `sprite` 為 `null` 時是 stage no-op**（無立繪角色登場的敘事標記，沒有圖要畫）。因此 `SpriteOnStage.sprite` 維持非 nullable，`SpriteLayer` 不必處理 null。
 - `add` 後的值夾在該變數宣告的 `min`／`max` 之間；**未宣告的變數不夾**。
 - 走完場的根陣列 → 依 `next` 跳下一場；`isEnding` → `status: ended`。兩者皆無 → 丟 `StateError`（那是資料錯誤，要炸給測試看到）。
 
@@ -1868,7 +1878,10 @@ PlayState _settle(Story story, PlayState state) {
       case ChoiceNode():
         return current.copyWith(status: PlayStatus.choosing);
       case ShowNode(:final who, :final sprite, :final filter):
-        current = current.copyWith(stage: _withSprite(current.stage, who, sprite, filter));
+        // sprite 為 null ＝ 無立繪角色登場，台上沒有東西要加。
+        if (sprite != null) {
+          current = current.copyWith(stage: _withSprite(current.stage, who, sprite, filter));
+        }
       case HideNode():
         current = current.copyWith(stage: const <SpriteOnStage>[]);
       case BgmNode(:final id):
@@ -3269,11 +3282,17 @@ class SpriteLayer extends StatelessWidget {
       errorBuilder: (_, _, _) => const SizedBox.shrink(),
     );
     if (sprite.filter == 'memory_desaturate') {
+      // 劇本在 missingAssets 裡對這個 filter 的註記是「回憶段落用去飽和＋暖色
+      // 偏移濾鏡，立繪沿用既有資產不另出圖」——所以不是純灰階，要帶暖色。
+      // 三列的權重和分別是 1.06 / 0.94 / 0.76：紅偏亮、藍壓低。
+      //
+      // ⚠️ `missingAssets['filter']` 含 'memory_desaturate'，但那是「引擎要實作
+      // 的效果」而非缺圖，**不要**拿它去做缺件降級把濾鏡跳過。
       image = ColorFiltered(
         colorFilter: const ColorFilter.matrix(<double>[
-          0.36, 0.46, 0.12, 0, 0,
-          0.36, 0.46, 0.12, 0, 0,
-          0.36, 0.46, 0.12, 0, 0,
+          0.42, 0.50, 0.14, 0, 12,
+          0.36, 0.46, 0.12, 0, 4,
+          0.28, 0.38, 0.10, 0, 0,
           0, 0, 0, 1, 0,
         ]),
         child: image,
