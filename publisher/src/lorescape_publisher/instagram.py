@@ -30,11 +30,31 @@ class ReelUploadGenericError(RuntimeError):
 
 META_GRAPH_API = "https://graph.facebook.com/v21.0"
 _REQUEST_TIMEOUT = 30
+_ERROR_BODY_LIMIT = 500
 _CONTAINER_READY_DELAY_SECONDS = 5
 RUPLOAD_API = "https://rupload.facebook.com/ig-api-upload/v21.0"
 _UPLOAD_TIMEOUT = 300
 _REEL_POLL_INTERVAL_SECONDS = 5
 _REEL_POLL_MAX_ATTEMPTS = 60
+
+
+def _check_ok(response, action: str) -> None:
+    """`raise_for_status()` that keeps the body and drops the request URL.
+
+    Graph API puts the actual reason (`error.message`, `error_subcode`) in the
+    response body, which `raise_for_status()` discards in favour of the request
+    URL. For reels that URL is mostly the URL-encoded caption, so the recorded
+    `social_posts.error` was all URL and no reason (2026-08-13, ISSUES.md) —
+    and it carries the access token, which has no business in a log.
+    """
+    if response.status_code < 400:
+        return
+    body = response.text or ""
+    if len(body) > _ERROR_BODY_LIMIT:
+        body = body[: _ERROR_BODY_LIMIT - 1] + "…"
+    raise RuntimeError(
+        f"{action} failed with HTTP {response.status_code}: {body}"
+    )
 
 
 def publish(
@@ -114,7 +134,7 @@ def _create_carousel_item(
         },
         timeout=_REQUEST_TIMEOUT,
     )
-    response.raise_for_status()
+    _check_ok(response, "Carousel item container creation")
     return response.json()["id"]
 
 
@@ -135,7 +155,7 @@ def _create_carousel_container(
         },
         timeout=_REQUEST_TIMEOUT,
     )
-    response.raise_for_status()
+    _check_ok(response, "Carousel parent container creation")
     return response.json()["id"]
 
 
@@ -155,7 +175,7 @@ def _create_container(
         },
         timeout=_REQUEST_TIMEOUT,
     )
-    response.raise_for_status()
+    _check_ok(response, "Image container creation")
     return response.json()["id"]
 
 
@@ -170,7 +190,7 @@ def _publish_container(
         },
         timeout=_REQUEST_TIMEOUT,
     )
-    response.raise_for_status()
+    _check_ok(response, f"Publishing container {container_id}")
     return response.json()["id"]
 
 
@@ -237,7 +257,7 @@ def publish_reel_from_url(
         params=params,
         timeout=_REQUEST_TIMEOUT,
     )
-    response.raise_for_status()
+    _check_ok(response, "Reel container creation (video_url)")
     container_id = response.json()["id"]
     _wait_until_finished(container_id=container_id, access_token=access_token)
     return _publish_container(
@@ -267,7 +287,7 @@ def _create_reel_container(
         params=params,
         timeout=_REQUEST_TIMEOUT,
     )
-    response.raise_for_status()
+    _check_ok(response, "Reel container creation (resumable)")
     return response.json()["id"]
 
 
@@ -331,7 +351,7 @@ def _wait_until_finished(*, container_id: str, access_token: str) -> None:
             },
             timeout=_REQUEST_TIMEOUT,
         )
-        response.raise_for_status()
+        _check_ok(response, f"Polling container {container_id}")
         payload = response.json()
         status = payload.get("status_code")
         if status == "FINISHED":

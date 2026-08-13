@@ -114,11 +114,133 @@ def test_publish_raises_on_http_error(requests_mock):
         json={"error": {"message": "Image not reachable"}},
     )
     with patch("lorescape_publisher.instagram.time.sleep"):
-        with pytest.raises(Exception):
+        with pytest.raises(RuntimeError, match="Image not reachable"):
             publish(
                 ig_user_id="ig1", access_token="tok",
                 image_url="bad", caption="c",
             )
+
+
+def test_publish_container_http_error_includes_response_body(requests_mock):
+    requests_mock.post(
+        "https://graph.facebook.com/v21.0/ig1/media", json={"id": "c-1"}
+    )
+    requests_mock.post(
+        "https://graph.facebook.com/v21.0/ig1/media_publish",
+        status_code=400,
+        json={"error": {"message": "Media ID is not available"}},
+    )
+    with patch("lorescape_publisher.instagram.time.sleep"):
+        with pytest.raises(RuntimeError, match="Media ID is not available"):
+            publish(
+                ig_user_id="ig1", access_token="tok",
+                image_url="https://example.com/x.jpg", caption="c",
+            )
+
+
+def test_reel_container_http_error_carries_body_not_request_url(
+    requests_mock, tmp_path
+):
+    """The 2026-08-13 incident: container creation 400'd and the recorded
+    error was `requests`' "for url: <the whole request URL>" — the URL-encoded
+    caption crowded the real reason out of social_posts.error (1000 chars).
+    The message must carry the API's body and not the request URL."""
+    video = tmp_path / "final.mp4"
+    video.write_bytes(b"x")
+    long_caption = "毗奢耶那伽羅，僅次於北京的世界第二大城。" * 20
+
+    requests_mock.post(
+        "https://graph.facebook.com/v21.0/ig1/media",
+        status_code=400,
+        json={
+            "error": {
+                "message": "The cover URL is not reachable",
+                "code": 100,
+                "error_subcode": 2207052,
+            }
+        },
+    )
+
+    with patch("lorescape_publisher.instagram.time.sleep"):
+        with pytest.raises(RuntimeError) as ei:
+            publish_reel(
+                ig_user_id="ig1",
+                access_token="tok",
+                video_path=str(video),
+                caption=long_caption,
+                cover_url="https://example.com/cover.png",
+            )
+
+    message = str(ei.value)
+    assert "The cover URL is not reachable" in message
+    assert "2207052" in message
+    # Neither the caption nor the credentials may ride along in the message —
+    # that is exactly what pushed the reason out of the stored error.
+    assert long_caption not in message
+    assert "access_token" not in message
+    assert len(message) < 500
+
+
+def test_publish_reel_from_url_http_error_includes_response_body(
+    requests_mock,
+):
+    requests_mock.post(
+        "https://graph.facebook.com/v21.0/ig1/media",
+        status_code=400,
+        json={"error": {"message": "video_url is not reachable"}},
+    )
+    with patch("lorescape_publisher.instagram.time.sleep"):
+        with pytest.raises(RuntimeError, match="video_url is not reachable"):
+            publish_reel_from_url(
+                ig_user_id="ig1",
+                access_token="tok",
+                video_url="https://example.com/final.mp4",
+                caption="c",
+            )
+
+
+def test_container_poll_http_error_includes_response_body(
+    requests_mock, tmp_path
+):
+    video = tmp_path / "final.mp4"
+    video.write_bytes(b"x")
+
+    requests_mock.post(
+        "https://graph.facebook.com/v21.0/ig1/media", json={"id": "poll-c"}
+    )
+    requests_mock.post(
+        "https://rupload.facebook.com/ig-api-upload/v21.0/poll-c",
+        json={"success": True},
+    )
+    requests_mock.get(
+        "https://graph.facebook.com/v21.0/poll-c",
+        status_code=400,
+        json={"error": {"message": "Unsupported get request"}},
+    )
+
+    with patch("lorescape_publisher.instagram.time.sleep"):
+        with pytest.raises(RuntimeError, match="Unsupported get request"):
+            publish_reel(
+                ig_user_id="ig1", access_token="tok",
+                video_path=str(video), caption="c",
+            )
+
+
+def test_error_body_is_capped_so_one_html_page_cannot_flood_the_log(
+    requests_mock,
+):
+    requests_mock.post(
+        "https://graph.facebook.com/v21.0/ig1/media",
+        status_code=502,
+        text="<html>" + "x" * 5000 + "</html>",
+    )
+    with patch("lorescape_publisher.instagram.time.sleep"):
+        with pytest.raises(RuntimeError) as ei:
+            publish(
+                ig_user_id="ig1", access_token="tok",
+                image_url="https://example.com/x.jpg", caption="c",
+            )
+    assert len(str(ei.value)) < 700
 
 
 def test_publish_reel_runs_create_upload_poll_publish(requests_mock, tmp_path):

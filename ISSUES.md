@@ -6,6 +6,61 @@
 
 ---
 
+## ISSUE-004 — Reel 自動發布 400，且錯誤內文沒被記下來
+
+- **發生日**：2026-08-13
+- **影響**：當日 reel 自動發布（亨比／毗奢耶那伽羅）；同日 carousel 正常發布
+
+### 現象
+
+`social_posts`（media_type=reel、review_decision=`approved`）status=`failed`，
+error 欄整整 1000 字都是這個：
+
+```
+400 Client Error: Bad Request for url:
+https://graph.facebook.com/v21.0/<IG_USER>/media?media_type=REELS
+&upload_type=resumable&caption=%E5%83%85%E6%AC%A1%E6%96%BC%E5%8C%97%E4%BA%AC…
+```
+
+失敗點在 container 建立階段（`_create_reel_container`），還沒進 rupload，
+所以與 ISSUE-002 的 `ProcessingFailedError` 不同類。
+
+### 原因
+
+**真因不明，且是「查不到」本身構成了這次事故的重點。**
+
+`instagram.py` 走 `response.raise_for_status()`，requests 產生的訊息只有
+「狀態碼 + 請求 URL」，Graph API 放在 response body 的 `error.message` /
+`error_subcode` 直接被丟掉。reel 的請求 URL 又幾乎整條都是 URL-encoded
+的 caption，把 `_truncate(str(exc), 1000)` 的額度吃光——記下來的 1000 字裡
+沒有半點診斷資訊。ISSUE-001 已經踩過同一個坑（當時靠事後另打一次 Graph API
+才拿到 subcode 2207052），這次是第二次。
+
+事後復查外部條件全部正常：cover 圖 `ig-cards/2026-08-13/reel-cover.png`
+HTTP 200、token 有效（`love.lorescape`）、`final.mp4` 在。同一份輸入補發
+一次就過，因此推測是 Meta 端一次性的 400，但**沒有證據**。
+
+### 當下處理
+
+1. 用 publish-reel skill 本機補發同一支 `final.mp4`，一次成功
+   （ig_post_id `17963079225155458`，permalink `/reel/Db-ssa2CjOv/`）。
+2. 這次有回寫該列為 `published` 並補上 `ig_post_id` / `published_at`、清空
+   `error`（ISSUE-002 當時維持 `failed`，會讓 metrics 漏算）。狀態原本已是
+   `failed`，publisher 不會再自動重試，無重複發布風險。
+3. 改 `instagram.py`：新增 `_check_ok(response, action)` 取代所有 Graph API
+   呼叫的 `raise_for_status()`，訊息改成「動作名 + 狀態碼 + response body
+   （上限 500 字）」，不再帶請求 URL（也就順手不再把 access_token 寫進 log）。
+   `_upload_reel_bytes` 原本就自己保留 body，維持不動。下次同樣的 400 會直接
+   在 `social_posts.error` 看到 Meta 的理由。
+
+### 相關
+
+- 同一個「錯誤內文被吃掉」問題的前例：ISSUE-001
+- reel 發布失敗的前例（不同階段）：ISSUE-002
+- 檔案：`publisher/src/lorescape_publisher/instagram.py`、`reel_publisher.py`
+
+---
+
 ## ISSUE-003 — Android deploy 因 runner 磁碟耗盡失敗（ENOSPC）
 
 - **發生日**：2026-08-07
