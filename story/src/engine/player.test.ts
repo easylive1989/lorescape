@@ -93,3 +93,10 @@ test('choose 沒有 set 的選項不動 flags', () => {
   const s: PlayState = { nodeId: 'start', paragraphIndex: 0, status: 'choosing', flags: ['sealed'] }
   expect(choose(flagScript, s, 1).flags).toEqual(['sealed'])
 })
+
+test('advance 經過 next 跳轉時 flags 原封不動', () => {
+  // harbor 是 next 型節點：段落用盡後直接跳到 next 指的節點，中間不經過選擇。
+  // flags 要在這個跳轉裡完整留存，故事才能在跳轉之後的結局節點讀到先前設下的 flag。
+  const s: PlayState = { nodeId: 'harbor', paragraphIndex: 0, status: 'playing', flags: ['sealed', 'warned'] }
+  expect(advance(flagScript, s).flags).toEqual(['sealed', 'warned'])
+})
