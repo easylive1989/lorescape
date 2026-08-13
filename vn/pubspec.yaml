@@ -20,3 +20,15 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/content/pompeii-79/
+    - assets/content/pompeii-79/assets/backgrounds/
+    - assets/content/pompeii-79/assets/sprites/
+    - assets/content/pompeii-79/stories/01-harbour-stranger/
+    - assets/content/pompeii-79/stories/02-the-oven-went-out/
+    - assets/content/pompeii-79/stories/03-the-well-fell/
+    - assets/content/pompeii-79/stories/04-the-tree-in-the-sky/
+    - assets/content/pompeii-79/stories/05-the-tablets/
+    - assets/content/pompeii-79/stories/06-the-locked-door/
+    - assets/content/pompeii-79/stories/07-cannot-land/
+    - assets/content/pompeii-79/stories/08-the-new-house/

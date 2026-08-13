@@ -1,0 +1,72 @@
+{
+  "id": "pompeii_79",
+  "title": "龐貝 79",
+  "place": "龐貝",
+  "blurb": "同一座城，同一場災難，八個人各自的最後一個選擇。",
+  "stories": [
+    {
+      "id": "pompeii_01_harbour_stranger",
+      "order": 1,
+      "dir": "01-harbour-stranger",
+      "title": "港口的外地人",
+      "subtitle": "爆發前一日",
+      "estimatedMinutes": 12
+    },
+    {
+      "id": "pompeii_02_the_oven_went_out",
+      "order": 2,
+      "dir": "02-the-oven-went-out",
+      "title": "烤爐熄了",
+      "subtitle": "爆發當日清晨",
+      "estimatedMinutes": 12
+    },
+    {
+      "id": "pompeii_03_the_well_fell",
+      "order": 3,
+      "dir": "03-the-well-fell",
+      "title": "井水退了",
+      "subtitle": "徵兆時分",
+      "estimatedMinutes": 13
+    },
+    {
+      "id": "pompeii_04_the_tree_in_the_sky",
+      "order": 4,
+      "dir": "04-the-tree-in-the-sky",
+      "title": "天上那棵樹",
+      "subtitle": "噴發柱升起",
+      "estimatedMinutes": 11
+    },
+    {
+      "id": "pompeii_05_the_tablets",
+      "order": 5,
+      "dir": "05-the-tablets",
+      "title": "蠟板",
+      "subtitle": "浮石雨中段",
+      "estimatedMinutes": 13
+    },
+    {
+      "id": "pompeii_06_the_locked_door",
+      "order": 6,
+      "dir": "06-the-locked-door",
+      "title": "上鎖的門",
+      "subtitle": "浮石雨深夜",
+      "estimatedMinutes": 13
+    },
+    {
+      "id": "pompeii_07_cannot_land",
+      "order": 7,
+      "dir": "07-cannot-land",
+      "title": "靠不了岸",
+      "subtitle": "同一夜・海上",
+      "estimatedMinutes": 13
+    },
+    {
+      "id": "pompeii_08_the_new_house",
+      "order": 8,
+      "dir": "08-the-new-house",
+      "title": "普特奧利的新房子",
+      "subtitle": "災後數月",
+      "estimatedMinutes": 13
+    }
+  ]
+}
