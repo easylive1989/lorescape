@@ -144,7 +144,16 @@ class VnApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: '龐貝 79',
-      theme: ThemeData(brightness: Brightness.dark, useMaterial3: true),
+      // 不給 seed 的話 Material 3 會發預設的紫，跟龐貝壁畫色調直接打架，
+      // 而且會一路蔓延到首頁、設定、結局收藏的每一個 Material 元件。
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: VnColors.ochre,
+          brightness: Brightness.dark,
+        ),
+        scaffoldBackgroundColor: VnColors.backdrop,
+      ),
       home: const Scaffold(body: Center(child: Text('龐貝 79'))),
     );
   }
@@ -3598,7 +3607,16 @@ class VnApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: '龐貝 79',
-      theme: ThemeData(brightness: Brightness.dark, useMaterial3: true),
+      // 不給 seed 的話 Material 3 會發預設的紫，跟龐貝壁畫色調直接打架，
+      // 而且會一路蔓延到首頁、設定、結局收藏的每一個 Material 元件。
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: VnColors.ochre,
+          brightness: Brightness.dark,
+        ),
+        scaffoldBackgroundColor: VnColors.backdrop,
+      ),
       home: const Scaffold(body: Center(child: Text('龐貝 79'))),
     );
   }
@@ -3744,6 +3762,25 @@ Expected: FAIL — 找不到 `layout.dart`
 
 ```dart
 import 'package:flutter/widgets.dart';
+
+/// 全案配色。美術風格聖經定的是龐貝壁畫色調——暖灰、赭、奶油白，**沒有紫色**。
+/// Material 3 不給 seed 就會發預設的紫，所以主題與所有自訂元件都從這裡取色。
+abstract final class VnColors {
+  /// 對話框與名牌的底。
+  static const Color ground = Color(0xFF1C1A19);
+
+  /// 正文。
+  static const Color body = Color(0xFFF2ECE1);
+
+  /// 名牌與次要文字。
+  static const Color muted = Color(0xFFE8DCC8);
+
+  /// 塗鴉樣式的旁白，以及邊框。
+  static const Color ochre = Color(0xFFB9A98C);
+
+  /// 讀不到背景時的底色。
+  static const Color backdrop = Color(0xFF0E0D0C);
+}
 
 /// Flutter製作規範 §2 的版面數值，全部收在這裡。改版面只改這個檔。
 final class VnLayout {
@@ -3976,7 +4013,20 @@ class DialogueBox extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: <Widget>[
-          const Positioned.fill(child: ColoredBox(color: Color(0xD11C1A19))),
+          // 規範 §2：上緣加細微漸層過渡。硬邊會讓對話框看起來像貼上去的一塊
+          // 黑條，漸層才接得回背景。上緣 10% 做過渡，其餘維持 0.82 不透明。
+          const Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: <Color>[Color(0x001C1A19), Color(0xD11C1A19)],
+                  stops: <double>[0, 0.1],
+                ),
+              ),
+            ),
+          ),
           if (name != null)
             Positioned(
               key: nameTagKey,
@@ -4053,7 +4103,17 @@ class ChoiceOverlay extends StatelessWidget {
                 child: FilledButton.tonal(
                   key: ValueKey<String>('choice-$i'),
                   onPressed: () => onChoose(i),
-                  child: Text(options[i].option.text),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: VnColors.ground.withValues(alpha: 0.90),
+                    foregroundColor: VnColors.body,
+                    padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
+                      side: BorderSide(color: VnColors.ochre.withValues(alpha: 0.40)),
+                    ),
+                    textStyle: TextStyle(fontSize: layout.bodyFontSize * 0.95, height: 1.4),
+                  ),
+                  child: Text(options[i].option.text, textAlign: TextAlign.center),
                 ),
               ),
             ),
