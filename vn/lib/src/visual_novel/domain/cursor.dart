@@ -41,28 +41,28 @@ final class Cursor {
   CursorStep get last => path.last;
 
   List<String> toTokens() => <String>[
-        for (final step in path) ...<String>[
-          '${step.index}',
-          if (step.branch != null) step.branch!,
-        ],
-      ];
+    for (final step in path) ...<String>[
+      '${step.index}',
+      if (step.branch != null) step.branch!,
+    ],
+  ];
 
   String get readKey => '$sceneId#${toTokens().join('.')}';
 
   Cursor withLastIndex(int index) => Cursor(
-        sceneId: sceneId,
-        path: <CursorStep>[...path.take(path.length - 1), last.withIndex(index)],
-      );
+    sceneId: sceneId,
+    path: <CursorStep>[...path.take(path.length - 1), last.withIndex(index)],
+  );
 
   /// 在最後一層記下要往哪個分支鑽，並開新的一層（index 0）。
   Cursor push(String branch) => Cursor(
-        sceneId: sceneId,
-        path: <CursorStep>[
-          ...path.take(path.length - 1),
-          last.withBranch(branch),
-          const CursorStep(0),
-        ],
-      );
+    sceneId: sceneId,
+    path: <CursorStep>[
+      ...path.take(path.length - 1),
+      last.withBranch(branch),
+      const CursorStep(0),
+    ],
+  );
 
   /// 收掉最後一層，回到呼叫端（上一層），並清掉上一層的分支標記。
   Cursor pop() {

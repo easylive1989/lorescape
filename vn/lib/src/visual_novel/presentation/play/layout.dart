@@ -23,7 +23,8 @@ abstract final class VnColors {
 final class VnLayout {
   const VnLayout(this.size);
 
-  factory VnLayout.of(BuildContext context) => VnLayout(MediaQuery.sizeOf(context));
+  factory VnLayout.of(BuildContext context) =>
+      VnLayout(MediaQuery.sizeOf(context));
 
   final Size size;
 

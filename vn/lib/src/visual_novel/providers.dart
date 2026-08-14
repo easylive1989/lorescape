@@ -12,7 +12,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 export 'package:lorescape_vn/src/visual_novel/data/pack_repository.dart'
     show Pack, PackEntry, PackRepository;
-export 'package:lorescape_vn/src/visual_novel/data/save_store.dart' show SaveStore;
+export 'package:lorescape_vn/src/visual_novel/data/save_store.dart'
+    show SaveStore;
 export 'package:lorescape_vn/src/visual_novel/domain/cursor.dart';
 export 'package:lorescape_vn/src/visual_novel/domain/play_state.dart';
 export 'package:lorescape_vn/src/visual_novel/domain/save_data.dart';
@@ -23,7 +24,9 @@ export 'package:lorescape_vn/src/visual_novel/presentation/play/play_controller.
 
 /// main() 於啟動時以 overrideWithValue 覆寫。
 final Provider<SharedPreferences> sharedPreferencesProvider =
-    Provider<SharedPreferences>((ref) => throw UnimplementedError('未於 main() 覆寫'));
+    Provider<SharedPreferences>(
+      (ref) => throw UnimplementedError('未於 main() 覆寫'),
+    );
 
 /// ⚠️ 這裡刻意不用共用的 `rootBundle` 單例，改成每次都給一顆新的
 /// `PlatformAssetBundle()`——**不要「順手」改回 `rootBundle`**，那不是多此一舉。
@@ -39,15 +42,19 @@ final Provider<SharedPreferences> sharedPreferencesProvider =
 /// `BundlePackRepository` 自己有 `_pack`／`_stories` 快取，不會因為放棄
 /// `rootBundle` 的快取而損失什麼。
 final Provider<PackRepository> packRepositoryProvider =
-    Provider<PackRepository>((ref) => BundlePackRepository(PlatformAssetBundle()));
+    Provider<PackRepository>(
+      (ref) => BundlePackRepository(PlatformAssetBundle()),
+    );
 
 final Provider<SaveStore> saveStoreProvider = Provider<SaveStore>(
   (ref) => SharedPreferencesSaveStore(ref.watch(sharedPreferencesProvider)),
 );
 
-final FutureProvider<Pack> packProvider =
-    FutureProvider<Pack>((ref) => ref.watch(packRepositoryProvider).loadPack());
-
-final FutureProviderFamily<Story, String> storyProvider = FutureProvider.family<Story, String>(
-  (ref, storyId) => ref.watch(packRepositoryProvider).loadStory(storyId),
+final FutureProvider<Pack> packProvider = FutureProvider<Pack>(
+  (ref) => ref.watch(packRepositoryProvider).loadPack(),
 );
+
+final FutureProviderFamily<Story, String> storyProvider =
+    FutureProvider.family<Story, String>(
+      (ref, storyId) => ref.watch(packRepositoryProvider).loadStory(storyId),
+    );

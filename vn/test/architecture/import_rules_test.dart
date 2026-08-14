@@ -8,8 +8,10 @@ import 'package:flutter_test/flutter_test.dart';
 ///
 /// 用測試守而不是靠註解與 code review：規則要能自己叫。
 void main() {
-  const String providers = 'package:lorescape_vn/src/visual_novel/providers.dart';
-  const String presentation = 'package:lorescape_vn/src/visual_novel/presentation/';
+  const String providers =
+      'package:lorescape_vn/src/visual_novel/providers.dart';
+  const String presentation =
+      'package:lorescape_vn/src/visual_novel/presentation/';
 
   Iterable<File> dartFilesIn(String path) => Directory(path)
       .listSync(recursive: true)
@@ -32,8 +34,11 @@ void main() {
       }
     }
 
-    expect(offenders, isEmpty,
-        reason: 'presentation 只准經 providers.dart 取用 data／domain');
+    expect(
+      offenders,
+      isEmpty,
+      reason: 'presentation 只准經 providers.dart 取用 data／domain',
+    );
   });
 
   test('domain 底下零 Flutter 依賴', () {

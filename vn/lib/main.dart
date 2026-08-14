@@ -70,7 +70,9 @@ class VnApp extends StatelessWidget {
                 width: width,
                 height: height,
                 child: MediaQuery(
-                  data: MediaQuery.of(context).copyWith(size: Size(width, height)),
+                  data: MediaQuery.of(
+                    context,
+                  ).copyWith(size: Size(width, height)),
                   child: ClipRect(child: child),
                 ),
               ),

@@ -18,7 +18,9 @@ void main() {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await tester.pumpWidget(
       ProviderScope(
-        overrides: <Override>[sharedPreferencesProvider.overrideWithValue(prefs)],
+        overrides: <Override>[
+          sharedPreferencesProvider.overrideWithValue(prefs),
+        ],
         child: const VnApp(),
       ),
     );

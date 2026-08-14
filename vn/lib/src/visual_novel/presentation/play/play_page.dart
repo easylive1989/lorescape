@@ -13,10 +13,16 @@ import 'package:lorescape_vn/src/visual_novel/providers.dart';
 class PlayPage extends ConsumerWidget {
   const PlayPage({required this.storyId, super.key});
 
-  static const ValueKey<String> advanceAreaKey = ValueKey<String>('play-advance-area');
-  static const ValueKey<String> backlogButtonKey = ValueKey<String>('play-backlog');
+  static const ValueKey<String> advanceAreaKey = ValueKey<String>(
+    'play-advance-area',
+  );
+  static const ValueKey<String> backlogButtonKey = ValueKey<String>(
+    'play-backlog',
+  );
   static const ValueKey<String> skipButtonKey = ValueKey<String>('play-skip');
-  static const ValueKey<String> homeButtonKey = ValueKey<String>('play-ending-home');
+  static const ValueKey<String> homeButtonKey = ValueKey<String>(
+    'play-ending-home',
+  );
 
   final String storyId;
 
@@ -66,7 +72,9 @@ class _StageState extends ConsumerState<_Stage> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(playControllerProvider(widget.storyId));
-    final controller = ref.read(playControllerProvider(widget.storyId).notifier);
+    final controller = ref.read(
+      playControllerProvider(widget.storyId).notifier,
+    );
     final repository = ref.watch(packRepositoryProvider);
     final fontScale = ref.watch(saveStoreProvider).fontScale();
     final msPerCharacter = ref.watch(saveStoreProvider).textSpeed();
@@ -104,14 +112,18 @@ class _StageState extends ConsumerState<_Stage> {
         fit: StackFit.expand,
         children: <Widget>[
           BackgroundLayer(
-            assetPath: cg ?? repository.backgroundPath(widget.story, scene.background),
+            assetPath:
+                cg ?? repository.backgroundPath(widget.story, scene.background),
           ),
           if (cg == null)
             SpriteLayer(
               stage: state.stage,
               layout: layout,
-              pathOf: (sprite) =>
-                  repository.spritePath(widget.story, sprite.who, sprite.sprite),
+              pathOf: (sprite) => repository.spritePath(
+                widget.story,
+                sprite.who,
+                sprite.sprite,
+              ),
             ),
           if (node is NarrationNode)
             DialogueBox(
@@ -135,7 +147,8 @@ class _StageState extends ConsumerState<_Stage> {
             ),
           // choice 節點本身沒有文字：把剛讀完的那句留著，玩家才不是在空白畫面
           // 上做選擇。已經讀完，不重新逐字。
-          if (state.status == PlayStatus.choosing && controller.lastEntry != null)
+          if (state.status == PlayStatus.choosing &&
+              controller.lastEntry != null)
             DialogueBox(
               text: controller.lastEntry!.text,
               layout: layout,
@@ -162,8 +175,11 @@ class _StageState extends ConsumerState<_Stage> {
                   color: VnColors.muted,
                   onPressed: () => showModalBottomSheet<void>(
                     context: context,
-                    backgroundColor: VnColors.ground.withValues(alpha: 0xF2 / 0xFF),
-                    builder: (context) => BacklogSheet(entries: controller.backlog),
+                    backgroundColor: VnColors.ground.withValues(
+                      alpha: 0xF2 / 0xFF,
+                    ),
+                    builder: (context) =>
+                        BacklogSheet(entries: controller.backlog),
                   ),
                 ),
                 IconButton(
@@ -196,7 +212,10 @@ class _EndingView extends StatelessWidget {
         children: <Widget>[
           Text('你走到了', style: Theme.of(context).textTheme.labelLarge),
           const SizedBox(height: 8),
-          Text(ending?.title ?? '結局', style: Theme.of(context).textTheme.headlineMedium),
+          Text(
+            ending?.title ?? '結局',
+            style: Theme.of(context).textTheme.headlineMedium,
+          ),
           const SizedBox(height: 32),
           // 結局是這篇的死路，沒有這顆按鈕玩家就卡在這裡回不去景點包首頁。
           TextButton(

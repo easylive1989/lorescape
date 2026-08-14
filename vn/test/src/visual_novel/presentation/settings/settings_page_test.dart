@@ -18,7 +18,9 @@ void main() {
     late SaveStore store;
     await tester.pumpWidget(
       ProviderScope(
-        overrides: <Override>[sharedPreferencesProvider.overrideWithValue(prefs)],
+        overrides: <Override>[
+          sharedPreferencesProvider.overrideWithValue(prefs),
+        ],
         child: Consumer(
           builder: (context, ref, _) {
             store = ref.watch(saveStoreProvider);
@@ -30,7 +32,10 @@ void main() {
     await tester.pump();
 
     expect(store.textSpeed(), 28);
-    await tester.drag(find.byKey(SettingsPage.textSpeedSliderKey), const Offset(-200, 0));
+    await tester.drag(
+      find.byKey(SettingsPage.textSpeedSliderKey),
+      const Offset(-200, 0),
+    );
     await tester.pumpAndSettle();
     expect(store.textSpeed(), lessThan(28));
   });

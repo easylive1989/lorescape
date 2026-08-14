@@ -22,7 +22,8 @@ Future<void> precacheNode(
     }
   }
   for (final sprite in state.stage) {
-    for (final expression in story.characters[sprite.who]?.sprites?.keys ?? const <String>[]) {
+    for (final expression
+        in story.characters[sprite.who]?.sprites?.keys ?? const <String>[]) {
       final path = repository.spritePath(story, sprite.who, expression);
       if (path != null) paths.add(path);
     }

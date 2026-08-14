@@ -21,7 +21,10 @@ class BacklogSheet extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               if (entry.speakerName != null)
-                Text(entry.speakerName!, style: Theme.of(context).textTheme.labelMedium),
+                Text(
+                  entry.speakerName!,
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
               Text(entry.text, style: Theme.of(context).textTheme.bodyLarge),
             ],
           );

@@ -5,7 +5,10 @@ import 'package:lorescape_vn/src/visual_novel/presentation/endings/endings_page.
 import 'package:lorescape_vn/src/visual_novel/providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-Future<void> pumpEndingsPage(WidgetTester tester, Map<String, Object> prefsValues) async {
+Future<void> pumpEndingsPage(
+  WidgetTester tester,
+  Map<String, Object> prefsValues,
+) async {
   // 這個 App 只設計給手機直式：預設的桌面型測試視窗（800×600、橫向）跟真機
   // 版面形狀不同，改成直式尺寸（見 pack_page_test.dart 的 pumpPackPage）。
   tester.view.physicalSize = const Size(390, 844);

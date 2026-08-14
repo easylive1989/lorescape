@@ -7,7 +7,9 @@ import 'package:lorescape_vn/src/visual_novel/domain/story.dart';
 
 Story loadFixture(String dir) {
   final file = File('assets/content/pompeii-79/stories/$dir/story.json');
-  return parseStory(jsonDecode(file.readAsStringSync()) as Map<String, dynamic>);
+  return parseStory(
+    jsonDecode(file.readAsStringSync()) as Map<String, dynamic>,
+  );
 }
 
 /// 遞迴走訪節點，含 if 的 then／orElse 與選項的 then——
@@ -36,7 +38,10 @@ void main() {
       expect(story.meta.id, 'pompeii_01_harbour_stranger');
       expect(story.meta.order, 1);
       expect(story.meta.subtitle, '爆發前一日');
-      expect(story.variables.keys, containsAll(<String>['affection', 'awareness']));
+      expect(
+        story.variables.keys,
+        containsAll(<String>['affection', 'awareness']),
+      );
       expect(story.variables['affection']!.max, 4);
       expect(story.start, 'S01');
       expect(story.scenes.length, 12);
@@ -47,7 +52,10 @@ void main() {
       final story = loadFixture('01-harbour-stranger');
       expect(story.characters['zabda']!.isPlayer, isTrue);
       expect(story.characters['zabda']!.sprites, isNull);
-      expect(story.characters['vibia']!.sprites!['softened'], 'vibia_softened.png');
+      expect(
+        story.characters['vibia']!.sprites!['softened'],
+        'vibia_softened.png',
+      );
     });
 
     test('結局場帶 isEnding 與 endingId，且沒有 next', () {
@@ -81,21 +89,29 @@ void main() {
 
     test('規範漏寫但資料在用的欄位：option.cond 與 show.filter', () {
       final withOptionCond = loadFixture('02-the-oven-went-out')
-          .scenes['S07']!.nodes.whereType<ChoiceNode>()
-          .expand((n) => n.options).where((o) => o.cond != null);
+          .scenes['S07']!
+          .nodes
+          .whereType<ChoiceNode>()
+          .expand((n) => n.options)
+          .where((o) => o.cond != null);
       expect(withOptionCond, isNotEmpty);
 
-      final filtered = flattenNodes(loadFixture('08-the-new-house').scenes['S04']!.nodes)
-          .whereType<ShowNode>()
-          .where((n) => n.filter == 'memory_desaturate');
+      final filtered = flattenNodes(
+        loadFixture('08-the-new-house').scenes['S04']!.nodes,
+      ).whereType<ShowNode>().where((n) => n.filter == 'memory_desaturate');
       expect(filtered, hasLength(1));
     });
 
     test('八篇都解得出來，且沒有未知節點型別', () {
       const dirs = <String>[
-        '01-harbour-stranger', '02-the-oven-went-out', '03-the-well-fell',
-        '04-the-tree-in-the-sky', '05-the-tablets', '06-the-locked-door',
-        '07-cannot-land', '08-the-new-house',
+        '01-harbour-stranger',
+        '02-the-oven-went-out',
+        '03-the-well-fell',
+        '04-the-tree-in-the-sky',
+        '05-the-tablets',
+        '06-the-locked-door',
+        '07-cannot-land',
+        '08-the-new-house',
       ];
       for (final dir in dirs) {
         expect(() => loadFixture(dir), returnsNormally, reason: dir);
@@ -106,8 +122,13 @@ void main() {
       expect(
         () => parseStory(<String, dynamic>{
           'meta': <String, dynamic>{
-            'id': 'x', 'pack': 'p', 'order': 1, 'title': 't',
-            'subtitle': '', 'estimatedMinutes': 1, 'locale': 'zh-Hant',
+            'id': 'x',
+            'pack': 'p',
+            'order': 1,
+            'title': 't',
+            'subtitle': '',
+            'estimatedMinutes': 1,
+            'locale': 'zh-Hant',
           },
           'variables': <String, dynamic>{},
           'characters': <String, dynamic>{},
@@ -116,12 +137,18 @@ void main() {
           'start': 'S01',
           'scenes': <String, dynamic>{
             'S01': <String, dynamic>{
-              'title': 't', 'background': 'b',
-              'nodes': <dynamic>[<String, dynamic>{'t': 'wat'}],
-              'isEnding': true, 'endingId': 'A',
+              'title': 't',
+              'background': 'b',
+              'nodes': <dynamic>[
+                <String, dynamic>{'t': 'wat'},
+              ],
+              'isEnding': true,
+              'endingId': 'A',
             },
           },
-          'endings': <String, dynamic>{'A': <String, dynamic>{'title': 'x', 'note': 'y'}},
+          'endings': <String, dynamic>{
+            'A': <String, dynamic>{'title': 'x', 'note': 'y'},
+          },
         }),
         throwsA(isA<FormatException>()),
       );

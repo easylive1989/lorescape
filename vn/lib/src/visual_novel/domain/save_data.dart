@@ -16,7 +16,8 @@ final class SaveData {
     this.bgmId,
   });
 
-  factory SaveData.from(String storyId, PlayState state, DateTime now) => SaveData(
+  factory SaveData.from(String storyId, PlayState state, DateTime now) =>
+      SaveData(
         storyId: storyId,
         cursor: state.cursor,
         vars: state.vars,
@@ -57,26 +58,29 @@ final class SaveData {
   final DateTime updatedAt;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'storyId': storyId,
-        'cursor': <String, dynamic>{'sceneId': cursor.sceneId, 'path': cursor.toTokens()},
-        'vars': vars,
-        'stage': <Map<String, dynamic>>[
-          for (final sprite in stage)
-            <String, dynamic>{
-              'who': sprite.who,
-              'sprite': sprite.sprite,
-              if (sprite.filter != null) 'filter': sprite.filter,
-            },
-        ],
-        if (bgmId != null) 'bgmId': bgmId,
-        'updatedAt': updatedAt.toUtc().toIso8601String(),
-      };
+    'storyId': storyId,
+    'cursor': <String, dynamic>{
+      'sceneId': cursor.sceneId,
+      'path': cursor.toTokens(),
+    },
+    'vars': vars,
+    'stage': <Map<String, dynamic>>[
+      for (final sprite in stage)
+        <String, dynamic>{
+          'who': sprite.who,
+          'sprite': sprite.sprite,
+          if (sprite.filter != null) 'filter': sprite.filter,
+        },
+    ],
+    if (bgmId != null) 'bgmId': bgmId,
+    'updatedAt': updatedAt.toUtc().toIso8601String(),
+  };
 
   PlayState toPlayState() => PlayState(
-        cursor: cursor,
-        vars: vars,
-        stage: stage,
-        status: PlayStatus.playing,
-        bgmId: bgmId,
-      );
+    cursor: cursor,
+    vars: vars,
+    stage: stage,
+    status: PlayStatus.playing,
+    bgmId: bgmId,
+  );
 }

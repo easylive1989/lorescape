@@ -56,10 +56,12 @@ final class SharedPreferencesSaveStore implements SaveStore {
       _prefs.setString(_saveKey(data.storyId), jsonEncode(data.toJson()));
 
   @override
-  Future<void> clearSave(String storyId) => _prefs.remove(_saveKey(storyId)).then((_) {});
+  Future<void> clearSave(String storyId) =>
+      _prefs.remove(_saveKey(storyId)).then((_) {});
 
   @override
-  Set<String> readNodes() => (_prefs.getStringList(_readKey) ?? const <String>[]).toSet();
+  Set<String> readNodes() =>
+      (_prefs.getStringList(_readKey) ?? const <String>[]).toSet();
 
   @override
   Future<void> markRead(String key) async {
@@ -69,7 +71,8 @@ final class SharedPreferencesSaveStore implements SaveStore {
   }
 
   @override
-  Set<String> endingsSeen() => (_prefs.getStringList(_endingsKey) ?? const <String>[]).toSet();
+  Set<String> endingsSeen() =>
+      (_prefs.getStringList(_endingsKey) ?? const <String>[]).toSet();
 
   @override
   Future<void> markEnding(String storyId, String endingId) async {
@@ -82,11 +85,13 @@ final class SharedPreferencesSaveStore implements SaveStore {
   double textSpeed() => _prefs.getDouble(_textSpeedKey) ?? 28;
 
   @override
-  Future<void> setTextSpeed(double value) => _prefs.setDouble(_textSpeedKey, value);
+  Future<void> setTextSpeed(double value) =>
+      _prefs.setDouble(_textSpeedKey, value);
 
   @override
   double fontScale() => _prefs.getDouble(_fontScaleKey) ?? 1.0;
 
   @override
-  Future<void> setFontScale(double value) => _prefs.setDouble(_fontScaleKey, value);
+  Future<void> setFontScale(double value) =>
+      _prefs.setDouble(_fontScaleKey, value);
 }

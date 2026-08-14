@@ -41,7 +41,11 @@ final class BgmNode extends StoryNode {
 }
 
 final class CgNode extends StoryNode {
-  const CgNode({required this.id, required this.fullscreen, required this.hideDialogue});
+  const CgNode({
+    required this.id,
+    required this.fullscreen,
+    required this.hideDialogue,
+  });
   final String id;
   final bool fullscreen;
   final bool hideDialogue;
@@ -58,7 +62,11 @@ final class SetNode extends StoryNode {
 }
 
 final class IfNode extends StoryNode {
-  const IfNode({required this.cond, required this.then, this.orElse = const <StoryNode>[]});
+  const IfNode({
+    required this.cond,
+    required this.then,
+    this.orElse = const <StoryNode>[],
+  });
   final Condition cond;
   final List<StoryNode> then;
   final List<StoryNode> orElse;
@@ -71,7 +79,11 @@ final class ChoiceNode extends StoryNode {
 
 /// 條件。未宣告的變數取 null（規範 §3.3）。
 final class Condition {
-  const Condition({required this.varName, required this.op, required this.value});
+  const Condition({
+    required this.varName,
+    required this.op,
+    required this.value,
+  });
   final String varName;
   final String op;
   final Object? value;
@@ -156,7 +168,11 @@ final class VariableSpec {
 }
 
 final class CharacterSpec {
-  const CharacterSpec({required this.name, required this.isPlayer, this.sprites});
+  const CharacterSpec({
+    required this.name,
+    required this.isPlayer,
+    this.sprites,
+  });
   final String name;
   final bool isPlayer;
 

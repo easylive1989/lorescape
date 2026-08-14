@@ -52,17 +52,29 @@ class ChoiceOverlay extends StatelessWidget {
                           key: ValueKey<String>('choice-$i'),
                           onPressed: () => onChoose(i),
                           style: FilledButton.styleFrom(
-                            backgroundColor: VnColors.ground.withValues(alpha: 0.90),
+                            backgroundColor: VnColors.ground.withValues(
+                              alpha: 0.90,
+                            ),
                             foregroundColor: VnColors.body,
-                            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 18,
+                              horizontal: 20,
+                            ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(4),
-                              side: BorderSide(color: VnColors.ochre.withValues(alpha: 0.40)),
+                              side: BorderSide(
+                                color: VnColors.ochre.withValues(alpha: 0.40),
+                              ),
                             ),
-                            textStyle:
-                                TextStyle(fontSize: layout.bodyFontSize * 0.95, height: 1.4),
+                            textStyle: TextStyle(
+                              fontSize: layout.bodyFontSize * 0.95,
+                              height: 1.4,
+                            ),
                           ),
-                          child: Text(options[i].option.text, textAlign: TextAlign.center),
+                          child: Text(
+                            options[i].option.text,
+                            textAlign: TextAlign.center,
+                          ),
                         ),
                       ),
                     ),

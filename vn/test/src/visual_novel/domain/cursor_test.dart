@@ -12,24 +12,31 @@ void main() {
     });
 
     test('序列化成規範 §6 的 token 形狀', () {
-      const cursor = Cursor(sceneId: 'S06', path: <CursorStep>[
-        CursorStep(12, 'then'),
-        CursorStep(3),
-      ]);
+      const cursor = Cursor(
+        sceneId: 'S06',
+        path: <CursorStep>[CursorStep(12, 'then'), CursorStep(3)],
+      );
       expect(cursor.toTokens(), <String>['12', 'then', '3']);
       expect(cursor.readKey, 'S06#12.then.3');
     });
 
     test('token 往返後是同一個游標', () {
-      const original = Cursor(sceneId: 'S06', path: <CursorStep>[
-        CursorStep(12, 'then'),
-        CursorStep(4, 'opt1'),
-        CursorStep(0),
-      ]);
+      const original = Cursor(
+        sceneId: 'S06',
+        path: <CursorStep>[
+          CursorStep(12, 'then'),
+          CursorStep(4, 'opt1'),
+          CursorStep(0),
+        ],
+      );
       final restored = Cursor.fromTokens('S06', original.toTokens());
       expect(restored.toTokens(), original.toTokens());
       expect(restored.path.map((s) => s.index), <int>[12, 4, 0]);
-      expect(restored.path.map((s) => s.branch), <String?>['then', 'opt1', null]);
+      expect(restored.path.map((s) => s.branch), <String?>[
+        'then',
+        'opt1',
+        null,
+      ]);
     });
 
     test('push 在最後一層記下分支並開新的一層', () {
@@ -38,7 +45,9 @@ void main() {
     });
 
     test('pop 收掉最後一層並清掉上一層的分支標記', () {
-      final popped = Cursor.atSceneStart('S01').withLastIndex(5).push('then').pop();
+      final popped = Cursor.atSceneStart(
+        'S01',
+      ).withLastIndex(5).push('then').pop();
       expect(popped.toTokens(), <String>['5']);
       expect(popped.last.branch, isNull);
     });

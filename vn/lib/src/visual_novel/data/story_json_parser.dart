@@ -41,11 +41,11 @@ Story parseStory(Map<String, dynamic> json) {
 }
 
 VariableSpec _variable(Map<String, dynamic> json) => VariableSpec(
-      label: (json['label'] as String?) ?? '',
-      initial: (json['initial'] as num?) ?? 0,
-      min: (json['min'] as num?) ?? double.negativeInfinity,
-      max: (json['max'] as num?) ?? double.infinity,
-    );
+  label: (json['label'] as String?) ?? '',
+  initial: (json['initial'] as num?) ?? 0,
+  min: (json['min'] as num?) ?? double.negativeInfinity,
+  max: (json['max'] as num?) ?? double.infinity,
+);
 
 CharacterSpec _character(Map<String, dynamic> json) {
   final sprites = json['sprites'] as Map<String, dynamic>?;
@@ -72,54 +72,60 @@ Map<String, Set<String>> _missingAssets(List<dynamic>? json) {
 }
 
 Scene _scene(String id, Map<String, dynamic> json) => Scene(
-      id: id,
-      title: (json['title'] as String?) ?? '',
-      background: json['background'] as String,
-      bgm: json['bgm'] as String?,
-      nodes: _nodes(json['nodes'] as List<dynamic>),
-      next: json['next'] as String?,
-      isEnding: (json['isEnding'] as bool?) ?? false,
-      endingId: json['endingId'] as String?,
-    );
+  id: id,
+  title: (json['title'] as String?) ?? '',
+  background: json['background'] as String,
+  bgm: json['bgm'] as String?,
+  nodes: _nodes(json['nodes'] as List<dynamic>),
+  next: json['next'] as String?,
+  isEnding: (json['isEnding'] as bool?) ?? false,
+  endingId: json['endingId'] as String?,
+);
 
-List<StoryNode> _nodes(List<dynamic>? json) =>
-    (json ?? const <dynamic>[]).map((e) => _node(e as Map<String, dynamic>)).toList();
+List<StoryNode> _nodes(List<dynamic>? json) => (json ?? const <dynamic>[])
+    .map((e) => _node(e as Map<String, dynamic>))
+    .toList();
 
 StoryNode _node(Map<String, dynamic> json) {
   final type = json['t'] as String?;
   return switch (type) {
-    'n' => NarrationNode(text: json['text'] as String, style: json['style'] as String?),
+    'n' => NarrationNode(
+      text: json['text'] as String,
+      style: json['style'] as String?,
+    ),
     'd' => DialogueNode(
-        who: json['who'] as String,
-        text: json['text'] as String,
-        sprite: json['sprite'] as String?,
-      ),
+      who: json['who'] as String,
+      text: json['text'] as String,
+      sprite: json['sprite'] as String?,
+    ),
     'show' => ShowNode(
-        who: json['who'] as String,
-        // 無立繪角色（characters[who].sprites 為 null）登場時 sprite 為 null。
-        sprite: json['sprite'] as String?,
-        filter: json['filter'] as String?,
-      ),
+      who: json['who'] as String,
+      // 無立繪角色（characters[who].sprites 為 null）登場時 sprite 為 null。
+      sprite: json['sprite'] as String?,
+      filter: json['filter'] as String?,
+    ),
     'hide' => const HideNode(),
     'sfx' => SfxNode(json['id'] as String),
     'bgm' => BgmNode(json['id'] as String?),
     'cg' => CgNode(
-        id: json['id'] as String,
-        fullscreen: (json['fullscreen'] as bool?) ?? true,
-        hideDialogue: (json['hideDialogue'] as bool?) ?? true,
-      ),
+      id: json['id'] as String,
+      fullscreen: (json['fullscreen'] as bool?) ?? true,
+      hideDialogue: (json['hideDialogue'] as bool?) ?? true,
+    ),
     'add' => AddNode(_numVars(json['vars'] as Map<String, dynamic>)),
-    'set' => SetNode(Map<String, Object?>.from(json['vars'] as Map<String, dynamic>)),
+    'set' => SetNode(
+      Map<String, Object?>.from(json['vars'] as Map<String, dynamic>),
+    ),
     'if' => IfNode(
-        cond: _condition(json['cond'] as Map<String, dynamic>),
-        then: _nodes(json['then'] as List<dynamic>?),
-        orElse: _nodes(json['else'] as List<dynamic>?),
-      ),
+      cond: _condition(json['cond'] as Map<String, dynamic>),
+      then: _nodes(json['then'] as List<dynamic>?),
+      orElse: _nodes(json['else'] as List<dynamic>?),
+    ),
     'choice' => ChoiceNode(
-        (json['options'] as List<dynamic>)
-            .map((e) => _option(e as Map<String, dynamic>))
-            .toList(),
-      ),
+      (json['options'] as List<dynamic>)
+          .map((e) => _option(e as Map<String, dynamic>))
+          .toList(),
+    ),
     _ => throw FormatException('未知的節點型別：$type'),
   };
 }
@@ -128,10 +134,10 @@ Map<String, num> _numVars(Map<String, dynamic> json) =>
     json.map((key, value) => MapEntry(key, value as num));
 
 Condition _condition(Map<String, dynamic> json) => Condition(
-      varName: json['var'] as String,
-      op: json['op'] as String,
-      value: json['value'],
-    );
+  varName: json['var'] as String,
+  op: json['op'] as String,
+  value: json['value'],
+);
 
 ChoiceOption _option(Map<String, dynamic> json) {
   final cond = json['cond'] as Map<String, dynamic>?;
@@ -141,7 +147,9 @@ ChoiceOption _option(Map<String, dynamic> json) {
     text: json['text'] as String,
     cond: cond == null ? null : _condition(cond),
     addVars: add == null ? const <String, num>{} : _numVars(add),
-    setVars: set == null ? const <String, Object?>{} : Map<String, Object?>.from(set),
+    setVars: set == null
+        ? const <String, Object?>{}
+        : Map<String, Object?>.from(set),
     then: _nodes(json['then'] as List<dynamic>?),
     goto: json['goto'] as String?,
     branch: ((json['branch'] as List<dynamic>?) ?? const <dynamic>[])

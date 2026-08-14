@@ -64,21 +64,23 @@ final class BundlePackRepository implements PackRepository {
     final cached = _pack;
     if (cached != null) return cached;
     final json =
-        jsonDecode(await _bundle.loadString('$packRoot/pack.json')) as Map<String, dynamic>;
-    final entries = (json['stories'] as List<dynamic>)
-        .map((e) => e as Map<String, dynamic>)
-        .map(
-          (e) => PackEntry(
-            id: e['id'] as String,
-            order: e['order'] as int,
-            dir: e['dir'] as String,
-            title: e['title'] as String,
-            subtitle: (e['subtitle'] as String?) ?? '',
-            estimatedMinutes: e['estimatedMinutes'] as int,
-          ),
-        )
-        .toList()
-      ..sort((a, b) => a.order.compareTo(b.order));
+        jsonDecode(await _bundle.loadString('$packRoot/pack.json'))
+            as Map<String, dynamic>;
+    final entries =
+        (json['stories'] as List<dynamic>)
+            .map((e) => e as Map<String, dynamic>)
+            .map(
+              (e) => PackEntry(
+                id: e['id'] as String,
+                order: e['order'] as int,
+                dir: e['dir'] as String,
+                title: e['title'] as String,
+                subtitle: (e['subtitle'] as String?) ?? '',
+                estimatedMinutes: e['estimatedMinutes'] as int,
+              ),
+            )
+            .toList()
+          ..sort((a, b) => a.order.compareTo(b.order));
     return _pack = Pack(
       id: json['id'] as String,
       title: json['title'] as String,
@@ -98,7 +100,11 @@ final class BundlePackRepository implements PackRepository {
       orElse: () => throw StateError('pack.json 沒有這篇：$storyId'),
     );
     final json =
-        jsonDecode(await _bundle.loadString('$packRoot/stories/${entry.dir}/story.json'))
+        jsonDecode(
+              await _bundle.loadString(
+                '$packRoot/stories/${entry.dir}/story.json',
+              ),
+            )
             as Map<String, dynamic>;
     return _stories[storyId] = parseStory(json);
   }

@@ -87,7 +87,9 @@ class _TypewriterTextState extends State<TypewriterText> {
   void _finish() {
     _timer?.cancel();
     _timer = null;
-    if (_shown != widget.text.length) setState(() => _shown = widget.text.length);
+    if (_shown != widget.text.length) {
+      setState(() => _shown = widget.text.length);
+    }
     _notify();
   }
 

@@ -7,8 +7,12 @@ import 'package:lorescape_vn/src/visual_novel/providers.dart';
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
 
-  static const ValueKey<String> textSpeedSliderKey = ValueKey<String>('settings-text-speed');
-  static const ValueKey<String> fontScaleSliderKey = ValueKey<String>('settings-font-scale');
+  static const ValueKey<String> textSpeedSliderKey = ValueKey<String>(
+    'settings-text-speed',
+  );
+  static const ValueKey<String> fontScaleSliderKey = ValueKey<String>(
+    'settings-font-scale',
+  );
 
   @override
   ConsumerState<SettingsPage> createState() => _SettingsPageState();
@@ -28,7 +32,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
     return Scaffold(
       backgroundColor: VnColors.backdrop,
-      appBar: AppBar(title: const Text('設定'), backgroundColor: Colors.transparent),
+      appBar: AppBar(
+        title: const Text('設定'),
+        backgroundColor: Colors.transparent,
+      ),
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: <Widget>[

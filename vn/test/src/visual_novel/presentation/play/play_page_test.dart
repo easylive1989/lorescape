@@ -47,7 +47,11 @@ void main() {
       expect(layout.choiceInset, 400 * 0.10);
       expect(layout.bodyFontSize, 400 / 20);
       expect(layout.spriteOffset, 400 * 0.18);
-      expect(layout.spriteBottom, 800 * 0.12, reason: '立繪底邊置於 0.88H ＝ 距底 0.12H');
+      expect(
+        layout.spriteBottom,
+        800 * 0.12,
+        reason: '立繪底邊置於 0.88H ＝ 距底 0.12H',
+      );
       expect(layout.choiceTop, 800 * 0.45);
       expect(layout.choiceBottom, 800 * 0.25);
       expect(layout.safeInset, 800 * 0.08);
@@ -103,7 +107,10 @@ void main() {
       expect(find.text('札布達。'), findsOneWidget);
       expect(find.byKey(DialogueBox.nameTagKey), findsOneWidget);
       expect(find.text('尼基亞斯'), findsOneWidget);
-      expect(find.byKey(const ValueKey<String>('sprite-nikias')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('sprite-nikias')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('選項只顯示 cond 成立者，點選後走對分支', (tester) async {
@@ -112,19 +119,30 @@ void main() {
       // 都只靠人工截圖確認過。這條補上。
       await pumpPlayPage(tester, 'pompeii_01_harbour_stranger');
       for (var i = 0; i < 40; i++) {
-        if (find.byKey(const ValueKey<String>('choice-0')).evaluate().isNotEmpty) break;
+        if (find
+            .byKey(const ValueKey<String>('choice-0'))
+            .evaluate()
+            .isNotEmpty) {
+          break;
+        }
         await tester.tap(find.byKey(PlayPage.advanceAreaKey));
         await _pumpTyping(tester);
       }
-      expect(find.byKey(const ValueKey<String>('choice-0')), findsOneWidget,
-          reason: '01 篇 S01 結尾有一個兩選項的分歧');
+      expect(
+        find.byKey(const ValueKey<String>('choice-0')),
+        findsOneWidget,
+        reason: '01 篇 S01 結尾有一個兩選項的分歧',
+      );
       expect(find.text('直接進城找人。'), findsOneWidget);
       expect(find.text('先去廣場，把債權登記起來。'), findsOneWidget);
 
       await tester.tap(find.byKey(const ValueKey<String>('choice-0')));
       await _pumpTyping(tester);
-      expect(find.byKey(const ValueKey<String>('choice-0')), findsNothing,
-          reason: '選完之後選項要收起來');
+      expect(
+        find.byKey(const ValueKey<String>('choice-0')),
+        findsNothing,
+        reason: '選完之後選項要收起來',
+      );
       expect(tester.takeException(), isNull);
     });
 
@@ -174,16 +192,23 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       await tester.pumpWidget(
         ProviderScope(
-          overrides: <Override>[sharedPreferencesProvider.overrideWithValue(prefs)],
-          child: const MaterialApp(home: PlayPage(storyId: 'pompeii_01_harbour_stranger')),
+          overrides: <Override>[
+            sharedPreferencesProvider.overrideWithValue(prefs),
+          ],
+          child: const MaterialApp(
+            home: PlayPage(storyId: 'pompeii_01_harbour_stranger'),
+          ),
         ),
       );
       await _pumpTyping(tester);
 
       await tester.tap(find.byKey(PlayPage.skipButtonKey));
       await _pumpTyping(tester);
-      expect(find.byKey(const ValueKey<String>('choice-0')), findsOneWidget,
-          reason: '全部已讀時，跳過應該一路停在選項上');
+      expect(
+        find.byKey(const ValueKey<String>('choice-0')),
+        findsOneWidget,
+        reason: '全部已讀時，跳過應該一路停在選項上',
+      );
     });
 
     testWidgets('重新開始要清掉上一輪的回顧', (tester) async {
@@ -195,20 +220,20 @@ void main() {
       // BuildContext 沒有內建 `.read`（那是 `provider` 套件的擴充方法，不是
       // riverpod 的）；riverpod 要透過 ProviderScope.containerOf 拿到
       // ProviderContainer 才能讀 provider。
-      final controller = ProviderScope.containerOf(tester.element(find.byKey(PlayPage.advanceAreaKey)))
-          .read(playControllerProvider('pompeii_01_harbour_stranger').notifier);
+      final controller = ProviderScope.containerOf(
+        tester.element(find.byKey(PlayPage.advanceAreaKey)),
+      ).read(playControllerProvider('pompeii_01_harbour_stranger').notifier);
       expect(controller.backlog.length, greaterThan(1));
 
       controller.restart();
       await _pumpTyping(tester);
-      expect(controller.backlog.length, 1,
-          reason: '重新開始後只該有新的第一句，不得殘留上一輪的台詞');
+      expect(controller.backlog.length, 1, reason: '重新開始後只該有新的第一句，不得殘留上一輪的台詞');
     });
 
-    testWidgets(
-        '抵達結局要寫入 endingsSeen 並清掉存檔（回歸：ended 游標必然越界，'
-        '硬呼叫 currentNode 曾經 RangeError，讓 markEnding／clearSave 整段沒執行到）',
-        (tester) async {
+    testWidgets('抵達結局要寫入 endingsSeen 並清掉存檔（回歸：ended 游標必然越界，'
+        '硬呼叫 currentNode 曾經 RangeError，讓 markEnding／clearSave 整段沒執行到）', (
+      tester,
+    ) async {
       // 直接餵一個就停在結局場尾端前一步的存檔，不用真的把 S01～S09 全部點完。
       final saveJson = jsonEncode(<String, dynamic>{
         'storyId': 'pompeii_01_harbour_stranger',
@@ -216,7 +241,12 @@ void main() {
           'sceneId': 'E_A',
           'path': <String>['19', 'then', '1'],
         },
-        'vars': <String, dynamic>{'affection': 3, 'awareness': 3, 'deal': 'wait', 'bread': true},
+        'vars': <String, dynamic>{
+          'affection': 3,
+          'awareness': 3,
+          'deal': 'wait',
+          'bread': true,
+        },
         'stage': const <dynamic>[],
         'updatedAt': DateTime.now().toUtc().toIso8601String(),
       });
@@ -229,8 +259,12 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       await tester.pumpWidget(
         ProviderScope(
-          overrides: <Override>[sharedPreferencesProvider.overrideWithValue(prefs)],
-          child: const MaterialApp(home: PlayPage(storyId: 'pompeii_01_harbour_stranger')),
+          overrides: <Override>[
+            sharedPreferencesProvider.overrideWithValue(prefs),
+          ],
+          child: const MaterialApp(
+            home: PlayPage(storyId: 'pompeii_01_harbour_stranger'),
+          ),
         ),
       );
       await _pumpTyping(tester);
@@ -247,8 +281,11 @@ void main() {
         prefs.getStringList('vn.endingsSeen'),
         contains('pompeii_01_harbour_stranger#A'),
       );
-      expect(prefs.getString('vn.save.pompeii_01_harbour_stranger'), isNull,
-          reason: '結局要清掉存檔，不然回首頁後這篇的進度條會多算一個「進行中」的假存檔');
+      expect(
+        prefs.getString('vn.save.pompeii_01_harbour_stranger'),
+        isNull,
+        reason: '結局要清掉存檔，不然回首頁後這篇的進度條會多算一個「進行中」的假存檔',
+      );
     });
 
     testWidgets('已讀跳過碰到未讀節點就停', (tester) async {
@@ -259,8 +296,12 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       await tester.pumpWidget(
         ProviderScope(
-          overrides: <Override>[sharedPreferencesProvider.overrideWithValue(prefs)],
-          child: const MaterialApp(home: PlayPage(storyId: 'pompeii_01_harbour_stranger')),
+          overrides: <Override>[
+            sharedPreferencesProvider.overrideWithValue(prefs),
+          ],
+          child: const MaterialApp(
+            home: PlayPage(storyId: 'pompeii_01_harbour_stranger'),
+          ),
         ),
       );
       await tester.pump();

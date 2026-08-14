@@ -6,13 +6,14 @@ import 'package:lorescape_vn/src/visual_novel/presentation/settings/settings_pag
 
 /// App 的導覽表：景點包首頁 → 播放頁 → 結局收藏／設定。
 GoRouter buildVnRouter() => GoRouter(
-      routes: <RouteBase>[
-        GoRoute(path: '/', builder: (_, _) => const PackPage()),
-        GoRoute(
-          path: '/play/:storyId',
-          builder: (_, state) => PlayPage(storyId: state.pathParameters['storyId']!),
-        ),
-        GoRoute(path: '/endings', builder: (_, _) => const EndingsPage()),
-        GoRoute(path: '/settings', builder: (_, _) => const SettingsPage()),
-      ],
-    );
+  routes: <RouteBase>[
+    GoRoute(path: '/', builder: (_, _) => const PackPage()),
+    GoRoute(
+      path: '/play/:storyId',
+      builder: (_, state) =>
+          PlayPage(storyId: state.pathParameters['storyId']!),
+    ),
+    GoRoute(path: '/endings', builder: (_, _) => const EndingsPage()),
+    GoRoute(path: '/settings', builder: (_, _) => const SettingsPage()),
+  ],
+);

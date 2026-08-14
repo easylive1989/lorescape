@@ -15,7 +15,9 @@ class DialogueBox extends StatelessWidget {
     super.key,
   });
 
-  static const ValueKey<String> nameTagKey = ValueKey<String>('dialogue-name-tag');
+  static const ValueKey<String> nameTagKey = ValueKey<String>(
+    'dialogue-name-tag',
+  );
 
   final String text;
   final String? speakerName;
@@ -62,7 +64,10 @@ class DialogueBox extends StatelessWidget {
               left: layout.sideInset,
               top: -18,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
                 color: VnColors.ground.withValues(alpha: 0xF2 / 0xFF),
                 child: Text(
                   name,

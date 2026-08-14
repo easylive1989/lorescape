@@ -6,13 +6,20 @@ import 'package:lorescape_vn/src/visual_novel/domain/save_data.dart';
 void main() {
   test('存檔往返：游標、變數、台上立繪都一致', () {
     const state = PlayState(
-      cursor: Cursor(sceneId: 'S06', path: <CursorStep>[CursorStep(12, 'then'), CursorStep(3)]),
+      cursor: Cursor(
+        sceneId: 'S06',
+        path: <CursorStep>[CursorStep(12, 'then'), CursorStep(3)],
+      ),
       vars: <String, Object?>{'affection': 2, 'deal': 'wait', 'bread': true},
       stage: <SpriteOnStage>[SpriteOnStage(who: 'vibia', sprite: 'softened')],
       status: PlayStatus.playing,
       bgmId: 'quiet',
     );
-    final save = SaveData.from('pompeii_01_harbour_stranger', state, DateTime.utc(2026, 8, 13));
+    final save = SaveData.from(
+      'pompeii_01_harbour_stranger',
+      state,
+      DateTime.utc(2026, 8, 13),
+    );
     final restored = SaveData.fromJson(save.toJson()).toPlayState();
 
     expect(restored.cursor.toTokens(), state.cursor.toTokens());

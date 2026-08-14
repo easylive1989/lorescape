@@ -22,7 +22,9 @@ import 'package:lorescape_vn/src/visual_novel/providers.dart'
         resume,
         saveStoreProvider,
         storyProvider;
-import 'package:lorescape_vn/src/visual_novel/providers.dart' as engine show advance, choose;
+import 'package:lorescape_vn/src/visual_novel/providers.dart'
+    as engine
+    show advance, choose;
 
 /// 回顧列表裡的一筆——旁白沒有說話者，`speakerName` 為 null。
 final class BacklogEntry {
@@ -89,7 +91,8 @@ class PlayController extends FamilyNotifier<PlayState, String> {
       if (next.status != PlayStatus.playing) break;
       if (!read.contains(next.readKey)) break;
       final candidate = engine.advance(_story, next);
-      if (candidate.status != PlayStatus.playing || !read.contains(candidate.readKey)) {
+      if (candidate.status != PlayStatus.playing ||
+          !read.contains(candidate.readKey)) {
         next = candidate;
         break;
       }
@@ -109,8 +112,10 @@ class PlayController extends FamilyNotifier<PlayState, String> {
     final node = currentNode(_story, value);
     final entry = switch (node) {
       NarrationNode(:final text) => BacklogEntry(speakerName: null, text: text),
-      DialogueNode(:final who, :final text) =>
-        BacklogEntry(speakerName: _story.characters[who]?.name ?? who, text: text),
+      DialogueNode(:final who, :final text) => BacklogEntry(
+        speakerName: _story.characters[who]?.name ?? who,
+        text: text,
+      ),
       _ => null,
     };
     if (entry == null) return;
@@ -139,5 +144,8 @@ class PlayController extends FamilyNotifier<PlayState, String> {
   }
 }
 
-final NotifierProviderFamily<PlayController, PlayState, String> playControllerProvider =
-    NotifierProvider.family<PlayController, PlayState, String>(PlayController.new);
+final NotifierProviderFamily<PlayController, PlayState, String>
+playControllerProvider =
+    NotifierProvider.family<PlayController, PlayState, String>(
+      PlayController.new,
+    );

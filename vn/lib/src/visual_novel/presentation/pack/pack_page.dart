@@ -9,7 +9,8 @@ import 'package:lorescape_vn/src/visual_novel/providers.dart';
 class PackPage extends ConsumerWidget {
   const PackPage({super.key});
 
-  static ValueKey<String> storyCardKey(String storyId) => ValueKey<String>('story-card-$storyId');
+  static ValueKey<String> storyCardKey(String storyId) =>
+      ValueKey<String>('story-card-$storyId');
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

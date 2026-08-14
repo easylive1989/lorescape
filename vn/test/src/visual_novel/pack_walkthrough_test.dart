@@ -30,28 +30,35 @@ const Map<String, Set<String>> knownDeadBranches = <String, Set<String>>{
 /// 分歧被誤刪。數字來自 task-6-report.md 記錄的實測結果。
 const Map<String, ({int paths, int options, int branches})> walkBaselines =
     <String, ({int paths, int options, int branches})>{
-  '01-harbour-stranger': (paths: 128, options: 14, branches: 9),
-  '02-the-oven-went-out': (paths: 40, options: 11, branches: 3),
-  '03-the-well-fell': (paths: 16, options: 8, branches: 4),
-  '04-the-tree-in-the-sky': (paths: 20, options: 9, branches: 2),
-  '05-the-tablets': (paths: 80, options: 13, branches: 3),
-  '06-the-locked-door': (paths: 32, options: 10, branches: 4),
-  '07-cannot-land': (paths: 32, options: 10, branches: 2),
-  '08-the-new-house': (paths: 20, options: 9, branches: 3),
-};
+      '01-harbour-stranger': (paths: 128, options: 14, branches: 9),
+      '02-the-oven-went-out': (paths: 40, options: 11, branches: 3),
+      '03-the-well-fell': (paths: 16, options: 8, branches: 4),
+      '04-the-tree-in-the-sky': (paths: 20, options: 9, branches: 2),
+      '05-the-tablets': (paths: 80, options: 13, branches: 3),
+      '06-the-locked-door': (paths: 32, options: 10, branches: 4),
+      '07-cannot-land': (paths: 32, options: 10, branches: 2),
+      '08-the-new-house': (paths: 20, options: 9, branches: 3),
+    };
 
 List<Map<String, String>> loadPackEntries() {
-  final pack = jsonDecode(File('$packRoot/pack.json').readAsStringSync()) as Map<String, dynamic>;
+  final pack =
+      jsonDecode(File('$packRoot/pack.json').readAsStringSync())
+          as Map<String, dynamic>;
   return (pack['stories'] as List<dynamic>)
       .map((e) => e as Map<String, dynamic>)
-      .map((e) => <String, String>{'dir': e['dir'] as String, 'title': e['title'] as String})
+      .map(
+        (e) => <String, String>{
+          'dir': e['dir'] as String,
+          'title': e['title'] as String,
+        },
+      )
       .toList();
 }
 
 Story loadStory(String dir) => parseStory(
-      jsonDecode(File('$packRoot/stories/$dir/story.json').readAsStringSync())
-          as Map<String, dynamic>,
-    );
+  jsonDecode(File('$packRoot/stories/$dir/story.json').readAsStringSync())
+      as Map<String, dynamic>,
+);
 
 /// 一次完整走訪的產出。
 final class WalkResult {
@@ -118,7 +125,9 @@ void walk(Story story, PlayState state, WalkResult result, int budget) {
         reason: '${story.meta.id} ${current.cursor.readKey}：所有選項都被條件擋掉了',
       );
       for (var i = 0; i < visible.length; i++) {
-        result.takenOptions.add('${current.cursor.readKey}#opt${visible[i].index}');
+        result.takenOptions.add(
+          '${current.cursor.readKey}#opt${visible[i].index}',
+        );
         walk(story, choose(story, current, i), result, steps);
       }
       return;
@@ -171,7 +180,11 @@ void main() {
                 if (side.isEmpty) continue;
                 expect(
                   side.any(
-                    (n) => n is NarrationNode || n is DialogueNode || n is CgNode || n is ChoiceNode,
+                    (n) =>
+                        n is NarrationNode ||
+                        n is DialogueNode ||
+                        n is CgNode ||
+                        n is ChoiceNode,
                   ),
                   isTrue,
                   reason: '這個 if 分支沒有直接的停頓節點，前綴判定會誤報',
@@ -238,7 +251,8 @@ void main() {
                 // 05/S06、08/S04），用 `.0` 判定會全部誤報成走不到。
                 // 前綴比對是可靠的：實測沒有任何分支是純副作用節點，每個分支
                 // 內都至少有一個會停頓的節點。
-                final prefix = '$sceneId#${<String>[...here, side.$1].join('.')}.';
+                final prefix =
+                    '$sceneId#${<String>[...here, side.$1].join('.')}.';
                 if (!result.readKeys.any((key) => key.startsWith(prefix))) {
                   unreached.add(prefix);
                 }
@@ -272,7 +286,11 @@ void main() {
         story.variables.forEach((name, spec) {
           final reached = result.maxima[name];
           if (reached == null) return;
-          expect(reached, lessThanOrEqualTo(spec.max), reason: '$name 超過宣告的 max');
+          expect(
+            reached,
+            lessThanOrEqualTo(spec.max),
+            reason: '$name 超過宣告的 max',
+          );
         });
       });
 
@@ -285,7 +303,8 @@ void main() {
           );
         }
         for (final character in story.characters.values) {
-          for (final filename in (character.sprites ?? const <String, String>{}).values) {
+          for (final filename
+              in (character.sprites ?? const <String, String>{}).values) {
             expect(
               File('$packRoot/assets/sprites/$filename').existsSync(),
               isTrue,
@@ -297,7 +316,9 @@ void main() {
           for (final node in nodes) {
             if (node is CgNode) {
               expect(
-                File('$packRoot/assets/backgrounds/${node.id}.png').existsSync(),
+                File(
+                  '$packRoot/assets/backgrounds/${node.id}.png',
+                ).existsSync(),
                 isTrue,
                 reason: node.id,
               );
@@ -326,7 +347,11 @@ void main() {
               _ => null,
             };
             if (text != null) {
-              expect(text.characters.length, lessThanOrEqualTo(60), reason: text);
+              expect(
+                text.characters.length,
+                lessThanOrEqualTo(60),
+                reason: text,
+              );
             }
             if (node is IfNode) {
               scan(node.then);

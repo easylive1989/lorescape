@@ -18,7 +18,10 @@ class EndingsPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: VnColors.backdrop,
-      appBar: AppBar(title: const Text('結局收藏'), backgroundColor: Colors.transparent),
+      appBar: AppBar(
+        title: const Text('結局收藏'),
+        backgroundColor: Colors.transparent,
+      ),
       body: packAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(child: Text('讀不到景點包：$error')),
@@ -29,7 +32,8 @@ class EndingsPage extends ConsumerWidget {
           // 得先滑到那一段才看得到自己解鎖了沒，體驗上也怪）。
           child: Column(
             children: <Widget>[
-              for (final PackEntry entry in pack.stories) _StoryEndings(entry: entry, seen: seen),
+              for (final PackEntry entry in pack.stories)
+                _StoryEndings(entry: entry, seen: seen),
             ],
           ),
         ),
@@ -53,13 +57,16 @@ class _StoryEndings extends ConsumerWidget {
         const SizedBox(height: 16),
         Text(
           entry.title,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(color: VnColors.body),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(color: VnColors.body),
         ),
         storyAsync.maybeWhen(
           orElse: () => const SizedBox(height: 8),
           data: (story) => Column(
             children: <Widget>[
-              for (final MapEntry<String, EndingSpec> ending in story.endings.entries)
+              for (final MapEntry<String, EndingSpec> ending
+                  in story.endings.entries)
                 _EndingTile(
                   achieved: seen.contains('${entry.id}#${ending.key}'),
                   endingKey: ending.key,
@@ -74,7 +81,11 @@ class _StoryEndings extends ConsumerWidget {
 }
 
 class _EndingTile extends StatelessWidget {
-  const _EndingTile({required this.achieved, required this.endingKey, required this.title});
+  const _EndingTile({
+    required this.achieved,
+    required this.endingKey,
+    required this.title,
+  });
 
   final bool achieved;
   final String endingKey;

@@ -25,7 +25,8 @@ PlayState initState(Story story) {
   final state = PlayState(
     cursor: Cursor.atSceneStart(story.start),
     vars: <String, Object?>{
-      for (final entry in story.variables.entries) entry.key: entry.value.initial,
+      for (final entry in story.variables.entries)
+        entry.key: entry.value.initial,
     },
     stage: const <SpriteOnStage>[],
     status: PlayStatus.playing,
@@ -41,10 +42,14 @@ StoryNode currentNode(Story story, PlayState state) {
 }
 
 /// 這個 choice 節點在目前變數下可以顯示的選項，index 保留原始位置。
-List<VisibleOption> visibleOptions(ChoiceNode node, Map<String, Object?> vars) => <VisibleOption>[
-      for (var i = 0; i < node.options.length; i++)
-        if (node.options[i].cond?.evaluate(vars) ?? true) VisibleOption(i, node.options[i]),
-    ];
+List<VisibleOption> visibleOptions(
+  ChoiceNode node,
+  Map<String, Object?> vars,
+) => <VisibleOption>[
+  for (var i = 0; i < node.options.length; i++)
+    if (node.options[i].cond?.evaluate(vars) ?? true)
+      VisibleOption(i, node.options[i]),
+];
 
 /// 游標往前一格，再套用副作用節點直到停下。
 PlayState advance(Story story, PlayState state) {
@@ -93,11 +98,15 @@ bool _cursorResolvable(Story story, Cursor cursor) {
       list = node.then;
     } else if (branch == 'else' && node is IfNode) {
       list = node.orElse;
-    } else if (branch != null && branch.startsWith('opt') && node is ChoiceNode) {
+    } else if (branch != null &&
+        branch.startsWith('opt') &&
+        node is ChoiceNode) {
       // 負索引也要擋：竄改過的存檔給 'opt-1' 時 tryParse 回 -1、過得了上界檢查，
       // 然後在這個「用來防崩潰」的函式裡丟 RangeError。
       final index = int.tryParse(branch.substring(3));
-      if (index == null || index < 0 || index >= node.options.length) return false;
+      if (index == null || index < 0 || index >= node.options.length) {
+        return false;
+      }
       list = node.options[index].then;
     } else {
       return false;
@@ -114,14 +123,24 @@ PlayState choose(Story story, PlayState state, int visibleIndex) {
   final option = picked.option;
 
   final next = state.copyWith(
-    vars: _applyVars(story, state.vars, add: option.addVars, set: option.setVars),
+    vars: _applyVars(
+      story,
+      state.vars,
+      add: option.addVars,
+      set: option.setVars,
+    ),
     status: PlayStatus.playing,
   );
 
   if (option.then.isNotEmpty) {
-    return _settle(story, next.copyWith(cursor: next.cursor.push('opt${picked.index}')));
+    return _settle(
+      story,
+      next.copyWith(cursor: next.cursor.push('opt${picked.index}')),
+    );
   }
-  final target = option.branch.isNotEmpty ? _resolveBranch(option.branch, next.vars) : option.goto;
+  final target = option.branch.isNotEmpty
+      ? _resolveBranch(option.branch, next.vars)
+      : option.goto;
   if (target != null) return _settle(story, _enterScene(story, next, target));
   return _settle(story, _moveNext(story, next));
 }
@@ -197,7 +216,8 @@ PlayState _enterScene(Story story, PlayState state, String sceneId) {
 PlayState _moveNext(Story story, PlayState state) {
   var cursor = state.cursor.withLastIndex(state.cursor.last.index + 1);
   while (cursor.path.length > 1 &&
-      cursor.last.index >= _listAt(story, cursor, cursor.path.length - 1).length) {
+      cursor.last.index >=
+          _listAt(story, cursor, cursor.path.length - 1).length) {
     cursor = cursor.pop();
     cursor = cursor.withLastIndex(cursor.last.index + 1);
   }
@@ -212,7 +232,10 @@ PlayState _settle(Story story, PlayState state) {
     if (current.cursor.last.index >= list.length) {
       final scene = _scene(story, current.cursor.sceneId);
       if (scene.isEnding) {
-        return current.copyWith(status: PlayStatus.ended, endingId: scene.endingId);
+        return current.copyWith(
+          status: PlayStatus.ended,
+          endingId: scene.endingId,
+        );
       }
       final next = scene.next;
       if (next == null) {
@@ -237,7 +260,9 @@ PlayState _settle(Story story, PlayState state) {
       case ShowNode(:final who, :final sprite, :final filter):
         // sprite 為 null ＝ 無立繪角色登場，台上沒有東西要加。
         if (sprite != null) {
-          current = current.copyWith(stage: _showSprite(current.stage, who, sprite, filter));
+          current = current.copyWith(
+            stage: _showSprite(current.stage, who, sprite, filter),
+          );
         }
       case HideNode():
         current = current.copyWith(stage: const <SpriteOnStage>[]);
@@ -246,9 +271,13 @@ PlayState _settle(Story story, PlayState state) {
       case SfxNode():
         break; // 音效由 presentation 在進入節點時播；引擎只負責不停頓地走過去
       case AddNode(:final vars):
-        current = current.copyWith(vars: _applyVars(story, current.vars, add: vars));
+        current = current.copyWith(
+          vars: _applyVars(story, current.vars, add: vars),
+        );
       case SetNode(:final vars):
-        current = current.copyWith(vars: _applyVars(story, current.vars, set: vars));
+        current = current.copyWith(
+          vars: _applyVars(story, current.vars, set: vars),
+        );
       case IfNode(:final cond, :final then, :final orElse):
         final taken = cond.evaluate(current.vars);
         final branch = taken ? 'then' : 'else';
@@ -288,7 +317,11 @@ List<SpriteOnStage> _showSprite(
 /// （08/S04）之後 vibia 還會講帶 sprite 的台詞，濾鏡若被洗掉，那整段回憶就失去
 /// 視覺區隔；而「移除再 append」會讓雙人同台的兩人在對話中途左右對調
 /// （07/S02、07/S03 各一次）。
-List<SpriteOnStage> _switchExpression(List<SpriteOnStage> stage, String who, String sprite) {
+List<SpriteOnStage> _switchExpression(
+  List<SpriteOnStage> stage,
+  String who,
+  String sprite,
+) {
   final next = <SpriteOnStage>[...stage];
   final at = next.indexWhere((s) => s.who == who);
   if (at < 0) {
