@@ -15,7 +15,7 @@
 - **Flutter 版本**：`vn/.fvmrc` 必須是 `{ "flutter": "3.38.5" }`，與 `frontend/` 一致。一律用 `fvm flutter` / `fvm dart` 執行指令。
 - **每個 task 結束前**必須跑 `cd vn && fvm flutter analyze --fatal-infos`，零問題才算完成。
 - **`lib/src/visual_novel/domain/` 零 Flutter 依賴**：只可 import `dart:*`。不得 import `package:flutter/*`。這條是搬進 `frontend/` 的前提。
-- **跨層引用只能經 `providers.dart`**：`presentation/` 不得直接 import `data/` 的實作類別。
+- **跨層引用只能經 `providers.dart`**：`presentation/` 底下的**每一個**檔案都只准 import `package:lorescape_vn/src/visual_novel/providers.dart`，不得直接 import `data/` 或 `domain/` 下的任何檔案。**沒有例外**——包含被 `providers.dart` re-export 的 `play_controller.dart`：它用具名 `show` 就能拿到需要的型別與函式，循環 export 在 Dart 是合法的。規則愈簡單愈守得住，而且這條由 `test/architecture/import_rules_test.dart` 機器守門。
 - **lint**：`vn/analysis_options.yaml` 直接複製 `frontend/analysis_options.yaml`（含 `always_declare_return_types`、`prefer_final_locals`、`always_use_package_imports`、`prefer_single_quotes`、`avoid_print`）。
 - **劇本逐字複製**：`story.json` 的內容一個字都不改。任何「修劇本」的念頭都要回報而不是動手。
 - **文件用繁體中文**（技術名詞除外）。
@@ -3710,6 +3710,10 @@ void main() {
       expect(layout.choiceInset, 400 * 0.10);
       expect(layout.bodyFontSize, 400 / 20);
       expect(layout.spriteOffset, 400 * 0.18);
+      expect(layout.spriteBottom, 800 * 0.12, reason: '立繪底邊置於 0.88H ＝ 距底 0.12H');
+      expect(layout.choiceTop, 800 * 0.45);
+      expect(layout.choiceBottom, 800 * 0.25);
+      expect(layout.safeInset, 800 * 0.08);
     });
   });
 
@@ -3803,6 +3807,10 @@ final class VnLayout {
   double get choiceInset => w * 0.10;
   double get safeInset => h * 0.08;
   double get bodyFontSize => w / 20;
+
+  /// 選項區的上下界（規範 §2：0.45H–0.75H）。距底 0.25H。
+  double get choiceTop => h * 0.45;
+  double get choiceBottom => h * 0.25;
 }
 ```
 
@@ -3810,15 +3818,23 @@ final class VnLayout {
 
 ```dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/play_state.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/save_data.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/story.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/story_player.dart' as player;
-import 'package:lorescape_vn/src/visual_novel/providers.dart' show saveStoreProvider, storyProvider;
+// 這個檔被 providers.dart re-export，形成循環——Dart 允許，但兩邊都要用具名
+// `show`，否則會互相看見對方的 export，名稱衝突時的錯誤訊息很難讀。
+// presentation/ 一律只 import providers.dart，這個檔也不例外。
+import 'package:lorescape_vn/src/visual_novel/providers.dart'
+    show
+        PlayState,
+        PlayStatus,
+        SaveData,
+        Story,
+        advance,
+        choose,
+        currentNode,
+        initState,
+        resume,
+        saveStoreProvider,
+        storyProvider;
 
-/// ⚠️ 這個檔被 providers.dart re-export，因此**只能**具名 import 它需要的兩個
-/// provider，不可整份 import——整份 import 會讓兩個檔互相看見對方的 export，
-/// 名稱衝突時的錯誤訊息會很難讀。
 class PlayController extends FamilyNotifier<PlayState, String> {
   @override
   PlayState build(String storyId) {
@@ -3829,8 +3845,8 @@ class PlayController extends FamilyNotifier<PlayState, String> {
     // resume 回 null ＝ 存檔對現在的劇本已失效（劇本改版後路徑位移），退回開頭
     // 重來，而不是崩在玩家臉上。
     final initial = saved == null
-        ? player.initState(story)
-        : (player.resume(story, saved.toPlayState()) ?? player.initState(story));
+        ? initState(story)
+        : (resume(story, saved.toPlayState()) ?? initState(story));
     _persist(storyId, initial);
     return initial;
   }
@@ -3839,12 +3855,12 @@ class PlayController extends FamilyNotifier<PlayState, String> {
 
   void advance() {
     if (state.status != PlayStatus.playing) return;
-    _apply(player.advance(_story, state));
+    _apply(advance(_story, state));
   }
 
   void choose(int visibleIndex) {
     if (state.status != PlayStatus.choosing) return;
-    _apply(player.choose(_story, state, visibleIndex));
+    _apply(choose(_story, state, visibleIndex));
   }
 
   void restart() {
@@ -4090,8 +4106,8 @@ class ChoiceOverlay extends StatelessWidget {
     return Positioned(
       left: layout.choiceInset,
       right: layout.choiceInset,
-      top: layout.h * 0.45,
-      bottom: layout.h * 0.25,
+      top: layout.choiceTop,
+      bottom: layout.choiceBottom,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
@@ -4177,8 +4193,11 @@ class _Stage extends ConsumerWidget {
 
     final node = currentNode(story, state);
     final scene = story.scenes[state.cursor.sceneId]!;
+    // CG 是會停頓的節點型別之一，所以 node 是 CgNode 時就不可能同時是旁白或
+    // 對白——對話框本來就不會出現，`CgNode.hideDialogue` 對現在的渲染沒有可
+    // 觀察的效果。等哪天要做「CG 蓋住上一句台詞」才需要它，屆時要有『上一句』
+    // 這個狀態，不是延伸現在的邏輯就能做到。
     final cg = node is CgNode ? repository.cgPath(story, node.id) : null;
-    final hideDialogue = node is CgNode && node.hideDialogue;
 
     return GestureDetector(
       key: PlayPage.advanceAreaKey,
@@ -4196,14 +4215,14 @@ class _Stage extends ConsumerWidget {
               layout: layout,
               pathOf: (sprite) => repository.spritePath(story, sprite.who, sprite.sprite),
             ),
-          if (!hideDialogue && node is NarrationNode)
+          if (node is NarrationNode)
             DialogueBox(
               text: node.text,
               layout: layout,
               fontScale: fontScale,
               graffiti: node.style == 'graffiti',
             ),
-          if (!hideDialogue && node is DialogueNode)
+          if (node is DialogueNode)
             DialogueBox(
               text: node.text,
               layout: layout,
