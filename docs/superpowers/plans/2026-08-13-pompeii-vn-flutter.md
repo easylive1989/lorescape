@@ -3893,7 +3893,12 @@ class PlayController extends FamilyNotifier<PlayState, String> {
   void restart() {
     final store = ref.read(saveStoreProvider);
     store.clearSave(arg);
-    state = initState(_story);
+    // backlog 與 lastEntry 是 controller 的欄位，不會因為 state 換了就重置。
+    // 少了這兩行，重新開始之後**立刻**打開回顧會看到上一輪的台詞——新的第一
+    // 句要等玩家點一次 advance 才會補進去。
+    _backlog.clear();
+    _lastEntry = null;
+    _apply(initState(_story));
   }
 
   void _apply(PlayState next) {
@@ -4796,6 +4801,44 @@ Task 10 的截圖顯示，走到 `choice` 節點時畫面只剩背景與兩顆�
       await tester.pump(const Duration(seconds: 1));
       expect(find.text('天還沒全亮，海面是鉛的顏色。'), findsOneWidget);
       expect(find.text('尼基亞斯'), findsWidgets);
+    });
+
+    testWidgets('已讀跳過碰到選項就停', (tester) async {
+      // 這是 skipRead 的第二條終止路徑（第一條是未讀節點）。把 S01 的所有節點
+      // 鍵都標成已讀，跳過就只可能停在選項上。
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'vn.readNodes': <String>[for (var i = 0; i < 40; i++) 'S01#$i'],
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: <Override>[sharedPreferencesProvider.overrideWithValue(prefs)],
+          child: const MaterialApp(home: PlayPage(storyId: 'pompeii_01_harbour_stranger')),
+        ),
+      );
+      await _pumpTyping(tester);
+
+      await tester.tap(find.byKey(PlayPage.skipButtonKey));
+      await _pumpTyping(tester);
+      expect(find.byKey(const ValueKey<String>('choice-0')), findsOneWidget,
+          reason: '全部已讀時，跳過應該一路停在選項上');
+    });
+
+    testWidgets('重新開始要清掉上一輪的回顧', (tester) async {
+      await pumpPlayPage(tester, 'pompeii_01_harbour_stranger');
+      for (var i = 0; i < 4; i++) {
+        await tester.tap(find.byKey(PlayPage.advanceAreaKey));
+        await _pumpTyping(tester);
+      }
+      final controller = tester
+          .element(find.byKey(PlayPage.advanceAreaKey))
+          .read(playControllerProvider('pompeii_01_harbour_stranger').notifier);
+      expect(controller.backlog.length, greaterThan(1));
+
+      controller.restart();
+      await _pumpTyping(tester);
+      expect(controller.backlog.length, 1,
+          reason: '重新開始後只該有新的第一句，不得殘留上一輪的台詞');
     });
 
     testWidgets('已讀跳過碰到未讀節點就停', (tester) async {
