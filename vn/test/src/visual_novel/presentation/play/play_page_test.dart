@@ -135,4 +135,46 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   });
+
+  group('backlog 與已讀跳過', () {
+    testWidgets('回顧列出已讀文字與說話者', (tester) async {
+      await pumpPlayPage(tester, 'pompeii_01_harbour_stranger');
+      // 每次點擊都要等打字動畫跑完才算真的推進一段，否則同一段文字還沒補完，
+      // 這次點擊只是把它補完、不會前進——沿用 pumpPlayPage 內部同一顆
+      // `_pumpTyping`，跟其餘測試「點擊→等打完」同一套節奏。
+      //
+      // 只推進 6 段，剛好停在第一句對白（尼基亞斯：札布達。）：BacklogSheet
+      // 的 ListView 是懶渲染，entries 一多，最舊的那句（天還沒全亮）會被捲出
+      // 版面外、找不到；6 段連同開場那句都還在同一屏內。
+      for (var i = 0; i < 6; i++) {
+        await tester.tap(find.byKey(PlayPage.advanceAreaKey));
+        await _pumpTyping(tester);
+      }
+      await tester.tap(find.byKey(PlayPage.backlogButtonKey));
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('天還沒全亮，海面是鉛的顏色。'), findsOneWidget);
+      expect(find.text('尼基亞斯'), findsWidgets);
+    });
+
+    testWidgets('已讀跳過碰到未讀節點就停', (tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        // 只把前三個節點標成已讀
+        'vn.readNodes': <String>['S01#0', 'S01#1', 'S01#2'],
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: <Override>[sharedPreferencesProvider.overrideWithValue(prefs)],
+          child: const MaterialApp(home: PlayPage(storyId: 'pompeii_01_harbour_stranger')),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 5));
+
+      await tester.tap(find.byKey(PlayPage.skipButtonKey));
+      await _pumpTyping(tester);
+      // 第 4 段（索引 3）未讀，應停在這裡
+      expect(find.text('我要裝滿它。裝魚醬。'), findsOneWidget);
+    });
+  });
 }

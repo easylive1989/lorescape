@@ -19,7 +19,7 @@ export 'package:lorescape_vn/src/visual_novel/domain/save_data.dart';
 export 'package:lorescape_vn/src/visual_novel/domain/story.dart';
 export 'package:lorescape_vn/src/visual_novel/domain/story_player.dart';
 export 'package:lorescape_vn/src/visual_novel/presentation/play/play_controller.dart'
-    show PlayController, playControllerProvider;
+    show BacklogEntry, PlayController, playControllerProvider;
 
 /// main() 於啟動時以 overrideWithValue 覆寫。
 final Provider<SharedPreferences> sharedPreferencesProvider =

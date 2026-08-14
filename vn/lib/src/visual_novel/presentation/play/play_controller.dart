@@ -11,17 +11,36 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // 函式。其餘沒有撞名的維持裸名 show。
 import 'package:lorescape_vn/src/visual_novel/providers.dart'
     show
+        DialogueNode,
+        NarrationNode,
         PlayState,
         PlayStatus,
         SaveData,
         Story,
+        currentNode,
         initState,
         resume,
         saveStoreProvider,
         storyProvider;
 import 'package:lorescape_vn/src/visual_novel/providers.dart' as engine show advance, choose;
 
+/// 回顧列表裡的一筆——旁白沒有說話者，`speakerName` 為 null。
+final class BacklogEntry {
+  const BacklogEntry({required this.speakerName, required this.text});
+  final String? speakerName;
+  final String text;
+}
+
 class PlayController extends FamilyNotifier<PlayState, String> {
+  final List<BacklogEntry> _backlog = <BacklogEntry>[];
+
+  List<BacklogEntry> get backlog => List<BacklogEntry>.unmodifiable(_backlog);
+
+  /// 選項畫面要顯示的上一句。`choice` 節點本身沒有文字，玩家在沒有上下文的
+  /// 情況下做選擇很難受——把剛讀完的那句留在對話框裡。
+  BacklogEntry? _lastEntry;
+  BacklogEntry? get lastEntry => _lastEntry;
+
   @override
   PlayState build(String storyId) {
     final story = ref.watch(storyProvider(storyId)).requireValue;
@@ -33,6 +52,7 @@ class PlayController extends FamilyNotifier<PlayState, String> {
     final initial = saved == null
         ? initState(story)
         : (resume(story, saved.toPlayState()) ?? initState(story));
+    _record(initial);
     _persist(storyId, initial);
     return initial;
   }
@@ -55,8 +75,42 @@ class PlayController extends FamilyNotifier<PlayState, String> {
     state = initState(_story);
   }
 
+  /// 只跳已讀節點。未讀、選項、結局都要停——這是規範 §5.3 的硬要求。
+  void skipRead() {
+    final read = ref.read(saveStoreProvider).readNodes();
+    var guard = 2000; // 8 篇裡最長的一場約幾百個節點，2000 步保底防呆迴圈失控。
+    var next = state;
+    while (guard-- > 0) {
+      if (next.status != PlayStatus.playing) break;
+      if (!read.contains(next.readKey)) break;
+      final candidate = engine.advance(_story, next);
+      if (candidate.status != PlayStatus.playing || !read.contains(candidate.readKey)) {
+        next = candidate;
+        break;
+      }
+      next = candidate;
+    }
+    _apply(next);
+  }
+
+  void _record(PlayState value) {
+    final node = currentNode(_story, value);
+    final entry = switch (node) {
+      NarrationNode(:final text) => BacklogEntry(speakerName: null, text: text),
+      DialogueNode(:final who, :final text) =>
+        BacklogEntry(speakerName: _story.characters[who]?.name ?? who, text: text),
+      _ => null,
+    };
+    if (entry == null) return;
+    _lastEntry = entry;
+    _backlog.add(entry);
+    // 一篇約 300 個節點，留 200 筆足夠往回捲，也不會讓記憶體無限長。
+    if (_backlog.length > 200) _backlog.removeAt(0);
+  }
+
   void _apply(PlayState next) {
     state = next;
+    _record(next);
     _persist(arg, next);
   }
 

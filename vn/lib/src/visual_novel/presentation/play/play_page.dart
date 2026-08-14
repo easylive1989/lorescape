@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lorescape_vn/src/visual_novel/presentation/play/backlog_sheet.dart';
 import 'package:lorescape_vn/src/visual_novel/presentation/play/background_layer.dart';
 import 'package:lorescape_vn/src/visual_novel/presentation/play/choice_overlay.dart';
 import 'package:lorescape_vn/src/visual_novel/presentation/play/dialogue_box.dart';
@@ -12,6 +13,8 @@ class PlayPage extends ConsumerWidget {
   const PlayPage({required this.storyId, super.key});
 
   static const ValueKey<String> advanceAreaKey = ValueKey<String>('play-advance-area');
+  static const ValueKey<String> backlogButtonKey = ValueKey<String>('play-backlog');
+  static const ValueKey<String> skipButtonKey = ValueKey<String>('play-skip');
 
   final String storyId;
 
@@ -128,12 +131,48 @@ class _StageState extends ConsumerState<_Stage> {
               onCompleted: _markTypingDone,
               msPerCharacter: msPerCharacter,
             ),
+          // choice 節點本身沒有文字：把剛讀完的那句留著，玩家才不是在空白畫面
+          // 上做選擇。已經讀完，不重新逐字。
+          if (state.status == PlayStatus.choosing && controller.lastEntry != null)
+            DialogueBox(
+              text: controller.lastEntry!.text,
+              layout: layout,
+              fontScale: fontScale,
+              speakerName: controller.lastEntry!.speakerName,
+              completed: true,
+              onCompleted: () {},
+              msPerCharacter: msPerCharacter,
+            ),
           if (state.status == PlayStatus.choosing && node is ChoiceNode)
             ChoiceOverlay(
               options: visibleOptions(node, state.vars),
               layout: layout,
               onChoose: controller.choose,
             ),
+          Positioned(
+            top: layout.safeInset,
+            right: layout.sideInset,
+            child: Row(
+              children: <Widget>[
+                IconButton(
+                  key: PlayPage.backlogButtonKey,
+                  icon: const Icon(Icons.history),
+                  color: VnColors.muted,
+                  onPressed: () => showModalBottomSheet<void>(
+                    context: context,
+                    backgroundColor: VnColors.ground.withValues(alpha: 0xF2 / 0xFF),
+                    builder: (context) => BacklogSheet(entries: controller.backlog),
+                  ),
+                ),
+                IconButton(
+                  key: PlayPage.skipButtonKey,
+                  icon: const Icon(Icons.fast_forward),
+                  color: VnColors.muted,
+                  onPressed: controller.skipRead,
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
