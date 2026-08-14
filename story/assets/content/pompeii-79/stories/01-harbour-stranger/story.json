@@ -325,12 +325,6 @@
           "text": "山很綠，一直綠到山頂，滿山都是葡萄藤，一排一排像梳過的頭髮。真是個好地方。"
         },
         {
-          "t": "add",
-          "vars": {
-            "awareness": 1
-          }
-        },
-        {
           "t": "sfx",
           "id": "pottery_drop"
         },
@@ -348,7 +342,8 @@
             {
               "text": "蹲下去幫他撿。",
               "add": {
-                "affection": 1
+                "affection": 1,
+                "awareness": 1
               },
               "then": [
                 {

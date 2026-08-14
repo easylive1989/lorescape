@@ -16,8 +16,6 @@ const String packRoot = 'assets/content/pompeii-79';
 /// 用 allowlist 而不是 `skip:`，是為了讓兩個方向都有訊號：多出新的死碼會紅，
 /// 而死碼被修好之後這裡沒刪也會紅。
 const Map<String, Set<String>> knownDeadBranches = <String, Set<String>>{
-  // awareness 有三個無條件 +1（S02/S05/S07），到 S08 必為 3，else 永不成立
-  '01-harbour-stranger': <String>{'S08#6.else.'},
   // 結局 A 的閘門要 conviction>=2，而 conviction 與 standing 在同三個選擇點互斥
   '03-the-well-fell': <String>{'E_A#9.then.'},
   // 結局 A 的閘門要 nerve>=2，nerve 只有兩個來源，兩個都選走 kinship 就上不去
