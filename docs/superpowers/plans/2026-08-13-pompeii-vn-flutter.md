@@ -1,5 +1,8 @@
 # 龐貝景點包 Flutter 視覺小說引擎 Implementation Plan
 
+> **後記（2026-08-14）**：本計畫全文的 `vn/` 最終定名為 `story/`，`package:lorescape_vn/` 為 `package:lorescape_story/`。素材改用 WebP（見最後一個 commit）。閱讀時請自行對應。
+
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 新開獨立 Flutter 專案 `vn/`，在 Flutter Web 上播放 `writer/創作/龐貝/` 已完成的 8 篇視覺小說（73 場、2,380 節點、24 結局、60 張美術），並移除舊的 `story/` React SPA。

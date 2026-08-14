@@ -1,5 +1,8 @@
 # 龐貝景點包：Flutter 視覺小說引擎
 
+> **後記（2026-08-14）**：專案目錄最終定名為 `story/`（本文件寫作時暫稱 `vn/`），Dart package 為 `lorescape_story`。素材格式最終採用 WebP（143 MB → 8 MB，alpha 無損），非本文件 §決策 5 所寫的 PNG。
+
+
 **日期**：2026-08-13
 **範圍**：新增 `vn/`（獨立 Flutter 專案，先跑 Flutter Web 驗證）；移除 `story/`（Vite + React SPA）
 **內容來源**：`writer/創作/龐貝/`（不進版控的 Obsidian vault，8 篇 `story.json` + 60 張美術）
