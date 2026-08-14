@@ -4806,6 +4806,11 @@ Task 10 的截圖顯示，走到 `choice` 節點時畫面只剩背景與兩顆�
     testWidgets('已讀跳過碰到選項就停', (tester) async {
       // 這是 skipRead 的第二條終止路徑（第一條是未讀節點）。把 S01 的所有節點
       // 鍵都標成已讀，跳過就只可能停在選項上。
+      // 這條會真的走到 ChoiceOverlay，預設的 800×600 桌面測試視窗會讓選項
+      // Column 撐爆丟 RenderFlex overflow——跟 pumpPlayPage 一樣鎖直式。
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
       SharedPreferences.setMockInitialValues(<String, Object>{
         'vn.readNodes': <String>[for (var i = 0; i < 40; i++) 'S01#$i'],
       });
@@ -4830,9 +4835,11 @@ Task 10 的截圖顯示，走到 `choice` 節點時畫面只剩背景與兩顆�
         await tester.tap(find.byKey(PlayPage.advanceAreaKey));
         await _pumpTyping(tester);
       }
-      final controller = tester
-          .element(find.byKey(PlayPage.advanceAreaKey))
-          .read(playControllerProvider('pompeii_01_harbour_stranger').notifier);
+      // Element 沒有內建 `.read`——那是 provider 套件的擴充方法。Riverpod 要
+      // 從 ProviderScope 取 container。
+      final controller = ProviderScope.containerOf(
+        tester.element(find.byKey(PlayPage.advanceAreaKey)),
+      ).read(playControllerProvider('pompeii_01_harbour_stranger').notifier);
       expect(controller.backlog.length, greaterThan(1));
 
       controller.restart();
