@@ -72,7 +72,12 @@ class PlayController extends FamilyNotifier<PlayState, String> {
   void restart() {
     final store = ref.read(saveStoreProvider);
     store.clearSave(arg);
-    state = initState(_story);
+    // 重玩是新的一輪，上一輪殘留的回顧會誤導玩家（例如剛看完結局按重新開
+    // 始，回顧卻還顯示結局台詞）。清掉之後改走 _apply()，讓新的第一句立刻
+    // 記進 backlog，跟其餘推進路徑一致，不用等玩家點第一下才補上。
+    _backlog.clear();
+    _lastEntry = null;
+    _apply(initState(_story));
   }
 
   /// 只跳已讀節點。未讀、選項、結局都要停——這是規範 §5.3 的硬要求。

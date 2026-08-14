@@ -156,6 +156,53 @@ void main() {
       expect(find.text('尼基亞斯'), findsWidgets);
     });
 
+    testWidgets('已讀跳過碰到選項就停', (tester) async {
+      // 這是 skipRead 的第二條終止路徑（第一條是未讀節點）。把 S01 的所有節點
+      // 鍵都標成已讀，跳過就只可能停在選項上。
+      //
+      // 這條會真的走到 ChoiceOverlay，跟 pumpPlayPage 開頭同理要把測試視窗換
+      // 成手機直式尺寸，否則桌面型視窗的比例會讓選項 Column 撐爆丟
+      // RenderFlex overflow。
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'vn.readNodes': <String>[for (var i = 0; i < 40; i++) 'S01#$i'],
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: <Override>[sharedPreferencesProvider.overrideWithValue(prefs)],
+          child: const MaterialApp(home: PlayPage(storyId: 'pompeii_01_harbour_stranger')),
+        ),
+      );
+      await _pumpTyping(tester);
+
+      await tester.tap(find.byKey(PlayPage.skipButtonKey));
+      await _pumpTyping(tester);
+      expect(find.byKey(const ValueKey<String>('choice-0')), findsOneWidget,
+          reason: '全部已讀時，跳過應該一路停在選項上');
+    });
+
+    testWidgets('重新開始要清掉上一輪的回顧', (tester) async {
+      await pumpPlayPage(tester, 'pompeii_01_harbour_stranger');
+      for (var i = 0; i < 4; i++) {
+        await tester.tap(find.byKey(PlayPage.advanceAreaKey));
+        await _pumpTyping(tester);
+      }
+      // BuildContext 沒有內建 `.read`（那是 `provider` 套件的擴充方法，不是
+      // riverpod 的）；riverpod 要透過 ProviderScope.containerOf 拿到
+      // ProviderContainer 才能讀 provider。
+      final controller = ProviderScope.containerOf(tester.element(find.byKey(PlayPage.advanceAreaKey)))
+          .read(playControllerProvider('pompeii_01_harbour_stranger').notifier);
+      expect(controller.backlog.length, greaterThan(1));
+
+      controller.restart();
+      await _pumpTyping(tester);
+      expect(controller.backlog.length, 1,
+          reason: '重新開始後只該有新的第一句，不得殘留上一輪的台詞');
+    });
+
     testWidgets('已讀跳過碰到未讀節點就停', (tester) async {
       SharedPreferences.setMockInitialValues(<String, Object>{
         // 只把前三個節點標成已讀
