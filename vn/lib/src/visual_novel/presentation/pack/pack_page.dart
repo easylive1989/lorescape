@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lorescape_vn/src/visual_novel/presentation/play/layout.dart';
 import 'package:lorescape_vn/src/visual_novel/providers.dart';
 
 /// 景點包首頁：列出這一包的所有故事，顯示標題、副標、預估分鐘數，
@@ -16,7 +17,7 @@ class PackPage extends ConsumerWidget {
     final Set<String> seen = ref.watch(saveStoreProvider).endingsSeen();
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0E0D0C),
+      backgroundColor: VnColors.backdrop,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         actions: <Widget>[
@@ -43,7 +44,7 @@ class PackPage extends ConsumerWidget {
             for (final PackEntry entry in pack.stories)
               Card(
                 key: storyCardKey(entry.id),
-                color: const Color(0xFF1C1A19),
+                color: VnColors.ground,
                 child: ListTile(
                   onTap: () => context.go('/play/${entry.id}'),
                   title: Text(entry.title),

@@ -5,8 +5,7 @@
   "targets": {
     "instant-explore-7b442": {
       "hosting": {
-        "landing": ["instant-explore-7b442"],
-        "story": ["story-lorescape"]
+        "landing": ["instant-explore-7b442"]
       }
     }
   }
