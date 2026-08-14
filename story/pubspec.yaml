@@ -1,0 +1,35 @@
+name: lorescape_story
+description: "A new Flutter project."
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ^3.10.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.6.1
+  go_router: ^17.0.0
+  shared_preferences: ^2.3.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  characters: ^1.4.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/content/pompeii-79/
+    - assets/content/pompeii-79/assets/backgrounds/
+    - assets/content/pompeii-79/assets/sprites/
+    - assets/content/pompeii-79/stories/01-harbour-stranger/
+    - assets/content/pompeii-79/stories/02-the-oven-went-out/
+    - assets/content/pompeii-79/stories/03-the-well-fell/
+    - assets/content/pompeii-79/stories/04-the-tree-in-the-sky/
+    - assets/content/pompeii-79/stories/05-the-tablets/
+    - assets/content/pompeii-79/stories/06-the-locked-door/
+    - assets/content/pompeii-79/stories/07-cannot-land/
+    - assets/content/pompeii-79/stories/08-the-new-house/

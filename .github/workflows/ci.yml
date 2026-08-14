@@ -115,21 +115,3 @@ jobs:
 
       - name: Run tests
         run: uv run python -m pytest
-
-  # Story 小站（沉浸式故事播放器）測試
-  story:
-    name: Story site tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: "npm"
-          cache-dependency-path: story/package-lock.json
-      - run: npm ci --no-audit --no-fund
-        working-directory: story
-      - run: npm test
-        working-directory: story
-      - run: npm run build
-        working-directory: story

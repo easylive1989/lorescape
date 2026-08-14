@@ -1,12 +1,15 @@
 # 龐貝景點包：Flutter 視覺小說引擎
 
+> **後記（2026-08-14）**：專案目錄最終定名為 `story/`（本文件寫作時暫稱 `vn/`），Dart package 為 `lorescape_story`。素材格式最終採用 WebP（143 MB → 8 MB，alpha 無損），非本文件 §決策 5 所寫的 PNG。
+
+
 **日期**：2026-08-13
 **範圍**：新增 `vn/`（獨立 Flutter 專案，先跑 Flutter Web 驗證）；移除 `story/`（Vite + React SPA）
-**內容來源**：`writer/創作/龐貝/`（不進版控的 Obsidian vault，8 篇 `story.json` + 57 張美術）
+**內容來源**：`writer/創作/龐貝/`（不進版控的 Obsidian vault，8 篇 `story.json` + 60 張美術）
 
 ## 問題
 
-`writer/創作/龐貝/` 已經備齊一整個景點包的內容與美術：8 篇群像短篇、73 場、2,380 節點、34,174 字、24 個結局、57 張直式美術，八篇 `story_tool.py check` 全部通過零警告。但**沒有任何東西能播放它**。
+`writer/創作/龐貝/` 已經備齊一整個景點包的內容與美術：8 篇群像短篇、73 場、2,380 節點、34,174 字、24 個結局、60 張直式美術，八篇 `story_tool.py check` 全部通過零警告。但**沒有任何東西能播放它**。
 
 repo 裡現有的播放器是 `story/`（React SPA），它讀的是另一套 `script.json` 格式，能力落後新內容一個世代：
 
@@ -74,7 +77,7 @@ repo 裡現有的播放器是 `story/`（React SPA），它讀的是另一套 `s
 
 ### 資產
 
-- **57 張唯一 PNG**，散在 8 個故事資料夾共 116 份（260 MB）。**無同名不同內容的衝突**，可安全攤平成單一共用池。
+- **60 個唯一檔名**（其中 57 個內容互異——有 3 對是同內容不同檔名），散在 8 個故事資料夾共 116 份參照（260 MB）。**無同名不同內容的衝突**，可安全依檔名攤平成單一共用池。
 - 背景 15 張（含 3 張災難變體）+ CG 1 張（`cg_column_rising`，01/04/07 共用）。
 - 立繪 44 張（16 角色的基底與表情差分）。
 - **立繪未去背**（`hasAlpha: no`，平灰底 1024×1536）。**未對齊**（表情差分與基底有尺度／位置飄移）。
@@ -258,7 +261,7 @@ python3 vn/tool/import_pack.py [--webp] [--no-cache]
 流程：
 
 1. **複製劇本**：`writer/創作/龐貝/stories/<n>_<中文>/story.json` → `vn/assets/content/pompeii-79/stories/<order>-<slug>/story.json`，**逐字複製**。slug 取自 `meta.id` 去掉 `pompeii_NN_` 前綴。
-2. **去重資產**：116 份 → 57 張，依 basename 攤平成 `assets/backgrounds/` 與 `assets/sprites/`。`cg_*.png` 歸 `backgrounds/`（來源就放那裡）。**衝突偵測**：同名不同 hash 即中止並報錯。
+2. **去重資產**：116 份參照 → 60 個檔案，依 basename 攤平成 `assets/backgrounds/` 與 `assets/sprites/`。`cg_*.png` 歸 `backgrounds/`（來源就放那裡）。**衝突偵測**：同名不同 hash 即中止並報錯。
 3. **立繪去背**：平灰底 → alpha。四邊界種子的容差 flood fill（8 連通）→ 邊緣 1px 羽化。只處理 `sprites/`，背景不動。
 4. **表情對齊**：同角色的差分對基底做**正規化互相關的縮放 + 平移搜尋**（縮放 0.92–1.08、平移 ±64px，先在 1/4 解析度粗搜再細修），輸出對齊後的差分。
    > 規範 §4.2 指定用「兩眼中點 + 眼距」對齊，但環境沒有臉部偵測可用。差分本來就是 image-to-image 從基底生成的，整體相關性夠高，**全域對齊在此等價且更穩**。這是對規範的刻意偏離，記在此處以免日後被當成實作疏漏。

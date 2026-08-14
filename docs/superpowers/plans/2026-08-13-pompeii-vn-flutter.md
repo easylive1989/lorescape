@@ -1,8 +1,11 @@
 # 龐貝景點包 Flutter 視覺小說引擎 Implementation Plan
 
+> **後記（2026-08-14）**：本計畫全文的 `vn/` 最終定名為 `story/`，`package:lorescape_vn/` 為 `package:lorescape_story/`。素材改用 WebP（見最後一個 commit）。閱讀時請自行對應。
+
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 新開獨立 Flutter 專案 `vn/`，在 Flutter Web 上播放 `writer/創作/龐貝/` 已完成的 8 篇視覺小說（73 場、2,380 節點、24 結局、57 張美術），並移除舊的 `story/` React SPA。
+**Goal:** 新開獨立 Flutter 專案 `vn/`，在 Flutter Web 上播放 `writer/創作/龐貝/` 已完成的 8 篇視覺小說（73 場、2,380 節點、24 結局、60 張美術），並移除舊的 `story/` React SPA。
 
 **Architecture:** 純 Dart 執行器（節點指標 ＝ 呼叫堆疊的投影）＋ Flutter 直式版面。所有程式碼收在 `lib/src/visual_novel/`，`domain/` 零 Flutter 依賴，`providers.dart` 是唯一對外介面——這一包日後整包搬進 `frontend/lib/features/visual_novel/`。素材由 `tool/import_pack.py` 從 writer vault 匯入（去背、對齊、去重）。
 
@@ -15,7 +18,7 @@
 - **Flutter 版本**：`vn/.fvmrc` 必須是 `{ "flutter": "3.38.5" }`，與 `frontend/` 一致。一律用 `fvm flutter` / `fvm dart` 執行指令。
 - **每個 task 結束前**必須跑 `cd vn && fvm flutter analyze --fatal-infos`，零問題才算完成。
 - **`lib/src/visual_novel/domain/` 零 Flutter 依賴**：只可 import `dart:*`。不得 import `package:flutter/*`。這條是搬進 `frontend/` 的前提。
-- **跨層引用只能經 `providers.dart`**：`presentation/` 不得直接 import `data/` 的實作類別。
+- **跨層引用只能經 `providers.dart`**：`presentation/` 底下的**每一個**檔案都只准 import `package:lorescape_vn/src/visual_novel/providers.dart`，不得直接 import `data/` 或 `domain/` 下的任何檔案。**沒有例外**——包含被 `providers.dart` re-export 的 `play_controller.dart`：它用具名 `show` 就能拿到需要的型別與函式，循環 export 在 Dart 是合法的。規則愈簡單愈守得住，而且這條由 `test/architecture/import_rules_test.dart` 機器守門。
 - **lint**：`vn/analysis_options.yaml` 直接複製 `frontend/analysis_options.yaml`（含 `always_declare_return_types`、`prefer_final_locals`、`always_use_package_imports`、`prefer_single_quotes`、`avoid_print`）。
 - **劇本逐字複製**：`story.json` 的內容一個字都不改。任何「修劇本」的念頭都要回報而不是動手。
 - **文件用繁體中文**（技術名詞除外）。
@@ -24,7 +27,7 @@
 
 ## 版控決定：素材不進 git
 
-去重後仍有 **57 張 PNG、約 137 MB**。這是**從 writer vault 可完整重生**的二進位檔，進 git 會永久撐大 repo。因此：
+去重後仍有 **60 張 PNG、約 133 MB**。這是**從 writer vault 可完整重生**的二進位檔，進 git 會永久撐大 repo。因此：
 
 - `vn/.gitignore` 排除 `assets/content/**/assets/**`（圖檔）
 - **進版控**：`story.json` ×8、`pack.json`、`tool/import_pack.py`（合計約 330 KB 純文字）
@@ -99,26 +102,16 @@ dev_dependencies:
   flutter_lints: ^5.0.0
 ```
 
-並在 `flutter:` 區段宣告素材目錄（Task 2 會填入內容，先宣告不影響 build）：
+`flutter:` 區段**這個 task 先不要宣告 assets**：
 
 ```yaml
 flutter:
   uses-material-design: true
-  assets:
-    - assets/content/pompeii-79/
-    - assets/content/pompeii-79/assets/backgrounds/
-    - assets/content/pompeii-79/assets/sprites/
-    - assets/content/pompeii-79/stories/01-harbour-stranger/
-    - assets/content/pompeii-79/stories/02-the-oven-went-out/
-    - assets/content/pompeii-79/stories/03-the-well-fell/
-    - assets/content/pompeii-79/stories/04-the-tree-in-the-sky/
-    - assets/content/pompeii-79/stories/05-the-tablets/
-    - assets/content/pompeii-79/stories/06-the-locked-door/
-    - assets/content/pompeii-79/stories/07-cannot-land/
-    - assets/content/pompeii-79/stories/08-the-new-house/
 ```
 
-> Flutter 的 assets 宣告**不遞迴**，每個目錄都要單獨列一行。
+> **為什麼不先宣告**：Flutter 對不存在的 asset 目錄會在 build／test 時報
+> `No file or variants found for asset`，而素材要到 Task 2 才產生。
+> 宣告放在 Task 2 Step 5，那時目錄才真的存在。
 
 - [ ] **Step 3: 複製 lint 設定與寫 .gitignore**
 
@@ -154,7 +147,16 @@ class VnApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: '龐貝 79',
-      theme: ThemeData(brightness: Brightness.dark, useMaterial3: true),
+      // 不給 seed 的話 Material 3 會發預設的紫，跟龐貝壁畫色調直接打架，
+      // 而且會一路蔓延到首頁、設定、結局收藏的每一個 Material 元件。
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: VnColors.ochre,
+          brightness: Brightness.dark,
+        ),
+        scaffoldBackgroundColor: VnColors.backdrop,
+      ),
       home: const Scaffold(body: Center(child: Text('龐貝 79'))),
     );
   }
@@ -199,6 +201,7 @@ git commit -m "feat(vn): Flutter 專案骨架，鎖 3.38.5 對齊 frontend"
 
 **Files:**
 - Create: `vn/tool/import_pack.py`
+- Modify: `vn/pubspec.yaml`（Step 5 補 assets 宣告）
 - Test: `vn/tool/test_import_pack.py`
 
 **Interfaces:**
@@ -235,7 +238,7 @@ def test_import_produces_eight_stories_and_dedup_assets():
     pack = json.loads((OUT / 'pack.json').read_text(encoding='utf-8'))
     assert len(pack['stories']) == 8
     assert [s['order'] for s in pack['stories']] == list(range(1, 9))
-    # 116 份重複參照去重成 57 張唯一檔
+    # 116 份重複參照，依檔名去重成 60 個檔案（其中 57 個內容互異）
     bgs = list((OUT / 'assets/backgrounds').glob('*.png'))
     sprites = list((OUT / 'assets/sprites').glob('*.png'))
     assert len(bgs) == 16, len(bgs)      # 15 背景 + cg_column_rising
@@ -377,21 +380,42 @@ if __name__ == '__main__':
 Run: `cd /Users/paulwu/Documents/PLRepo/lorescape && python3 -m pytest vn/tool/test_import_pack.py -v`
 Expected: 4 PASS
 
-- [ ] **Step 5: 確認 Flutter 讀得到素材**
+- [ ] **Step 5: 宣告 assets 並確認 Flutter 讀得到**
+
+素材目錄現在才真的存在，這時候才把 `vn/pubspec.yaml` 的 `flutter:` 區段補成：
+
+```yaml
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/content/pompeii-79/
+    - assets/content/pompeii-79/assets/backgrounds/
+    - assets/content/pompeii-79/assets/sprites/
+    - assets/content/pompeii-79/stories/01-harbour-stranger/
+    - assets/content/pompeii-79/stories/02-the-oven-went-out/
+    - assets/content/pompeii-79/stories/03-the-well-fell/
+    - assets/content/pompeii-79/stories/04-the-tree-in-the-sky/
+    - assets/content/pompeii-79/stories/05-the-tablets/
+    - assets/content/pompeii-79/stories/06-the-locked-door/
+    - assets/content/pompeii-79/stories/07-cannot-land/
+    - assets/content/pompeii-79/stories/08-the-new-house/
+```
+
+> Flutter 的 assets 宣告**不遞迴**，每個目錄都要單獨列一行。
 
 ```bash
-cd vn && fvm flutter pub get && fvm flutter analyze --fatal-infos
+cd vn && fvm flutter pub get && fvm flutter test && fvm flutter analyze --fatal-infos
 du -sh assets/content/pompeii-79
 git status --short vn/assets | head
 ```
 
-Expected: `du` 約 137 MB；`git status` **不應列出任何 .png**（.gitignore 生效）。
+Expected: 測試 PASS；`du` 約 133 MB；`git status` **不應列出任何 .png**（.gitignore 生效）。
 
 - [ ] **Step 6: Commit**
 
 ```bash
 git add vn/tool/ vn/assets/content/pompeii-79/pack.json vn/assets/content/pompeii-79/stories/
-git commit -m "feat(vn): 匯入腳本與 8 篇劇本，素材去重 116→57 張"
+git commit -m "feat(vn): 匯入腳本與 8 篇劇本，素材去重 116→60 張"
 ```
 
 ---
@@ -410,7 +434,7 @@ git commit -m "feat(vn): 匯入腳本與 8 篇劇本，素材去重 116→57 張
 sealed class StoryNode
 final class NarrationNode extends StoryNode { final String text; final String? style; }
 final class DialogueNode  extends StoryNode { final String who, text; final String? sprite; }
-final class ShowNode      extends StoryNode { final String who, sprite; final String? filter; }
+final class ShowNode      extends StoryNode { final String who; final String? sprite, filter; }
 final class HideNode      extends StoryNode
 final class SfxNode       extends StoryNode { final String id; }
 final class BgmNode       extends StoryNode { final String? id; }
@@ -594,9 +618,13 @@ final class DialogueNode extends StoryNode {
 }
 
 final class ShowNode extends StoryNode {
-  const ShowNode({required this.who, required this.sprite, this.filter});
+  const ShowNode({required this.who, this.sprite, this.filter});
   final String who;
-  final String sprite;
+
+  /// null ＝ 無立繪角色登場（`characters[who].sprites == null` 的路人）。
+  /// 真實資料有 4 處：03/S01 婦人、06/S04 男人、08/S02 陶匠、08/S04 挖掘者。
+  /// 這是敘事標記，沒有圖要畫——執行器把它當 stage no-op。
+  final String? sprite;
   final String? filter;
 }
 
@@ -857,7 +885,12 @@ Map<String, Set<String>> _missingAssets(List<dynamic>? json) {
   final result = <String, Set<String>>{};
   for (final entry in json ?? const <dynamic>[]) {
     final map = entry as Map<String, dynamic>;
-    final ids = (map['ids'] as List<dynamic>).cast<String>();
+    // 多數 entry 用複數 `ids` 陣列，但 08-the-new-house 的 filter 那筆用單數
+    // `id`。兩種都收進同一個 Set，不要求資料端統一——劇本是既成事實。
+    // 兩者皆缺時 `as String` 會對 null 丟 TypeError——刻意讓它吵，
+    // 靜默略過會讓一整類缺件無聲消失。
+    final ids = (map['ids'] as List<dynamic>?)?.cast<String>() ??
+        <String>[map['id'] as String];
     result.putIfAbsent(map['type'] as String, () => <String>{}).addAll(ids);
   }
   return result;
@@ -888,7 +921,7 @@ StoryNode _node(Map<String, dynamic> json) {
       ),
     'show' => ShowNode(
         who: json['who'] as String,
-        sprite: json['sprite'] as String,
+        sprite: json['sprite'] as String?,
         filter: json['filter'] as String?,
       ),
     'hide' => const HideNode(),
@@ -1368,6 +1401,7 @@ StoryNode currentNode(Story story, PlayState state);
 PlayState advance(Story story, PlayState state);
 List<VisibleOption> visibleOptions(ChoiceNode node, Map<String, Object?> vars);
 PlayState choose(Story story, PlayState state, int visibleIndex);
+PlayState? resume(Story story, PlayState restored);  // 讀檔後重算 status；null ＝ 存檔已失效
 
 final class VisibleOption { const VisibleOption(this.index, this.option);
                             final int index; final ChoiceOption option; }
@@ -1376,8 +1410,12 @@ final class VisibleOption { const VisibleOption(this.index, this.option);
 **行為契約**（後續 UI 與走訪測試都依賴這些）：
 - `cursor` 在 `playing` / `choosing` 時**一定**指向會停頓的節點（`n` / `d` / `cg` / `choice`）。
 - 副作用節點（`sfx` / `bgm` / `add` / `set` / `show` / `hide`）不停頓，套用後自動往下走。
+- **`show` 的 `sprite` 為 `null` 時是 stage no-op**（無立繪角色登場的敘事標記，沒有圖要畫）。因此 `SpriteOnStage.sprite` 維持非 nullable，`SpriteLayer` 不必處理 null。
 - `add` 後的值夾在該變數宣告的 `min`／`max` 之間；**未宣告的變數不夾**。
 - 走完場的根陣列 → 依 `next` 跳下一場；`isEnding` → `status: ended`。兩者皆無 → 丟 `StateError`（那是資料錯誤，要炸給測試看到）。
+- **`resume` 是讀檔專用**：`SaveData` 不存 `status`，`toPlayState()` 一律回 `playing`。這個 `playing` 有兩種錯法——停在 `choice` 上會被 `advance` 跳過整個選擇；停在結局場的游標**必然越界**（`_settle` 只在越界時回傳 `ended`），直接 `currentNode` 會 `RangeError`。`resume` 先驗證游標路徑對得上現在的劇本，再交給 `_settle` 重算。**回傳 `null` ＝ 存檔已失效，呼叫端退回 `initState`。任何從存檔還原的路徑都必須經過它。**
+- **`advance` 只在 `playing` 時動作**。`choosing` 時推進會靜默跳過整個選擇、不套用任何選項的變數。
+- **場沒有宣告 `bgm` ＝ 沿用上一場**，不是停止。停止只由 `bgm` 節點帶 `id: null` 觸發。
 
 - [ ] **Step 1: 寫失敗的測試**
 
@@ -1393,14 +1431,19 @@ import 'package:lorescape_vn/src/visual_novel/domain/play_state.dart';
 import 'package:lorescape_vn/src/visual_novel/domain/story.dart';
 import 'package:lorescape_vn/src/visual_novel/domain/story_player.dart';
 
-Story build(Map<String, dynamic> scenes, {Map<String, dynamic>? variables}) {
+Story build(
+  Map<String, dynamic> scenes, {
+  Map<String, dynamic>? variables,
+  Map<String, dynamic>? characters,
+}) {
   return parseStory(<String, dynamic>{
     'meta': <String, dynamic>{
       'id': 'test', 'pack': 'p', 'order': 1, 'title': 't',
       'subtitle': '', 'estimatedMinutes': 1, 'locale': 'zh-Hant',
     },
     'variables': variables ?? <String, dynamic>{},
-    'characters': <String, dynamic>{'a': <String, dynamic>{'name': '甲', 'sprites': null}},
+    'characters': characters ??
+        <String, dynamic>{'a': <String, dynamic>{'name': '甲', 'sprites': null}},
     'backgrounds': <String, dynamic>{'bg': 'bg.png'},
     'missingAssets': <dynamic>[],
     'start': 'S01',
@@ -1540,6 +1583,236 @@ void main() {
             isEnding: true, endingId: 'A'),
       });
       expect(initState(story).status, PlayStatus.choosing);
+    });
+  });
+
+  group('規格明列、但最容易無聲壞掉的邊界', () {
+    test('if 不成立且沒有 else 時，往下一個節點走（22/26 個 if 屬此類）', () {
+      final story = build(
+        <String, dynamic>{
+          'S01': scene(<dynamic>[
+            <String, dynamic>{
+              't': 'if',
+              'cond': <String, dynamic>{'var': 'v', 'op': '>=', 'value': 9},
+              'then': <dynamic>[<String, dynamic>{'t': 'n', 'text': '不該出現'}],
+            },
+            <String, dynamic>{'t': 'n', 'text': '後面'},
+          ], isEnding: true, endingId: 'A'),
+        },
+        variables: <String, dynamic>{
+          'v': <String, dynamic>{'label': 'v', 'initial': 0, 'min': 0, 'max': 4},
+        },
+      );
+      final state = initState(story);
+      expect((currentNode(story, state) as NarrationNode).text, '後面');
+      expect(state.cursor.toTokens(), <String>['1'],
+          reason: '空分支不得 push，否則 _listAt 拿到空陣列會誤觸「整場走完」而提前跳場');
+    });
+
+    test('show 的 sprite 為 null 是 stage no-op', () {
+      final story = build(<String, dynamic>{
+        'S01': scene(<dynamic>[
+          <String, dynamic>{'t': 'show', 'who': 'a', 'sprite': null},
+          <String, dynamic>{'t': 'n', 'text': '一'},
+        ], isEnding: true, endingId: 'A'),
+      });
+      expect(initState(story).stage, isEmpty);
+    });
+
+    test('bgm 節點帶 id: null 會把 bgmId 清成 null', () {
+      final story = build(<String, dynamic>{
+        'S01': <String, dynamic>{
+          'title': '場', 'background': 'bg', 'bgm': 'sea',
+          'isEnding': true, 'endingId': 'A',
+          'nodes': <dynamic>[
+            <String, dynamic>{'t': 'n', 'text': '一'},
+            <String, dynamic>{'t': 'bgm', 'id': null},
+            <String, dynamic>{'t': 'n', 'text': '二'},
+          ],
+        },
+      });
+      var state = initState(story);
+      expect(state.bgmId, 'sea');
+      state = advance(story, state);
+      expect(state.bgmId, isNull);
+    });
+
+    test('連續 pop 兩層之後，外層的 index 正確 +1', () {
+      final story = build(
+        <String, dynamic>{
+          'S01': scene(<dynamic>[
+            <String, dynamic>{
+              't': 'choice',
+              'options': <dynamic>[
+                <String, dynamic>{
+                  'text': '甲',
+                  'then': <dynamic>[
+                    <String, dynamic>{
+                      't': 'if',
+                      'cond': <String, dynamic>{'var': 'v', 'op': '>=', 'value': 0},
+                      'then': <dynamic>[<String, dynamic>{'t': 'n', 'text': '最內層'}],
+                    },
+                  ],
+                },
+                <String, dynamic>{'text': '乙', 'goto': 'S01'},
+              ],
+            },
+            <String, dynamic>{'t': 'n', 'text': '匯流'},
+          ], isEnding: true, endingId: 'A'),
+        },
+        variables: <String, dynamic>{
+          'v': <String, dynamic>{'label': 'v', 'initial': 0, 'min': 0, 'max': 4},
+        },
+      );
+      var state = choose(story, initState(story), 0);
+      expect((currentNode(story, state) as NarrationNode).text, '最內層');
+      expect(state.cursor.toTokens(), <String>['0', 'opt0', '0', 'then', '0']);
+      state = advance(story, state);
+      expect((currentNode(story, state) as NarrationNode).text, '匯流');
+      expect(state.cursor.toTokens(), <String>['1']);
+    });
+
+    test('d 切表情保留該角色的濾鏡與台上位置', () {
+      final story = build(<String, dynamic>{
+        'S01': scene(<dynamic>[
+          <String, dynamic>{'t': 'show', 'who': 'a', 'sprite': 'neutral',
+              'filter': 'memory_desaturate'},
+          <String, dynamic>{'t': 'show', 'who': 'b', 'sprite': 'neutral'},
+          <String, dynamic>{'t': 'n', 'text': '一'},
+          <String, dynamic>{'t': 'd', 'who': 'a', 'sprite': 'wry', 'text': '二'},
+        ], isEnding: true, endingId: 'A'),
+        }, characters: <String, dynamic>{
+          'a': <String, dynamic>{'name': '甲', 'sprites': <String, dynamic>{'neutral': 'a.png', 'wry': 'aw.png'}},
+          'b': <String, dynamic>{'name': '乙', 'sprites': <String, dynamic>{'neutral': 'b.png'}},
+        });
+      final state = advance(story, initState(story));
+      expect(state.stage.map((s) => s.who), <String>['a', 'b'],
+          reason: '換表情不得改變左右站位');
+      expect(state.stage.first.sprite, 'wry');
+      expect(state.stage.first.filter, 'memory_desaturate',
+          reason: '換表情不得把 show 設定的濾鏡洗掉');
+    });
+
+    test('advance 在 choosing 時不動作', () {
+      final story = build(<String, dynamic>{
+        'S01': scene(<dynamic>[
+          <String, dynamic>{
+            't': 'choice',
+            'options': <dynamic>[
+              <String, dynamic>{'text': '甲', 'goto': 'S02'},
+              <String, dynamic>{'text': '乙', 'goto': 'S02'},
+            ],
+          },
+        ]),
+        'S02': scene(<dynamic>[<String, dynamic>{'t': 'n', 'text': '二'}],
+            isEnding: true, endingId: 'A'),
+      });
+      final state = initState(story);
+      expect(advance(story, state).cursor.toTokens(), state.cursor.toTokens());
+      expect(advance(story, state).status, PlayStatus.choosing);
+    });
+  });
+
+  group('resume', () {
+    test('存檔停在選項上時，讀回來要是 choosing 而不是 playing', () {
+      final story = build(<String, dynamic>{
+        'S01': scene(<dynamic>[
+          <String, dynamic>{
+            't': 'choice',
+            'options': <dynamic>[
+              <String, dynamic>{'text': '甲', 'goto': 'S02'},
+              <String, dynamic>{'text': '乙', 'goto': 'S02'},
+            ],
+          },
+        ]),
+        'S02': scene(<dynamic>[<String, dynamic>{'t': 'n', 'text': '二'}],
+            isEnding: true, endingId: 'A'),
+      });
+      // 模擬讀檔：SaveData.toPlayState() 一律回 playing
+      final fromSave = initState(story).copyWith(status: PlayStatus.playing);
+      expect(resume(story, fromSave).status, PlayStatus.choosing);
+    });
+
+    test('存檔停在旁白上時維持 playing', () {
+      final story = build(<String, dynamic>{
+        'S01': scene(<dynamic>[<String, dynamic>{'t': 'n', 'text': '一'}],
+            isEnding: true, endingId: 'A'),
+      });
+      expect(resume(story, initState(story))!.status, PlayStatus.playing);
+    });
+
+    test('結局場的越界游標還原成 ended 並帶回 endingId，不得 RangeError', () {
+      final story = build(<String, dynamic>{
+        'S01': scene(<dynamic>[<String, dynamic>{'t': 'n', 'text': '一'}],
+            isEnding: true, endingId: 'A'),
+      });
+      // 結局狀態的游標必然越界——_settle 只在越界時才回傳 ended。
+      final atEnd = initState(story).copyWith(
+        cursor: Cursor.atSceneStart('S01').withLastIndex(1),
+        status: PlayStatus.playing,
+      );
+      final restored = resume(story, atEnd)!;
+      expect(restored.status, PlayStatus.ended);
+      expect(restored.endingId, 'A');
+    });
+
+    test('巢狀層越界回 null——不得被當成「整場走完」而傳送到結局', () {
+      final story = build(<String, dynamic>{
+        'S01': scene(<dynamic>[
+          <String, dynamic>{
+            't': 'choice',
+            'options': <dynamic>[
+              <String, dynamic>{
+                'text': '甲',
+                'then': <dynamic>[<String, dynamic>{'t': 'n', 'text': '裡面'}],
+              },
+              <String, dynamic>{'text': '乙', 'goto': 'S01'},
+            ],
+          },
+        ], isEnding: true, endingId: 'A'),
+      });
+      // 模擬劇本改版：舊存檔停在 opt0.then 的 index 4，新版那串只剩 1 個節點。
+      final stale = initState(story).copyWith(
+        cursor: Cursor.fromTokens('S01', <String>['0', 'opt0', '4']),
+        status: PlayStatus.playing,
+      );
+      expect(resume(story, stale), isNull);
+    });
+
+    test('竄改成負的選項索引也要回 null，不得 RangeError', () {
+      final story = build(<String, dynamic>{
+        'S01': scene(<dynamic>[
+          <String, dynamic>{
+            't': 'choice',
+            'options': <dynamic>[
+              <String, dynamic>{
+                'text': '甲',
+                'then': <dynamic>[<String, dynamic>{'t': 'n', 'text': '裡面'}],
+              },
+              <String, dynamic>{'text': '乙', 'goto': 'S01'},
+            ],
+          },
+        ], isEnding: true, endingId: 'A'),
+      });
+      final tampered = initState(story).copyWith(
+        cursor: Cursor.fromTokens('S01', <String>['0', 'opt-1', '0']),
+        status: PlayStatus.playing,
+      );
+      expect(resume(story, tampered), isNull);
+    });
+
+    test('路徑對不上現在的劇本時回 null，讓呼叫端退回開頭', () {
+      final story = build(<String, dynamic>{
+        'S01': scene(<dynamic>[<String, dynamic>{'t': 'n', 'text': '一'}],
+            isEnding: true, endingId: 'A'),
+      });
+      final stale = initState(story).copyWith(
+        cursor: Cursor.fromTokens('S01', <String>['0', 'then', '0']),
+      );
+      expect(resume(story, stale), isNull, reason: 'S01[0] 是旁白，沒有 then 分支');
+      expect(resume(story, initState(story).copyWith(
+        cursor: Cursor.atSceneStart('S99'),
+      )), isNull, reason: '場不存在');
     });
   });
 
@@ -1727,8 +2000,62 @@ List<VisibleOption> visibleOptions(ChoiceNode node, Map<String, Object?> vars) =
     ];
 
 PlayState advance(Story story, PlayState state) {
-  if (state.status == PlayStatus.ended) return state;
+  // choosing 時推進會靜默跳過整個選擇、不套用任何選項的 vars——那是最難查的一
+  // 種 bug（玩家的選擇無聲消失）。這裡直接擋掉，不倚賴 UI 自律。
+  if (state.status != PlayStatus.playing) return state;
   return _settle(story, _moveNext(story, state));
+}
+
+/// 讀檔還原用。存檔只記 cursor 與 vars，不記 status（`SaveData.toPlayState()`
+/// 一律回 playing），但游標可能正停在一個 choice 上。那種情況下把 status 當成
+/// playing 會讓 UI 不畫選項、而點擊直接 advance 過去——玩家的選擇被無聲跳過。
+/// 因此 status 一律由「游標指著什麼節點」重算。
+PlayState? resume(Story story, PlayState restored) {
+  if (!_cursorResolvable(story, restored.cursor)) return null;
+  // 交給 _settle 重算：它本來就負責「走到下一個會停頓的節點」與「場走完了要跳
+  // 場還是結束」。讀檔與播放因此走同一條路，不會有第二套狀態推導邏輯。
+  return _settle(story, restored);
+}
+
+/// 游標的每一層都要對得上現在的劇本結構。
+///
+/// **只有「單層且越界」才放行**——那是「這個場走完了」的合法狀態（結局狀態的
+/// 游標必然越界），由 `_settle` 處理成跳場或結局。
+///
+/// 巢狀層越界則一律回 false。理由：`_settle` 的越界分支預設「越界 ＝ 這個場的
+/// 根陣列走完了」，這個前提只在正常播放時成立——`_moveNext` 會先把巢狀層 pop
+/// 掉，交到 `_settle` 手上的越界游標必然只剩一層。`resume` 餵的是任意存檔游標，
+/// 前提就破了：劇本 v1 的 `opt0.then` 有 5 個節點、玩家存在 index 4，v2 縮成 2
+/// 個，若放行，玩家一開檔就會被判成走完該場——是結局場就直接傳送到結局，有
+/// `next` 就跳過整場剩下的內容。回 `null` 讓呼叫端退回開頭遠比這乾淨。
+bool _cursorResolvable(Story story, Cursor cursor) {
+  final scene = story.scenes[cursor.sceneId];
+  if (scene == null) return false;
+  var list = scene.nodes;
+  for (var i = 0; i < cursor.path.length; i++) {
+    final step = cursor.path[i];
+    final isLast = i == cursor.path.length - 1;
+    if (step.index < 0 || step.index >= list.length) {
+      return isLast && cursor.path.length == 1;
+    }
+    if (isLast) return true;
+    final node = list[step.index];
+    final branch = step.branch;
+    if (branch == 'then' && node is IfNode) {
+      list = node.then;
+    } else if (branch == 'else' && node is IfNode) {
+      list = node.orElse;
+    } else if (branch != null && branch.startsWith('opt') && node is ChoiceNode) {
+      // 負索引也要擋：竄改過的存檔給 'opt-1' 時 tryParse 回 -1、過得了上界檢查，
+      // 然後在這個「用來防崩潰」的函式裡丟 RangeError。
+      final index = int.tryParse(branch.substring(3));
+      if (index == null || index < 0 || index >= node.options.length) return false;
+      list = node.options[index].then;
+    } else {
+      return false;
+    }
+  }
+  return true;
 }
 
 PlayState choose(Story story, PlayState state, int visibleIndex) {
@@ -1805,10 +2132,13 @@ Map<String, Object?> _applyVars(
 
 PlayState _enterScene(Story story, PlayState state, String sceneId) {
   final scene = _scene(story, sceneId);
+  // 場沒有宣告 bgm ＝ **未指定，沿用上一場**，不是停止播放。劇本要靜下來時是明
+  // 寫 `bgm: "silence"` 的（多場在用）；若把「沒有欄位」當成停止，8 篇的結局場
+  // 會全部無聲進場，而 01 篇的 E_A 明明寫了 `bgm: "sea"`。停止只由 `bgm` 節點
+  // 帶 `id: null` 觸發。
   return state.copyWith(
     cursor: Cursor.atSceneStart(sceneId),
     bgmId: scene.bgm,
-    clearBgm: scene.bgm == null,
     status: PlayStatus.playing,
   );
 }
@@ -1846,17 +2176,20 @@ PlayState _settle(Story story, PlayState state) {
     final node = list[current.cursor.last.index];
     switch (node) {
       case NarrationNode() || DialogueNode() || CgNode():
-        // d 會順帶切表情：把該角色的立繪換成新的 sprite。
+        // 規範 §3.3：`d` 的 sprite 存在時「同時切換該角色表情並顯示」。
         if (node is DialogueNode && node.sprite != null) {
           current = current.copyWith(
-            stage: _withSprite(current.stage, node.who, node.sprite!, null),
+            stage: _switchExpression(current.stage, node.who, node.sprite!),
           );
         }
         return current.copyWith(status: PlayStatus.playing);
       case ChoiceNode():
         return current.copyWith(status: PlayStatus.choosing);
       case ShowNode(:final who, :final sprite, :final filter):
-        current = current.copyWith(stage: _withSprite(current.stage, who, sprite, filter));
+        // sprite 為 null ＝ 無立繪角色登場，台上沒有東西要加。
+        if (sprite != null) {
+          current = current.copyWith(stage: _showSprite(current.stage, who, sprite, filter));
+        }
       case HideNode():
         current = current.copyWith(stage: const <SpriteOnStage>[]);
       case BgmNode(:final id):
@@ -1882,17 +2215,38 @@ PlayState _settle(Story story, PlayState state) {
   }
 }
 
-List<SpriteOnStage> _withSprite(
+/// `show`：設定某角色的立繪與濾鏡。既有角色**原位取代**，新角色才 append。
+List<SpriteOnStage> _showSprite(
   List<SpriteOnStage> stage,
   String who,
   String sprite,
   String? filter,
 ) {
-  final next = <SpriteOnStage>[
-    for (final s in stage)
-      if (s.who != who) s,
-  ];
-  next.add(SpriteOnStage(who: who, sprite: sprite, filter: filter));
+  final next = <SpriteOnStage>[...stage];
+  final at = next.indexWhere((s) => s.who == who);
+  final entry = SpriteOnStage(who: who, sprite: sprite, filter: filter);
+  if (at < 0) {
+    next.add(entry);
+  } else {
+    next[at] = entry;
+  }
+  return next;
+}
+
+/// `d` 切表情：**只換表情**，保留該角色現有的濾鏡與台上位置。
+///
+/// 兩個都是實際會被看見的：8 篇裡唯一一次 `show ... filter: memory_desaturate`
+/// （08/S04）之後 vibia 還會講帶 sprite 的台詞，濾鏡若被洗掉，那整段回憶就失去
+/// 視覺區隔；而「移除再 append」會讓雙人同台的兩人在對話中途左右對調
+/// （07/S02、07/S03 各一次）。
+List<SpriteOnStage> _switchExpression(List<SpriteOnStage> stage, String who, String sprite) {
+  final next = <SpriteOnStage>[...stage];
+  final at = next.indexWhere((s) => s.who == who);
+  if (at < 0) {
+    next.add(SpriteOnStage(who: who, sprite: sprite));
+  } else {
+    next[at] = SpriteOnStage(who: who, sprite: sprite, filter: next[at].filter);
+  }
   return next;
 }
 ```
@@ -1970,9 +2324,9 @@ void walk(Story story, PlayState state, WalkResult result, int budget) {
       fail('${story.meta.id}：步數超過預算，可能有無窮迴圈於 ${current.cursor.readKey}');
     }
     current.vars.forEach((key, value) {
-      if (value is num) {
-        result.maxima[key] = value > (result.maxima[key] ?? value) ? value : result.maxima[key]!;
-      }
+      if (value is! num) return;
+      final seen = result.maxima[key];
+      if (seen == null || value > seen) result.maxima[key] = value;
     });
 
     if (current.status == PlayStatus.ended) {
@@ -2019,6 +2373,43 @@ void main() {
         expect(result.endings, story.endings.keys.toSet());
       });
 
+      test('走訪規模符合實測基準', () {
+        // 沒有下限斷言的話，內容被刪掉一整段分歧時這組測試依然全綠。
+        final baseline = walkBaselines[dir]!;
+        expect(result.paths, baseline.paths, reason: '路徑數變了');
+        expect(result.takenOptions.length, baseline.options, reason: '選項數變了');
+        expect(result.branchCount, baseline.branches, reason: '非空 if 分支數變了');
+      });
+
+      test('每個非空 if 分支都至少有一個直接的停頓節點', () {
+        // 前綴判定的前提。若有人寫出 `if (x) { show ... }` 這種只有副作用的分支，
+        // 判定會誤報成走不到——註解擋不住，這條斷言才擋得住。
+        void scan(List<StoryNode> nodes) {
+          for (final node in nodes) {
+            if (node is IfNode) {
+              for (final side in <List<StoryNode>>[node.then, node.orElse]) {
+                if (side.isEmpty) continue;
+                expect(
+                  side.any((n) => n is NarrationNode || n is DialogueNode ||
+                      n is CgNode || n is ChoiceNode),
+                  isTrue,
+                  reason: '這個 if 分支沒有直接的停頓節點，前綴判定會誤報',
+                );
+                scan(side);
+              }
+            } else if (node is ChoiceNode) {
+              for (final option in node.options) {
+                scan(option.then);
+              }
+            }
+          }
+        }
+
+        for (final scene in story.scenes.values) {
+          scan(scene.nodes);
+        }
+      });
+
       test('每個選項至少被走過一次', () {
         final declared = <String>{};
         void scan(String sceneId, List<StoryNode> nodes, List<String> path) {
@@ -2055,8 +2446,17 @@ void main() {
                 ('else', node.orElse),
               ]) {
                 if (side.$2.isEmpty) continue;
-                final key = '$sceneId#${<String>[...here, side.$1, '0'].join('.')}';
-                if (!result.readKeys.contains(key)) unreached.add(key);
+                // 判定「這個分支走到了沒」要看**有沒有任何已讀鍵落在它底下**，
+                // 不能只看 `.then.0`。readKeys 只記錄游標停下來的位置，而分支的
+                // 第一個節點若是 show／sfx 這種不停頓的型別，游標永遠不會停在
+                // `.0` 上——實測 8 篇有 4 個分支正是如此（01/S07、01/E_C、
+                // 05/S06、08/S04），用 `.0` 判定會全部誤報成走不到。
+                // 前綴比對是可靠的：實測沒有任何分支是純副作用節點，每個分支
+                // 內都至少有一個會停頓的節點。
+                final prefix = '$sceneId#${<String>[...here, side.$1].join('.')}.';
+                if (!result.readKeys.any((key) => key.startsWith(prefix))) {
+                  unreached.add(prefix);
+                }
                 scan(sceneId, side.$2, <String>[...here, side.$1]);
               }
             } else if (node is ChoiceNode) {
@@ -2141,7 +2541,53 @@ void main() {
 }
 ```
 
-> `text.characters` 需要 `import 'package:characters/characters.dart';`——`flutter_test` 已傳遞依賴 `characters`，直接 import 即可。把這一行加進檔案開頭。
+> `text.characters` 需要 `import 'package:characters/characters.dart';`。**要在 `pubspec.yaml` 的 `dev_dependencies` 明確宣告 `characters`**——靠 `flutter_test` 的傳遞依賴雖然 import 得到，但過不了 `depend_on_referenced_packages` 這條 lint。
+
+### 兩條讓這組測試「不會空綠」的骨幹斷言
+
+走訪測試最危險的失敗模式不是紅燈，是**全綠但什麼都沒斷言**——那會讓後面所有人以為內容驗過了。上面七條有兩個結構性漏洞必須補：
+
+**（一）逐篇的基準數量。** `declared.difference(taken)` 在 `declared` 為空時也通過；`unreached` 在分支清單為空時也通過。若日後有人從某篇刪掉一整段分歧，這組測試依然全綠。因此每篇要斷言實測基準：
+
+| # | 篇 | 路徑 | 選項 | 非空 if 分支 |
+|---|---|:-:|:-:|:-:|
+| 1 | 港口的外地人 | 128 | 14 | 9 |
+| 2 | 烤爐熄了 | 40 | 11 | 3 |
+| 3 | 井水退了 | 16 | 8 | 4 |
+| 4 | 天上那棵樹 | 20 | 9 | 2 |
+| 5 | 蠟板 | 80 | 13 | 3 |
+| 6 | 上鎖的門 | 32 | 10 | 4 |
+| 7 | 靠不了岸 | 32 | 10 | 2 |
+| 8 | 普特奧利的新房子 | 20 | 9 | 3 |
+| | **合計** | **368** | **84** | **30** |
+
+**（二）已知死碼用 allowlist 雙向斷言，不要用 `skip:`。** `skip:` 關掉的是整條測試，有兩個方向的風險：日後往同一篇新增的死碼會被一起吞掉；而死碼修好之後測試永遠停在 skip，沒有任何訊號提示該把它刪掉。改成：
+
+```dart
+/// 已確認的死碼——劇本裡在任何路徑上都走不到的 if 分支。
+///
+/// 這不是測試問題，是內容問題，等作者決定要不要改（見 task-6-report）。
+/// 用 allowlist 而不是 `skip:`，是為了讓兩個方向都有訊號：多出新的死碼會紅，
+/// 而死碼被修好之後這裡沒刪也會紅。
+const Map<String, Set<String>> knownDeadBranches = <String, Set<String>>{
+  // awareness 有三個無條件 +1（S02/S05/S07），到 S08 必為 3，else 永不成立
+  '01-harbour-stranger': <String>{'S08#6.else.'},
+  // 結局 A 的閘門要 conviction>=2，而 conviction 與 standing 在同三個選擇點互斥
+  '03-the-well-fell': <String>{'E_A#9.then.'},
+  // 結局 A 的閘門要 nerve>=2，nerve 只有兩個來源，兩個都選走 kinship 就上不去
+  '06-the-locked-door': <String>{'E_A#12.then.'},
+};
+```
+
+斷言改成：
+
+```dart
+        final known = knownDeadBranches[dir] ?? const <String>{};
+        expect(unreached.toSet().difference(known), isEmpty,
+            reason: '出現新的死碼——這些 if 分支在任何路徑上都進不去');
+        expect(known.difference(unreached.toSet()), isEmpty,
+            reason: '這些死碼已經走得到了，請從 knownDeadBranches 刪掉');
+```
 
 - [ ] **Step 2: 跑測試**
 
@@ -2194,8 +2640,61 @@ def test_sprites_have_alpha_and_opaque_subject():
     h, w = a.shape
     assert a[int(h * 0.6), int(w * 0.5)] == 255, '人物被啃掉了'
     # 透明佔比要落在合理區間——太低表示沒去到，太高表示啃過頭
+    # 實測 44 張落在 0.337–0.508，區間取 0.25–0.60 留一點餘裕但不至於形同虛設。
     ratio = float((a == 0).mean())
-    assert 0.10 < ratio < 0.70, f'透明佔比異常：{ratio:.2f}'
+    assert 0.25 < ratio < 0.60, f'透明佔比異常：{ratio:.2f}'
+
+
+def _interior_islands(alpha):
+    """回傳「不與畫面邊界連通的透明像素數」——會透出背景的破洞。"""
+    import numpy as np
+    transparent = alpha <= 127
+    h, w = transparent.shape
+    reach = np.zeros((h, w), dtype=bool)
+    reach[0, :] |= transparent[0, :]
+    reach[-1, :] |= transparent[-1, :]
+    reach[:, 0] |= transparent[:, 0]
+    reach[:, -1] |= transparent[:, -1]
+    while True:
+        grown = reach.copy()
+        grown[1:, :] |= reach[:-1, :]
+        grown[:-1, :] |= reach[1:, :]
+        grown[:, 1:] |= reach[:, :-1]
+        grown[:, :-1] |= reach[:, 1:]
+        grown &= transparent
+        if grown.sum() == reach.sum():
+            break
+        reach = grown
+    return int((transparent & ~reach).sum())
+
+
+def test_no_interior_holes():
+    """閉運算會把咬痕的頸部填掉、讓殘骸變成孤島，_fill_interior 負責收拾。
+
+    孤島 ＝ 人物身上會透出背景的破洞，一個都不該留。
+    """
+    from PIL import Image
+    import numpy as np
+    for path in sorted((OUT / 'assets/sprites').glob('*.png')):
+        alpha = np.asarray(Image.open(path).convert('RGBA').getchannel('A')).astype(int)
+        assert _interior_islands(alpha) == 0, f'{path.name} 有內部破洞'
+
+
+def test_genuine_gaps_are_not_bridged():
+    """尼基亞斯手臂與軀幹之間的縫隙不得被閉運算夾斷。
+
+    這是 CLOSE_RADIUS 從 7 降到 4 的原因。**這個回歸在「透明比例」上量不到**
+    ——r=7 時尼基亞斯的主體佔比只多 0.16 個百分點，看起來完全安全，實際上
+    那條縫隙已經被從中間夾斷、上半段封成 3,150px 的孤島，再被 _fill_interior
+    填實。只有量特定區域的拓樸才抓得到。
+    """
+    from PIL import Image
+    import numpy as np
+    for path in sorted((OUT / 'assets/sprites').glob('nikias_*.png')):
+        alpha = np.asarray(Image.open(path).convert('RGBA').getchannel('A')).astype(int)
+        gap = alpha[1250:1500, 150:280] <= 127
+        # 實測四張表情都是 13.0–13.7%；被夾斷後會掉到 3% 左右。
+        assert gap.mean() > 0.08, f'{path.name} 的手臂縫隙被填掉了：{gap.mean():.3f}'
 
 
 def test_backgrounds_stay_opaque():
@@ -2214,7 +2713,7 @@ Expected: FAIL — `img.mode == 'RGB'`
 
 - [ ] **Step 3: 實作去背**
 
-在 `vn/tool/import_pack.py` 加入（並在檔案頂端 `from PIL import Image, ImageFilter` / `import numpy as np`）：
+在 `vn/tool/import_pack.py` 加入（並在檔案頂端 `import collections` / `from PIL import Image, ImageFilter` / `import numpy as np`）：
 
 ```python
 CACHE = ROOT / 'writer/創作/龐貝/美術測試/_processed'
@@ -2235,12 +2734,7 @@ def remove_background(src: pathlib.Path):
     pixels = np.asarray(img).astype(np.int16)
     h, w, _ = pixels.shape
 
-    # 以四個角落的中位數當背景色，比單一角落穩。
-    corners = np.concatenate([
-        pixels[0:8, 0:8].reshape(-1, 3), pixels[0:8, -8:].reshape(-1, 3),
-        pixels[-8:, 0:8].reshape(-1, 3), pixels[-8:, -8:].reshape(-1, 3),
-    ])
-    bg = np.median(corners, axis=0)
+    bg = _background_colour(pixels)
     similar = (np.abs(pixels - bg).max(axis=2) <= BG_TOLERANCE)
 
     # 從邊界泛洪（4 連通的 BFS，用 numpy 的逐列擴張代替遞迴）
@@ -2260,12 +2754,111 @@ def remove_background(src: pathlib.Path):
             break
         reachable = grown
 
-    alpha = np.where(reachable, 0, 255).astype(np.uint8)
+    alpha = Image.fromarray(np.where(reachable, 0, 255).astype(np.uint8), mode='L')
+    alpha = _close_bites(alpha)
+    alpha = _fill_interior(np.asarray(alpha).astype(int))
     out = Image.fromarray(np.dstack([np.asarray(img), alpha]), mode='RGBA')
     # 1px 羽化：去背邊緣會有一圈灰，模糊 alpha 讓它過渡掉。
-    blurred = out.getchannel('A').filter(ImageFilter.GaussianBlur(radius=1.0))
-    out.putalpha(blurred)
+    out.putalpha(out.getchannel('A').filter(ImageFilter.GaussianBlur(radius=1.0)))
     return out
+
+
+# 閉運算的半徑（px）。r=4 會填掉寬度 8px 以內的凹陷。
+#
+# **不要調大。** 實測掃過 r=1..9：r=5 起會橋接尼基亞斯手臂與軀幹之間的縫隙，
+# 把那塊真實背景封成 3,150–3,461px 的孤島（四張表情都中）。r=4 是唯一同時
+# 「填掉祭司咬痕」與「不碰真實縫隙」的窗口——祭司在 r=4 已填入 12,247px，
+# 達到 r=7 的 92%。
+CLOSE_RADIUS = 4
+
+
+def _close_bites(alpha):
+    """對主體遮罩做閉運算（先膨脹後侵蝕），填掉泛洪咬進衣服的細長凹陷。
+
+    祭司的米白僧袍在右肩下緣的陰影剛好貼近背景灰，泛洪會沿著那裡鑽進布料，
+    留下幾道深入的鋸齒——遊戲內縮到 0.72H 仍有 8–15px 寬，看起來像袍子破了。
+
+    ⚠️ 閉運算的危險不在「多填了多少主體像素」（那個量很小、看指標會誤判安全），
+    而在**它可能把一條真實的背景縫隙從中間夾斷**。判斷安全與否要看
+    「有多少原本連通的背景被封成孤島」，不是看主體佔比增加多少。
+    """
+    binary = alpha.point(lambda v: 255 if v > 127 else 0)
+    size = CLOSE_RADIUS * 2 + 1
+    return binary.filter(ImageFilter.MaxFilter(size)).filter(ImageFilter.MinFilter(size))
+
+
+def _fill_interior(alpha_array):
+    """透明區域只有**與畫面邊界連通**的才算背景，其餘填實。
+
+    這是把泛洪本來就依賴的那條不變式，在閉運算之後重新套一次——閉運算會把
+    咬痕的「頸部」填掉，讓殘骸變成不再連通邊界的孤島。
+
+    實測 r=4 下的孤島有兩類：祭司袍子上的咬痕殘骸（1,006–1,706px，正是要清掉
+    的），以及莎爾維婭與特婭耳環圈裡的縫隙（555px／107px，遊戲內約 2px，
+    填掉等於耳環變實心，看不出來）。兩類都填是對的取捨。
+    """
+    transparent = alpha_array <= 127
+    height, width = transparent.shape
+    reachable = np.zeros((height, width), dtype=bool)
+    reachable[0, :] |= transparent[0, :]
+    reachable[-1, :] |= transparent[-1, :]
+    reachable[:, 0] |= transparent[:, 0]
+    reachable[:, -1] |= transparent[:, -1]
+    while True:
+        grown = reachable.copy()
+        grown[1:, :] |= reachable[:-1, :]
+        grown[:-1, :] |= reachable[1:, :]
+        grown[:, 1:] |= reachable[:, :-1]
+        grown[:, :-1] |= reachable[:, 1:]
+        grown &= transparent
+        if grown.sum() == reachable.sum():
+            break
+        reachable = grown
+    return np.where(reachable, 0, 255).astype(np.uint8)
+
+
+# 去背演算法的版本號。**改動 remove_background() 的行為時要手動 +1。**
+PIPELINE_VERSION = 1
+
+
+def _cache_key(src: pathlib.Path) -> str:
+    """快取鍵要綁「來源圖 ＋ 演算法參數 ＋ 版本號」，不能只綁來源圖。
+
+    只綁來源圖的話，調了 BG_TOLERANCE 或 CLOSE_RADIUS 卻忘記加 `--no-cache`，
+    就會靜默命中舊 hash、吐出用舊參數跑出來的舊結果，而且不會有任何警告。
+    這一版的三輪修正全都是「來源圖沒變、演算法變了」，正是這個坑的形狀。
+    """
+    stamp = f'{BG_TOLERANCE}:{CLOSE_RADIUS}:{PIPELINE_VERSION}'.encode()
+    return hashlib.md5(src.read_bytes() + stamp).hexdigest()
+
+
+def _background_colour(pixels):
+    """取邊界像素的**眾數**當背景色。
+
+    不要用「四角中位數」——這批立繪是半身像，人物的衣服延伸到畫面下緣，
+    **下面兩角取到的是人物本身**。實測 vibia_neutral 的下緣兩角是 (91,80,55)
+    與 (84,74,47)，那是她的橄欖綠斗篷；混進中位數會把背景估成 (135,129,112)，
+    與真正的背景 (150,149,148) 差了 37，超過容差，於是泛洪從邊界長不出去、
+    幾乎沒去到背景。
+
+    眾數對「人物佔掉一部分邊界」免疫：實測 44 張，背景色都是邊界的**最大宗**
+    （相對多數 18.5–84.6%，不是絕對多數），且沒有任何一張的人物碰到上緣。
+
+    佔比最低的 philemon_neutral 只有 18.5%，是因為它的背景本身有雜訊，被 /8
+    量化拆成四個相鄰 bin（合計約 53%）。它仍然能正確去背——真正的安全網是
+    「相對多數勝出 ＋ 容差夠寬，把相鄰的量化 bin 一起吃進來」，**不是**
+    「背景要過半」。日後有人排查新素材去背失敗，不要往「背景佔比為何偏低」
+    這個方向找，那不是原因。
+    """
+    height, width, _ = pixels.shape
+    border = np.concatenate([
+        pixels[0:4, :].reshape(-1, 3), pixels[height - 4:, :].reshape(-1, 3),
+        pixels[:, 0:4].reshape(-1, 3), pixels[:, width - 4:].reshape(-1, 3),
+    ])
+    # 量化到 /8 再數，避免 JPEG 式雜訊把同一個顏色拆成幾十種。
+    quantised = border // 8
+    counts = collections.Counter(map(tuple, quantised))
+    return np.array(counts.most_common(1)[0][0]) * 8 + 4
 
 
 def write_review(name: str, before, after) -> None:
@@ -2288,8 +2881,7 @@ def process_asset(kind: str, src: pathlib.Path, dest: pathlib.Path,
         shutil.copyfile(src, dest)   # 背景不去背
         return
     CACHE.mkdir(parents=True, exist_ok=True)
-    digest = hashlib.md5(src.read_bytes()).hexdigest()
-    cached = CACHE / f'{digest}_cutout.png'
+    cached = CACHE / f'{_cache_key(src)}_cutout.png'
     if use_cache and cached.exists():
         shutil.copyfile(cached, dest)
         return
@@ -2315,6 +2907,8 @@ EOF
 ```
 
 **停在這裡，把 `vn/tool/_review/cutout_vibia_neutral.png` 給 user 看過再往下。** 洋紅底上若有灰邊或人物缺角，調 `BG_TOLERANCE`（灰邊 → 調高；缺角 → 調低）後重看。
+
+> **實測基準**（`BG_TOLERANCE = 26` ＋ 眾數背景色）：透明比例落在 34–42%，人物中軸由上到下完全保留。若你的結果離這個區間很遠，先懷疑背景色估錯了，不要急著動容差——**容差能補的是雜訊，補不了採樣點選錯**。
 
 - [ ] **Step 5: 全跑並驗收**
 
@@ -2353,6 +2947,29 @@ git commit -m "feat(vn): 立繪去背——邊界泛洪避免吃掉人物身上�
 在 `vn/tool/test_import_pack.py` 追加：
 
 ```python
+def test_skipped_sprites_are_untouched():
+    """被 skip 的立繪必須**一個像素都沒被動過**。
+
+    先前的寫法會把它貼進基底畫布以統一尺寸，結果比基底寬的 officer_hard
+    （1122×1402）左右各被裁掉一塊，損失 2.45% 的主體。統一尺寸本身沒有必要
+    ——Flutter 端依高度縮放。
+    """
+    import json
+    from PIL import Image
+    import numpy as np
+    manifest = json.loads((ROOT / 'vn/tool/_review/align_manifest.json').read_text())
+    skipped = [name for name, params in manifest.items() if params.get('skipped')]
+    assert skipped, 'manifest 裡沒有任何 skipped 條目，這條測試等於沒驗到東西'
+    for name in skipped:
+        source = next(iter(sorted(
+            (ROOT / 'writer/創作/龐貝/stories').glob(f'*/assets/sprites/{name}'))))
+        cutout = remove_background(source)
+        output = Image.open(OUT / 'assets/sprites' / name).convert('RGBA')
+        assert output.size == cutout.size, f'{name} 尺寸被改了：{cutout.size} → {output.size}'
+        opaque = lambda im: int((np.asarray(im)[:, :, 3] > 127).sum())
+        assert opaque(output) == opaque(cutout), f'{name} 有不透明內容被裁掉'
+
+
 def test_expression_variants_align_with_base():
     from PIL import Image
     import numpy as np
@@ -2390,8 +3007,26 @@ SCALE_RANGE = [0.88 + 0.02 * i for i in range(13)]   # 0.88 … 1.12
 SHIFT_LIMIT = 72                                      # px，於 1/4 解析度上為 18
 
 
+# 對齊分數的下限。低於它就不套用對齊——那種分數代表素材本身有問題
+# （畫錯人、畫錯時代），硬套對齊只會把它變得更歪。
+ALIGN_MIN_SCORE = 0.95
+
+# 已知有問題的立繪：分數過低是**素材問題**，不是對齊失敗。
+#
+# 用 allowlist 而不是默默跳過，是為了讓兩個方向都有訊號：多出新的壞素材會紅，
+# 而素材被重出修好之後這裡沒刪也會紅（與 Task 6 的 knownDeadBranches 同一套路）。
+KNOWN_BAD_SPRITES = {
+    # 十九世紀海軍軍官制服，時代錯置。用在 07-cannot-land S01/S02 共 5 處。
+    'officer_hard.png': '時代錯置：19 世紀海軍軍官',
+    # 以下三張與別的角色位元組相同，是表情差分被指到了別人的臉。
+    'hylas_scared.png': '錯掛：實為盧奇烏斯（≡ master_impatient）',
+    'orestes_urgent.png': '錯掛：實為忒亞（≡ thea_afraid）',
+    'survivor_sharp.png': '錯掛：實為普林尼（≡ pliny_labored）',
+}
+
+
 def _score(a, b):
-    """正規化互相關。兩張同尺寸的灰階 numpy 陣列。"""
+    """正規化互相關。兩張同尺寸的 numpy 陣列。"""
     a = a - a.mean()
     b = b - b.mean()
     denom = np.sqrt((a * a).sum() * (b * b).sum())
@@ -2404,14 +3039,29 @@ def align_to_base(base_rgba, variant_rgba):
     先在 1/4 解析度粗搜縮放與平移，再於全解析度做 ±4px 細修。
     """
     w, h = base_rgba.size
-    base_small = np.asarray(base_rgba.convert('L').resize((w // 4, h // 4))).astype(np.float32)
+
+    # **比 alpha 剪影，不要比灰階亮度。**
+    #
+    # 差分的原始畫布尺寸不一定與基底相同（實測 4 張是 1023×1537、officer_hard
+    # 是 1122×1402，其餘 39 張才是 1024×1536）。把差分貼到基底尺寸的畫布上時，
+    # 邊緣會留下一圈墊底色，而 `convert('L')` 丟掉 alpha 只看 RGB——那圈邊在
+    # 互相關裡是極強的人造對比，分數整個被它主導。實測灰階法會把
+    # nikias_watchful 評成 0.38 並挑出 scale 0.90 的錯誤解，把一張本來就對齊
+    # 的圖弄歪 132px。
+    #
+    # alpha 對此免疫：透明區的值是 0，與畫布留白同值，沒有人造邊。改用 alpha
+    # 之後 24/28 個差分都是 score ≥ 0.978、scale 1.00、位移 (0,0)。
+    def silhouette(image):
+        return np.asarray(image.getchannel('A').resize((w // 4, h // 4))).astype(np.float32)
+
+    base_small = silhouette(base_rgba)
 
     best = (-1.0, 1.0, 0, 0)
     for scale in SCALE_RANGE:
         scaled = variant_rgba.resize((int(w * scale), int(h * scale)))
         canvas = Image.new('RGBA', (w, h))
         canvas.paste(scaled, ((w - scaled.width) // 2, (h - scaled.height) // 2))
-        small = np.asarray(canvas.convert('L').resize((w // 4, h // 4))).astype(np.float32)
+        small = silhouette(canvas)
         for dy in range(-SHIFT_LIMIT // 4, SHIFT_LIMIT // 4 + 1, 2):
             for dx in range(-SHIFT_LIMIT // 4, SHIFT_LIMIT // 4 + 1, 2):
                 shifted = np.roll(np.roll(small, dy, axis=0), dx, axis=1)
@@ -2419,11 +3069,24 @@ def align_to_base(base_rgba, variant_rgba):
                 if score > best[0]:
                     best = (score, scale, dx * 4, dy * 4)
 
-    _score_value, scale, dx, dy = best
+    score, scale, dx, dy = best
+    if score < ALIGN_MIN_SCORE:
+        # 分數這麼低不是「沒對齊」，是「這兩張根本不是同一個人／同一個時代」。
+        # 硬套搜尋出來的最佳解只會把它縮放平移到更歪的位置——實測就發生過。
+        #
+        # **原封不動回傳，連畫布都不要正規化。** 貼進基底畫布看似無害，實際上
+        # 會裁掉比基底寬的圖：officer_hard 是 1122×1402，置中貼進 1024×1536
+        # 會左裁 49px、右裁 27px，實測損失 20,491 個不透明像素（主體的 2.45%，
+        # 左邊那塊是大腿）。「skipped」就該是字面意義的沒被動過。
+        #
+        # 尺寸不一致不影響播放：Flutter 端是 `BoxFit.fitHeight` 依高度縮放。
+        return variant_rgba, {'scale': 1.0, 'dx': 0, 'dy': 0,
+                              'score': round(score, 4), 'skipped': True}
     scaled = variant_rgba.resize((int(w * scale), int(h * scale)))
     out = Image.new('RGBA', (w, h))
     out.paste(scaled, ((w - scaled.width) // 2 + dx, (h - scaled.height) // 2 + dy))
-    return out, {'scale': round(scale, 3), 'dx': dx, 'dy': dy, 'score': round(best[0], 4)}
+    return out, {'scale': round(scale, 3), 'dx': dx, 'dy': dy, 'score': round(score, 4),
+                 'skipped': False}
 
 
 def write_align_review(name: str, base, before, after) -> None:
@@ -2947,7 +3610,16 @@ class VnApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: '龐貝 79',
-      theme: ThemeData(brightness: Brightness.dark, useMaterial3: true),
+      // 不給 seed 的話 Material 3 會發預設的紫，跟龐貝壁畫色調直接打架，
+      // 而且會一路蔓延到首頁、設定、結局收藏的每一個 Material 元件。
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: VnColors.ochre,
+          brightness: Brightness.dark,
+        ),
+        scaffoldBackgroundColor: VnColors.backdrop,
+      ),
       home: const Scaffold(body: Center(child: Text('龐貝 79'))),
     );
   }
@@ -3020,6 +3692,12 @@ import 'package:lorescape_vn/src/visual_novel/providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> pumpPlayPage(WidgetTester tester, String storyId) async {
+  // flutter_test 預設視窗是 800×600（桌面橫向），而這個 App 鎖直式：字級與
+  // 內距都按寬度算，選項區高度卻只有 (0.45–0.25)×600 ＝ 120px，兩顆按鈕會
+  // RenderFlex overflow。固定成真機直式尺寸，測到的才是實際版面。
+  tester.view.physicalSize = const Size(390, 844);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
   SharedPreferences.setMockInitialValues(<String, Object>{});
   final prefs = await SharedPreferences.getInstance();
   await tester.pumpWidget(
@@ -3041,6 +3719,10 @@ void main() {
       expect(layout.choiceInset, 400 * 0.10);
       expect(layout.bodyFontSize, 400 / 20);
       expect(layout.spriteOffset, 400 * 0.18);
+      expect(layout.spriteBottom, 800 * 0.12, reason: '立繪底邊置於 0.88H ＝ 距底 0.12H');
+      expect(layout.choiceTop, 800 * 0.45);
+      expect(layout.choiceBottom, 800 * 0.25);
+      expect(layout.safeInset, 800 * 0.08);
     });
   });
 
@@ -3072,6 +3754,31 @@ void main() {
       expect(find.byKey(const ValueKey<String>('sprite-nikias')), findsOneWidget);
     });
 
+    testWidgets('選項只顯示 cond 成立者，點選後走對分支', (tester) async {
+      // choice_overlay.dart 是這個 task 新寫的 widget，卻沒有任何 widget 測試
+      // 走到 choosing 狀態——渲染與「點第 i 個 → choose(可見索引 i)」的接線
+      // 都只靠人工截圖確認過。這條補上。
+      await pumpPlayPage(tester, 'pompeii_01_harbour_stranger');
+      for (var i = 0; i < 40; i++) {
+        if (find.byKey(const ValueKey<String>('choice-0')).evaluate().isNotEmpty) break;
+        await tester.tap(find.byKey(PlayPage.advanceAreaKey));
+        await tester.pumpAndSettle();
+      }
+      expect(find.byKey(const ValueKey<String>('choice-0')), findsOneWidget,
+          reason: '01 篇 S01 結尾有一個兩選項的分歧');
+      expect(find.text('直接進城找人。'), findsOneWidget);
+      expect(find.text('先去廣場，把債權登記起來。'), findsOneWidget);
+      expect(find.text('他人在哪我就去哪。三天前他說「下批就好」，兩天前他說「明天」。我不想再收到第三個明天。'),
+          findsNothing,
+          reason: '那是選項之後才出現的文字，不該提前洩漏');
+
+      await tester.tap(find.byKey(const ValueKey<String>('choice-0')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey<String>('choice-0')), findsNothing,
+          reason: '選完之後選項要收起來');
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('缺件的 sfx 與 bgm 不造成例外', (tester) async {
       await pumpPlayPage(tester, 'pompeii_01_harbour_stranger');
       for (var i = 0; i < 12; i++) {
@@ -3094,6 +3801,25 @@ Expected: FAIL — 找不到 `layout.dart`
 ```dart
 import 'package:flutter/widgets.dart';
 
+/// 全案配色。美術風格聖經定的是龐貝壁畫色調——暖灰、赭、奶油白，**沒有紫色**。
+/// Material 3 不給 seed 就會發預設的紫，所以主題與所有自訂元件都從這裡取色。
+abstract final class VnColors {
+  /// 對話框與名牌的底。
+  static const Color ground = Color(0xFF1C1A19);
+
+  /// 正文。
+  static const Color body = Color(0xFFF2ECE1);
+
+  /// 名牌與次要文字。
+  static const Color muted = Color(0xFFE8DCC8);
+
+  /// 塗鴉樣式的旁白，以及邊框。
+  static const Color ochre = Color(0xFFB9A98C);
+
+  /// 讀不到背景時的底色。
+  static const Color backdrop = Color(0xFF0E0D0C);
+}
+
 /// Flutter製作規範 §2 的版面數值，全部收在這裡。改版面只改這個檔。
 final class VnLayout {
   const VnLayout(this.size);
@@ -3115,6 +3841,10 @@ final class VnLayout {
   double get choiceInset => w * 0.10;
   double get safeInset => h * 0.08;
   double get bodyFontSize => w / 20;
+
+  /// 選項區的上下界（規範 §2：0.45H–0.75H）。距底 0.25H。
+  double get choiceTop => h * 0.45;
+  double get choiceBottom => h * 0.25;
 }
 ```
 
@@ -3122,21 +3852,31 @@ final class VnLayout {
 
 ```dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/play_state.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/save_data.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/story.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/story_player.dart' as player;
-import 'package:lorescape_vn/src/visual_novel/providers.dart' show saveStoreProvider, storyProvider;
+// 這個檔被 providers.dart re-export，形成循環——Dart 允許，但兩邊都要用具名
+// `show`，否則會互相看見對方的 export，名稱衝突時的錯誤訊息很難讀。
+// presentation/ 一律只 import providers.dart，這個檔也不例外。
+import 'package:lorescape_vn/src/visual_novel/providers.dart'
+    show PlayState, PlayStatus, SaveData, Story, currentNode, initState, resume,
+        saveStoreProvider, storyProvider;
+// `advance` / `choose` 與本類別的同名方法撞名。Dart 在 class 方法體內對裸名
+// 一律先解到 instance member（等於 `this.advance`），不會落到 import 進來的
+// 頂層函式——這是名稱解析規則本身，不是 import 寫法的問題，所以這兩個必須
+// 帶 prefix。守門測試看的是 import 的目標路徑而不是有沒有 prefix，規則不變。
+import 'package:lorescape_vn/src/visual_novel/providers.dart' as engine
+    show advance, choose;
 
-/// ⚠️ 這個檔被 providers.dart re-export，因此**只能**具名 import 它需要的兩個
-/// provider，不可整份 import——整份 import 會讓兩個檔互相看見對方的 export，
-/// 名稱衝突時的錯誤訊息會很難讀。
 class PlayController extends FamilyNotifier<PlayState, String> {
   @override
   PlayState build(String storyId) {
     final story = ref.watch(storyProvider(storyId)).requireValue;
     final saved = ref.read(saveStoreProvider).loadSave(storyId);
-    final initial = saved == null ? player.initState(story) : saved.toPlayState();
+    // 讀檔一律經過 resume：存檔沒記 status，停在選項上的存檔若當成 playing，
+    // 點一下就會把那個選擇跳過。
+    // resume 回 null ＝ 存檔對現在的劇本已失效（劇本改版後路徑位移），退回開頭
+    // 重來，而不是崩在玩家臉上。
+    final initial = saved == null
+        ? initState(story)
+        : (resume(story, saved.toPlayState()) ?? initState(story));
     _persist(storyId, initial);
     return initial;
   }
@@ -3145,18 +3885,23 @@ class PlayController extends FamilyNotifier<PlayState, String> {
 
   void advance() {
     if (state.status != PlayStatus.playing) return;
-    _apply(player.advance(_story, state));
+    _apply(engine.advance(_story, state));
   }
 
   void choose(int visibleIndex) {
     if (state.status != PlayStatus.choosing) return;
-    _apply(player.choose(_story, state, visibleIndex));
+    _apply(engine.choose(_story, state, visibleIndex));
   }
 
   void restart() {
     final store = ref.read(saveStoreProvider);
     store.clearSave(arg);
-    state = player.initState(_story);
+    // backlog 與 lastEntry 是 controller 的欄位，不會因為 state 換了就重置。
+    // 少了這兩行，重新開始之後**立刻**打開回顧會看到上一輪的台詞——新的第一
+    // 句要等玩家點一次 advance 才會補進去。
+    _backlog.clear();
+    _lastEntry = null;
+    _apply(initState(_story));
   }
 
   void _apply(PlayState next) {
@@ -3257,11 +4002,17 @@ class SpriteLayer extends StatelessWidget {
       errorBuilder: (_, _, _) => const SizedBox.shrink(),
     );
     if (sprite.filter == 'memory_desaturate') {
+      // 劇本在 missingAssets 裡對這個 filter 的註記是「回憶段落用去飽和＋暖色
+      // 偏移濾鏡，立繪沿用既有資產不另出圖」——所以不是純灰階，要帶暖色。
+      // 三列的權重和分別是 1.06 / 0.94 / 0.76：紅偏亮、藍壓低。
+      //
+      // ⚠️ `missingAssets['filter']` 含 'memory_desaturate'，但那是「引擎要實作
+      // 的效果」而非缺圖，**不要**拿它去做缺件降級把濾鏡跳過。
       image = ColorFiltered(
         colorFilter: const ColorFilter.matrix(<double>[
-          0.36, 0.46, 0.12, 0, 0,
-          0.36, 0.46, 0.12, 0, 0,
-          0.36, 0.46, 0.12, 0, 0,
+          0.42, 0.50, 0.14, 0, 12,
+          0.36, 0.46, 0.12, 0, 4,
+          0.28, 0.38, 0.10, 0, 0,
           0, 0, 0, 1, 0,
         ]),
         child: image,
@@ -3313,7 +4064,20 @@ class DialogueBox extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: <Widget>[
-          const Positioned.fill(child: ColoredBox(color: Color(0xD11C1A19))),
+          // 規範 §2：上緣加細微漸層過渡。硬邊會讓對話框看起來像貼上去的一塊
+          // 黑條，漸層才接得回背景。上緣 10% 做過渡，其餘維持 0.82 不透明。
+          const Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: <Color>[Color(0x001C1A19), Color(0xD11C1A19)],
+                  stops: <double>[0, 0.1],
+                ),
+              ),
+            ),
+          ),
           if (name != null)
             Positioned(
               key: nameTagKey,
@@ -3377,12 +4141,17 @@ class ChoiceOverlay extends StatelessWidget {
     return Positioned(
       left: layout.choiceInset,
       right: layout.choiceInset,
-      top: layout.h * 0.45,
-      bottom: layout.h * 0.25,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          for (var i = 0; i < options.length; i++)
+      top: layout.choiceTop,
+      bottom: layout.choiceBottom,
+      // 選項帶是固定高度（0.30H），而按鈕高度取決於字級與是否換行——最長的
+      // 選項有 16 字，在窄螢幕上會折成兩行。內容放得下就置中，放不下就可捲，
+      // 不要讓它 RenderFlex overflow。
+      child: Center(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              for (var i = 0; i < options.length; i++)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: SizedBox(
@@ -3390,16 +4159,30 @@ class ChoiceOverlay extends StatelessWidget {
                 child: FilledButton.tonal(
                   key: ValueKey<String>('choice-$i'),
                   onPressed: () => onChoose(i),
-                  child: Text(options[i].option.text),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: VnColors.ground.withValues(alpha: 0.90),
+                    foregroundColor: VnColors.body,
+                    padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
+                      side: BorderSide(color: VnColors.ochre.withValues(alpha: 0.40)),
+                    ),
+                    textStyle: TextStyle(fontSize: layout.bodyFontSize * 0.95, height: 1.4),
+                  ),
+                  child: Text(options[i].option.text, textAlign: TextAlign.center),
                 ),
               ),
-            ),
-        ],
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
 }
 ```
+
+> 上面的 `for` 迴圈內容（`Padding` ＋ `SizedBox` ＋ `FilledButton.tonal`）縮排要跟著多兩層。
 
 - [ ] **Step 6: 實作 play_page.dart**
 
@@ -3454,8 +4237,11 @@ class _Stage extends ConsumerWidget {
 
     final node = currentNode(story, state);
     final scene = story.scenes[state.cursor.sceneId]!;
+    // CG 是會停頓的節點型別之一，所以 node 是 CgNode 時就不可能同時是旁白或
+    // 對白——對話框本來就不會出現，`CgNode.hideDialogue` 對現在的渲染沒有可
+    // 觀察的效果。等哪天要做「CG 蓋住上一句台詞」才需要它，屆時要有『上一句』
+    // 這個狀態，不是延伸現在的邏輯就能做到。
     final cg = node is CgNode ? repository.cgPath(story, node.id) : null;
-    final hideDialogue = node is CgNode && node.hideDialogue;
 
     return GestureDetector(
       key: PlayPage.advanceAreaKey,
@@ -3473,19 +4259,30 @@ class _Stage extends ConsumerWidget {
               layout: layout,
               pathOf: (sprite) => repository.spritePath(story, sprite.who, sprite.sprite),
             ),
-          if (!hideDialogue && node is NarrationNode)
+          if (node is NarrationNode)
             DialogueBox(
               text: node.text,
               layout: layout,
               fontScale: fontScale,
               graffiti: node.style == 'graffiti',
             ),
-          if (!hideDialogue && node is DialogueNode)
+          if (node is DialogueNode)
             DialogueBox(
               text: node.text,
               layout: layout,
               fontScale: fontScale,
               speakerName: story.characters[node.who]?.name ?? node.who,
+            ),
+          // 選項出現時，把剛讀完的那句留在對話框裡當上下文（不重新逐字）。
+          if (state.status == PlayStatus.choosing && controller.lastEntry != null)
+            DialogueBox(
+              text: controller.lastEntry!.text,
+              layout: layout,
+              fontScale: fontScale,
+              speakerName: controller.lastEntry!.speakerName,
+              completed: true,
+              onCompleted: () {},
+              msPerCharacter: 0,
             ),
           if (state.status == PlayStatus.choosing && node is ChoiceNode)
             ChoiceOverlay(
@@ -3522,12 +4319,70 @@ class _EndingView extends StatelessWidget {
 }
 ```
 
-- [ ] **Step 7: 跑測試與 analyze**
+- [ ] **Step 7: 寫架構守門測試**
+
+`vn/test/architecture/import_rules_test.dart`：
+
+```dart
+import 'dart:io';
+
+import 'package:flutter_test/flutter_test.dart';
+
+/// 這一包日後要整包搬進另一個 Flutter 專案的 `features/visual_novel/`，屆時
+/// 跨 feature 引用只看 `providers.dart`。若 presentation 已經散著直接引用
+/// data／domain，搬過去就會拖出一串跨層依賴——那時候才發現就太晚了。
+///
+/// 用測試守而不是靠註解與 code review：規則要能自己叫。
+void main() {
+  const String providers = 'package:lorescape_vn/src/visual_novel/providers.dart';
+  const String presentation = 'package:lorescape_vn/src/visual_novel/presentation/';
+
+  Iterable<File> dartFilesIn(String path) => Directory(path)
+      .listSync(recursive: true)
+      .whereType<File>()
+      .where((file) => file.path.endsWith('.dart'));
+
+  test('presentation 底下只准 import providers.dart', () {
+    final RegExp importLine = RegExp("^import '(package:lorescape_vn/[^']+)'");
+    final List<String> offenders = <String>[];
+
+    for (final File file in dartFilesIn('lib/src/visual_novel/presentation')) {
+      for (final String line in file.readAsLinesSync()) {
+        final RegExpMatch? match = importLine.firstMatch(line);
+        if (match == null) continue;
+        final String target = match.group(1)!;
+        // 同一層內部互相引用沒問題，那不算跨層。
+        if (target.startsWith(presentation)) continue;
+        if (target == providers) continue;
+        offenders.add('${file.path} → $target');
+      }
+    }
+
+    expect(offenders, isEmpty,
+        reason: 'presentation 只准經 providers.dart 取用 data／domain');
+  });
+
+  test('domain 底下零 Flutter 依賴', () {
+    final RegExp flutterImport = RegExp("^import 'package:flutter/");
+    final List<String> offenders = <String>[];
+
+    for (final File file in dartFilesIn('lib/src/visual_novel/domain')) {
+      for (final String line in file.readAsLinesSync()) {
+        if (flutterImport.hasMatch(line)) offenders.add('${file.path}: $line');
+      }
+    }
+
+    expect(offenders, isEmpty, reason: 'domain 要能用 dart test 跑，不得依賴 Flutter');
+  });
+}
+```
+
+- [ ] **Step 8: 跑測試與 analyze**
 
 Run: `cd vn && fvm flutter test && fvm flutter analyze --fatal-infos`
 Expected: 全 PASS
 
-- [ ] **Step 8: 用真機（瀏覽器）看一眼**
+- [ ] **Step 9: 用真機（瀏覽器）看一眼**
 
 ```bash
 cd vn && fvm flutter run -d chrome
@@ -3560,7 +4415,6 @@ class TypewriterText extends StatefulWidget {
   const TypewriterText({required this.text, required this.style,
       required this.msPerCharacter, required this.completed,
       required this.onCompleted, super.key});
-  static const ValueKey<String> key_ = ValueKey<String>('typewriter');
 }
 
 Future<void> precacheNode(BuildContext context, PackRepository repository,
@@ -3620,6 +4474,42 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
     expect(calls, 1);
   });
+
+  testWidgets('自然打完之後父層把 completed 翻成 true，不得再通知一次', (tester) async {
+    // 實際會走到的路徑：打完 → 父層 _typingDone 翻 true → rebuild 時新 widget
+    // 的 completed 是 true、舊的是 false → didUpdateWidget 的「外部強制補完」
+    // 分支被觸發。沒有 _notified 旗標的話 onCompleted 會被打第二次。
+    var calls = 0;
+    Widget build(bool completed) => wrap(TypewriterText(
+          text: '天亮',
+          style: const TextStyle(),
+          msPerCharacter: 10,
+          completed: completed,
+          onCompleted: () => calls++,
+        ));
+    await tester.pumpWidget(build(false));
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump();
+    expect(calls, 1);
+
+    await tester.pumpWidget(build(true));
+    await tester.pump();
+    expect(calls, 1, reason: '同一段文字只能通知一次');
+  });
+
+  testWidgets('一開始就是 completed 也要通知，否則已讀節點要多點一次', (tester) async {
+    var calls = 0;
+    await tester.pumpWidget(wrap(TypewriterText(
+      text: '天亮',
+      style: const TextStyle(),
+      msPerCharacter: 200,
+      completed: true,
+      onCompleted: () => calls++,
+    )));
+    await tester.pump();
+    expect(find.text('天亮'), findsOneWidget);
+    expect(calls, 1);
+  });
 }
 ```
 
@@ -3627,20 +4517,33 @@ void main() {
 
 ```dart
     testWidgets('逐字顯示中點擊先補完，再點才推進', (tester) async {
+      // pumpPlayPage 結尾已經讓第一段（14 字）打完字，直接點一次會推進——
+      // 這正是「點擊推進到下一個節點」那條測試在驗的行為。要驗「還沒顯示完先
+      // 補完」得挑一段夠長、還來不及打完的文字：第二段旁白有 39 字，
+      // 39 * 28ms ≈ 1092ms，只推進 10ms 絕對還在逐字顯示中。
+      const secondText = '我押著這批貨走了二十六天——亞麻布、玻璃器、四捆莎草紙，從亞歷山卓一路到這裡。';
       await pumpPlayPage(tester, 'pompeii_01_harbour_stranger');
+      await tester.tap(find.byKey(PlayPage.advanceAreaKey));
+      // 只推進一個 frame，不讓第二段的逐字動畫跑完。
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 10));
-      // 第一次點：補完當前這段
+      expect(find.text(secondText), findsNothing, reason: '此時應該還在逐字顯示中');
+
+      // 第一次點：補完當前這段，不推進
       await tester.tap(find.byKey(PlayPage.advanceAreaKey));
       await tester.pump();
-      expect(find.text('天還沒全亮，海面是鉛的顏色。'), findsOneWidget);
+      expect(find.text(secondText), findsOneWidget);
+
       // 第二次點：推進到下一段
       await tester.tap(find.byKey(PlayPage.advanceAreaKey));
       await tester.pumpAndSettle();
-      expect(find.text('天還沒全亮，海面是鉛的顏色。'), findsNothing);
+      expect(find.text(secondText), findsNothing);
     });
 ```
 
-> `pumpPlayPage` 原本結尾是 `pumpAndSettle()`，逐字動畫會讓它一直不 settle。把它改成 `await tester.pump(); await tester.pump(const Duration(seconds: 5));`，並在既有的其他 test 裡沿用。
+> **`pumpPlayPage` 的結尾要改成 `await tester.pump(); await tester.pump(const Duration(seconds: 5));`**（原本的 `pumpAndSettle()` 碰到逐字動畫會永遠不 settle），既有測試沿用。
+>
+> ⚠️ **這個改動與「在第一段驗補完」互斥**：5 秒的假時鐘遠長於第一段的 392ms，`pumpPlayPage` 一結束第一段早就打完了。所以上面這條測試必須先推進到夠長的第二段才驗得到——**行為要驗真，不能為了讓範例好看就把兩段式點擊測成一段**。
 
 - [ ] **Step 2: 跑測試確認失敗**
 
@@ -3680,6 +4583,15 @@ class _TypewriterTextState extends State<TypewriterText> {
   Timer? _timer;
   int _shown = 0;
 
+  /// onCompleted 對同一段文字只能通知一次。
+  ///
+  /// 沒有這個旗標會被打兩次：timer 自然打完先通知一次 → 父層的 `_typingDone`
+  /// 翻 true 觸發 rebuild → 新 widget 的 `completed` 是 true 而舊的是 false
+  /// （打字期間父層不會因為逐字動畫本身而重繪）→ `didUpdateWidget` 的
+  /// 「外部強制補完」分支再通知一次。目前呼叫端剛好是冪等的所以看不出來，
+  /// 但只要有人接一個「打完字播音效」就會聽到兩聲。
+  bool _notified = false;
+
   @override
   void initState() {
     super.initState();
@@ -3705,8 +4617,13 @@ class _TypewriterTextState extends State<TypewriterText> {
 
   void _start() {
     _timer?.cancel();
+    _notified = false;
     if (widget.completed || widget.msPerCharacter <= 0) {
+      // 一開始就是完成狀態（已讀節點直接顯示全文）也要通知——否則父層的
+      // `_typingDone` 永遠不會翻 true，玩家對已讀節點的第一次點擊會變成
+      // 無效的「補完」，每一格都要多點一次。
       _shown = widget.text.length;
+      _notify();
       return;
     }
     _timer = Timer.periodic(
@@ -3726,6 +4643,12 @@ class _TypewriterTextState extends State<TypewriterText> {
     _timer?.cancel();
     _timer = null;
     if (_shown != widget.text.length) setState(() => _shown = widget.text.length);
+    _notify();
+  }
+
+  void _notify() {
+    if (_notified) return;
+    _notified = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) widget.onCompleted();
     });
@@ -3862,8 +4785,15 @@ final class BacklogEntry { const BacklogEntry({required this.speakerName, requir
                            final String? speakerName; final String text; }
 // PlayController 新增：
 List<BacklogEntry> get backlog;      // 本次遊玩累積，最多保留 200 筆
+BacklogEntry? get lastEntry;         // 選項畫面要顯示的上一句
 void skipRead();                     // 連續推進，直到碰到未讀節點或選項或結局
 ```
+
+### 順帶收掉：選項出現時上一句台詞會消失
+
+Task 10 的截圖顯示，走到 `choice` 節點時畫面只剩背景與兩顆按鈕——玩家剛讀完的那句話不見了，等於**在沒有上下文的情況下做選擇**。當時沒有「上一句」這個狀態可用，所以記著等 backlog 做出來。現在有了。
+
+`_Stage` 在 `choosing` 時把 `controller.lastEntry` 餵給 `DialogueBox`（`completed: true`，不要重新逐字），選項疊在它上面。
 
 **已讀判定**：`SaveStore.readNodes()` 內有 `state.readKey` 即為已讀。`skipRead()` **不得跳過未讀節點**。
 
@@ -3883,6 +4813,51 @@ void skipRead();                     // 連續推進，直到碰到未讀節點�
       await tester.pump(const Duration(seconds: 1));
       expect(find.text('天還沒全亮，海面是鉛的顏色。'), findsOneWidget);
       expect(find.text('尼基亞斯'), findsWidgets);
+    });
+
+    testWidgets('已讀跳過碰到選項就停', (tester) async {
+      // 這是 skipRead 的第二條終止路徑（第一條是未讀節點）。把 S01 的所有節點
+      // 鍵都標成已讀，跳過就只可能停在選項上。
+      // 這條會真的走到 ChoiceOverlay，預設的 800×600 桌面測試視窗會讓選項
+      // Column 撐爆丟 RenderFlex overflow——跟 pumpPlayPage 一樣鎖直式。
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'vn.readNodes': <String>[for (var i = 0; i < 40; i++) 'S01#$i'],
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: <Override>[sharedPreferencesProvider.overrideWithValue(prefs)],
+          child: const MaterialApp(home: PlayPage(storyId: 'pompeii_01_harbour_stranger')),
+        ),
+      );
+      await _pumpTyping(tester);
+
+      await tester.tap(find.byKey(PlayPage.skipButtonKey));
+      await _pumpTyping(tester);
+      expect(find.byKey(const ValueKey<String>('choice-0')), findsOneWidget,
+          reason: '全部已讀時，跳過應該一路停在選項上');
+    });
+
+    testWidgets('重新開始要清掉上一輪的回顧', (tester) async {
+      await pumpPlayPage(tester, 'pompeii_01_harbour_stranger');
+      for (var i = 0; i < 4; i++) {
+        await tester.tap(find.byKey(PlayPage.advanceAreaKey));
+        await _pumpTyping(tester);
+      }
+      // Element 沒有內建 `.read`——那是 provider 套件的擴充方法。Riverpod 要
+      // 從 ProviderScope 取 container。
+      final controller = ProviderScope.containerOf(
+        tester.element(find.byKey(PlayPage.advanceAreaKey)),
+      ).read(playControllerProvider('pompeii_01_harbour_stranger').notifier);
+      expect(controller.backlog.length, greaterThan(1));
+
+      controller.restart();
+      await _pumpTyping(tester);
+      expect(controller.backlog.length, 1,
+          reason: '重新開始後只該有新的第一句，不得殘留上一輪的台詞');
     });
 
     testWidgets('已讀跳過碰到未讀節點就停', (tester) async {
@@ -3920,8 +4895,13 @@ Expected: FAIL — 找不到 `PlayPage.backlogButtonKey`
 
   List<BacklogEntry> get backlog => List<BacklogEntry>.unmodifiable(_backlog);
 
+  /// 選項畫面要顯示的上一句。`choice` 節點本身沒有文字，玩家在沒有上下文的
+  /// 情況下做選擇很難受——把剛讀完的那句留在對話框裡。
+  BacklogEntry? _lastEntry;
+  BacklogEntry? get lastEntry => _lastEntry;
+
   void _record(PlayState value) {
-    final node = player.currentNode(_story, value);
+    final node = currentNode(_story, value);
     final entry = switch (node) {
       NarrationNode(:final text) => BacklogEntry(speakerName: null, text: text),
       DialogueNode(:final who, :final text) =>
@@ -3929,6 +4909,7 @@ Expected: FAIL — 找不到 `PlayPage.backlogButtonKey`
       _ => null,
     };
     if (entry == null) return;
+    _lastEntry = entry;
     _backlog.add(entry);
     // 一篇約 300 個節點，留 200 筆足夠往回捲，也不會讓記憶體無限長。
     if (_backlog.length > 200) _backlog.removeAt(0);
@@ -3942,7 +4923,7 @@ Expected: FAIL — 找不到 `PlayPage.backlogButtonKey`
     while (guard-- > 0) {
       if (next.status != PlayStatus.playing) break;
       if (!read.contains(next.readKey)) break;
-      final candidate = player.advance(_story, next);
+      final candidate = engine.advance(_story, next);
       if (candidate.status != PlayStatus.playing || !read.contains(candidate.readKey)) {
         next = candidate;
         break;
@@ -4212,11 +5193,20 @@ GoRouter buildVnRouter() => GoRouter(
 `main.dart` 的 `MaterialApp.router` 加 `builder`，在寬螢幕上以 9:16 置中，兩側留黑，模擬手機：
 
 ```dart
+      // 外框比例用**真實手機**（390:844 ≈ 0.462），不是 9:16（0.5625）。
+      //
+      // VnLayout 的字級跟寬度走（`W / 20`）、選項帶跟高度走（`0.45H`–`0.75H`），
+      // 所以外框比例直接決定版面成不成立。9:16 在同樣高度下更寬（H=844 時
+      // W=475），字級變 23.75、三顆選項按鈕要 255px，而選項帶只有 253px——
+      // 差 2px 就溢出，一換行更慘。390:844 下字級 19.5、三顆 234px，餘裕 19px。
+      //
+      // 背景是 9:16 的圖，放進較窄的框只是多裁一點下緣——規範 §2 本來就說
+      // 「螢幕更長時裁下緣，因為關鍵構圖都在上半部」。
       builder: (context, child) => ColoredBox(
         color: const Color(0xFF000000),
         child: Center(
           child: AspectRatio(
-            aspectRatio: 9 / 16,
+            aspectRatio: 390 / 844,
             child: ClipRect(child: child),
           ),
         ),
