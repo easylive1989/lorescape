@@ -4451,20 +4451,33 @@ void main() {
 
 ```dart
     testWidgets('逐字顯示中點擊先補完，再點才推進', (tester) async {
+      // pumpPlayPage 結尾已經讓第一段（14 字）打完字，直接點一次會推進——
+      // 這正是「點擊推進到下一個節點」那條測試在驗的行為。要驗「還沒顯示完先
+      // 補完」得挑一段夠長、還來不及打完的文字：第二段旁白有 39 字，
+      // 39 * 28ms ≈ 1092ms，只推進 10ms 絕對還在逐字顯示中。
+      const secondText = '我押著這批貨走了二十六天——亞麻布、玻璃器、四捆莎草紙，從亞歷山卓一路到這裡。';
       await pumpPlayPage(tester, 'pompeii_01_harbour_stranger');
+      await tester.tap(find.byKey(PlayPage.advanceAreaKey));
+      // 只推進一個 frame，不讓第二段的逐字動畫跑完。
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 10));
-      // 第一次點：補完當前這段
+      expect(find.text(secondText), findsNothing, reason: '此時應該還在逐字顯示中');
+
+      // 第一次點：補完當前這段，不推進
       await tester.tap(find.byKey(PlayPage.advanceAreaKey));
       await tester.pump();
-      expect(find.text('天還沒全亮，海面是鉛的顏色。'), findsOneWidget);
+      expect(find.text(secondText), findsOneWidget);
+
       // 第二次點：推進到下一段
       await tester.tap(find.byKey(PlayPage.advanceAreaKey));
       await tester.pumpAndSettle();
-      expect(find.text('天還沒全亮，海面是鉛的顏色。'), findsNothing);
+      expect(find.text(secondText), findsNothing);
     });
 ```
 
-> `pumpPlayPage` 原本結尾是 `pumpAndSettle()`，逐字動畫會讓它一直不 settle。把它改成 `await tester.pump(); await tester.pump(const Duration(seconds: 5));`，並在既有的其他 test 裡沿用。
+> **`pumpPlayPage` 的結尾要改成 `await tester.pump(); await tester.pump(const Duration(seconds: 5));`**（原本的 `pumpAndSettle()` 碰到逐字動畫會永遠不 settle），既有測試沿用。
+>
+> ⚠️ **這個改動與「在第一段驗補完」互斥**：5 秒的假時鐘遠長於第一段的 392ms，`pumpPlayPage` 一結束第一段早就打完了。所以上面這條測試必須先推進到夠長的第二段才驗得到——**行為要驗真，不能為了讓範例好看就把兩段式點擊測成一段**。
 
 - [ ] **Step 2: 跑測試確認失敗**
 
