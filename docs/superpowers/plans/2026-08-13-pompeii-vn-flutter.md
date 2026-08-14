@@ -3765,6 +3765,9 @@ void main() {
           reason: '01 篇 S01 結尾有一個兩選項的分歧');
       expect(find.text('直接進城找人。'), findsOneWidget);
       expect(find.text('先去廣場，把債權登記起來。'), findsOneWidget);
+      expect(find.text('他人在哪我就去哪。三天前他說「下批就好」，兩天前他說「明天」。我不想再收到第三個明天。'),
+          findsNothing,
+          reason: '那是選項之後才出現的文字，不該提前洩漏');
 
       await tester.tap(find.byKey(const ValueKey<String>('choice-0')));
       await tester.pumpAndSettle();
@@ -4252,6 +4255,17 @@ class _Stage extends ConsumerWidget {
               layout: layout,
               fontScale: fontScale,
               speakerName: story.characters[node.who]?.name ?? node.who,
+            ),
+          // 選項出現時，把剛讀完的那句留在對話框裡當上下文（不重新逐字）。
+          if (state.status == PlayStatus.choosing && controller.lastEntry != null)
+            DialogueBox(
+              text: controller.lastEntry!.text,
+              layout: layout,
+              fontScale: fontScale,
+              speakerName: controller.lastEntry!.speakerName,
+              completed: true,
+              onCompleted: () {},
+              msPerCharacter: 0,
             ),
           if (state.status == PlayStatus.choosing && node is ChoiceNode)
             ChoiceOverlay(
@@ -4754,8 +4768,15 @@ final class BacklogEntry { const BacklogEntry({required this.speakerName, requir
                            final String? speakerName; final String text; }
 // PlayController 新增：
 List<BacklogEntry> get backlog;      // 本次遊玩累積，最多保留 200 筆
+BacklogEntry? get lastEntry;         // 選項畫面要顯示的上一句
 void skipRead();                     // 連續推進，直到碰到未讀節點或選項或結局
 ```
+
+### 順帶收掉：選項出現時上一句台詞會消失
+
+Task 10 的截圖顯示，走到 `choice` 節點時畫面只剩背景與兩顆按鈕——玩家剛讀完的那句話不見了，等於**在沒有上下文的情況下做選擇**。當時沒有「上一句」這個狀態可用，所以記著等 backlog 做出來。現在有了。
+
+`_Stage` 在 `choosing` 時把 `controller.lastEntry` 餵給 `DialogueBox`（`completed: true`，不要重新逐字），選項疊在它上面。
 
 **已讀判定**：`SaveStore.readNodes()` 內有 `state.readKey` 即為已讀。`skipRead()` **不得跳過未讀節點**。
 
@@ -4812,6 +4833,11 @@ Expected: FAIL — 找不到 `PlayPage.backlogButtonKey`
 
   List<BacklogEntry> get backlog => List<BacklogEntry>.unmodifiable(_backlog);
 
+  /// 選項畫面要顯示的上一句。`choice` 節點本身沒有文字，玩家在沒有上下文的
+  /// 情況下做選擇很難受——把剛讀完的那句留在對話框裡。
+  BacklogEntry? _lastEntry;
+  BacklogEntry? get lastEntry => _lastEntry;
+
   void _record(PlayState value) {
     final node = currentNode(_story, value);
     final entry = switch (node) {
@@ -4821,6 +4847,7 @@ Expected: FAIL — 找不到 `PlayPage.backlogButtonKey`
       _ => null,
     };
     if (entry == null) return;
+    _lastEntry = entry;
     _backlog.add(entry);
     // 一篇約 300 個節點，留 200 筆足夠往回捲，也不會讓記憶體無限長。
     if (_backlog.length > 200) _backlog.removeAt(0);
