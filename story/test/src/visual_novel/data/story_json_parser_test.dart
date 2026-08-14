@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lorescape_vn/src/visual_novel/data/story_json_parser.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/story.dart';
+import 'package:lorescape_story/src/visual_novel/data/story_json_parser.dart';
+import 'package:lorescape_story/src/visual_novel/domain/story.dart';
 
 Story loadFixture(String dir) {
   final file = File('assets/content/pompeii-79/stories/$dir/story.json');

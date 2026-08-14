@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lorescape_vn/src/visual_novel/data/story_json_parser.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/cursor.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/play_state.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/story.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/story_player.dart';
+import 'package:lorescape_story/src/visual_novel/data/story_json_parser.dart';
+import 'package:lorescape_story/src/visual_novel/domain/cursor.dart';
+import 'package:lorescape_story/src/visual_novel/domain/play_state.dart';
+import 'package:lorescape_story/src/visual_novel/domain/story.dart';
+import 'package:lorescape_story/src/visual_novel/domain/story_player.dart';
 
 Story build(
   Map<String, dynamic> scenes, {

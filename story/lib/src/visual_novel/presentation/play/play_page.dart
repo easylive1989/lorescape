@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/play/backlog_sheet.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/play/background_layer.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/play/choice_overlay.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/play/dialogue_box.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/play/layout.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/play/preloader.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/play/sprite_layer.dart';
-import 'package:lorescape_vn/src/visual_novel/providers.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/play/backlog_sheet.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/play/background_layer.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/play/choice_overlay.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/play/dialogue_box.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/play/layout.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/play/preloader.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/play/sprite_layer.dart';
+import 'package:lorescape_story/src/visual_novel/providers.dart';
 
 class PlayPage extends ConsumerWidget {
   const PlayPage({required this.storyId, super.key});

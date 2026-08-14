@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/play/layout.dart';
-import 'package:lorescape_vn/src/visual_novel/providers.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/play/layout.dart';
+import 'package:lorescape_story/src/visual_novel/providers.dart';
 
 /// 結局收藏頁：列出每篇故事的三個結局。
 ///

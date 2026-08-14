@@ -9,7 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // 不會落到這個 import 裡的頂層函式——那不是「import 沒 show 乾淨」的問題，是
 // Dart 的名稱解析規則，沒有 prefix 就無法在方法體內指名呼叫到引擎那兩個同名
 // 函式。其餘沒有撞名的維持裸名 show。
-import 'package:lorescape_vn/src/visual_novel/providers.dart'
+import 'package:lorescape_story/src/visual_novel/providers.dart'
     show
         DialogueNode,
         NarrationNode,
@@ -22,7 +22,7 @@ import 'package:lorescape_vn/src/visual_novel/providers.dart'
         resume,
         saveStoreProvider,
         storyProvider;
-import 'package:lorescape_vn/src/visual_novel/providers.dart'
+import 'package:lorescape_story/src/visual_novel/providers.dart'
     as engine
     show advance, choose;
 
@@ -82,6 +82,17 @@ class PlayController extends FamilyNotifier<PlayState, String> {
     _apply(initState(_story));
   }
 
+  /// 已讀集合的鍵。**一定要帶 storyId。**
+  ///
+  /// `Cursor.readKey` 只有 `<場>#<路徑>`，而 8 篇的場 id 全都是 S01…S12 與
+  /// E_A/E_B/E_C——實測 8 篇加總 2,123 個鍵、跨篇聯集只有 749，**碰撞
+  /// 64.7%**。少了 storyId 的話，玩家讀完第 1 篇再進第 2 篇按快進，會沿著
+  /// 碰撞鍵一路衝過從沒看過的劇情（實測其他七篇各有 43–57% 的節點被誤判成
+  /// 已讀），直接違反規範 §5.3「只跳已讀節點，碰到未讀即停」。
+  ///
+  /// 同一個 SaveStore 裡 `markEnding` 與存檔鍵本來就帶 storyId，只有已讀漏了。
+  String _readKey(PlayState value) => '$arg#${value.readKey}';
+
   /// 只跳已讀節點。未讀、選項、結局都要停——這是規範 §5.3 的硬要求。
   void skipRead() {
     final read = ref.read(saveStoreProvider).readNodes();
@@ -89,10 +100,13 @@ class PlayController extends FamilyNotifier<PlayState, String> {
     var next = state;
     while (guard-- > 0) {
       if (next.status != PlayStatus.playing) break;
-      if (!read.contains(next.readKey)) break;
+      if (!read.contains(_readKey(next))) break;
       final candidate = engine.advance(_story, next);
+      // 跳過的內容仍然要進回顧——快進之後正是最可能想回頭查看的時候，
+      // backlog 有洞會讓「回顧」名不副實。
+      _record(candidate);
       if (candidate.status != PlayStatus.playing ||
-          !read.contains(candidate.readKey)) {
+          !read.contains(_readKey(candidate))) {
         next = candidate;
         break;
       }
@@ -133,7 +147,9 @@ class PlayController extends FamilyNotifier<PlayState, String> {
 
   void _persist(String storyId, PlayState value) {
     final store = ref.read(saveStoreProvider);
-    store.markRead(value.readKey);
+    // 結局狀態的游標必然越界，那個鍵不對應任何節點、之後也永遠查不到——
+    // 寫進已讀集合只是污染。
+    if (value.status != PlayStatus.ended) store.markRead(_readKey(value));
     if (value.status == PlayStatus.ended) {
       final endingId = value.endingId;
       if (endingId != null) store.markEnding(storyId, endingId);

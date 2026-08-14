@@ -8,7 +8,7 @@
 素材與劇本來自 **`writer/`（Obsidian vault，不在版控裡）**。首次 clone 後必須先匯入：
 
 ```bash
-python3 vn/tool/import_pack.py
+python3 story/tool/import_pack.py
 ```
 
 沒跑這一步的話，`assets/content/pompeii-79/assets/` 是空的，測試會失敗、畫面會全黑。

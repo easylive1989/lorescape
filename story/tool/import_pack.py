@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""把 writer vault 的龐貝景點包匯入 vn/assets/。可重跑。
+"""把 writer vault 的龐貝景點包匯入 story/assets/。可重跑。
 
 用法：
-    python3 vn/tool/import_pack.py [--png] [--no-cache]
+    python3 story/tool/import_pack.py [--png] [--no-cache]
 
 立繪去背見 remove_background()；表情差分對齊（Task 8）見 align_to_base()，
 兩者串接於 process_sprites()。
@@ -13,14 +13,14 @@ import numpy as np
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 SRC = ROOT / 'writer/創作/龐貝/stories'
-OUT = ROOT / 'vn/assets/content/pompeii-79'
+OUT = ROOT / 'story/assets/content/pompeii-79'
 
 PACK_TITLE = '龐貝 79'
 PACK_PLACE = '龐貝'
 PACK_BLURB = '同一座城，同一場災難，八個人各自的最後一個選擇。'
 
 CACHE = ROOT / 'writer/創作/龐貝/美術測試/_processed'
-REVIEW = ROOT / 'vn/tool/_review'
+REVIEW = ROOT / 'story/tool/_review'
 
 # 灰底判定的容差。AI 出的平灰底其實有輕微雜訊，純等值比對會留下一圈麻點。
 BG_TOLERANCE = 26
@@ -169,22 +169,21 @@ SCALE_RANGE = [0.88 + 0.02 * i for i in range(13)]   # 0.88 … 1.12
 SHIFT_LIMIT = 72                                      # px，於 1/4 解析度上為 18
 
 
-# 對齊分數的下限。低於它就不套用對齊——那種分數代表素材本身有問題
-# （畫錯人、畫錯時代），硬套對齊只會把它變得更歪。
-ALIGN_MIN_SCORE = 0.95
-
-# 已知有問題的立繪：分數過低是**素材問題**，不是對齊失敗。
+# 對齊分數的下限。低於它就不套用對齊——搜尋在弱訊號的地形上會挑出比不動更歪
+# 的假最佳解（實測發生過：把一張本來就對齊的圖弄歪 132px）。
 #
-# 用 allowlist 而不是默默跳過，是為了讓兩個方向都有訊號：多出新的壞素材會紅，
-# 而素材被重出修好之後這裡沒刪也會紅（與 Task 6 的 knownDeadBranches 同一套路）。
-KNOWN_BAD_SPRITES = {
-    # 十九世紀海軍軍官制服，時代錯置。用在 07-cannot-land S01/S02 共 5 處。
-    'officer_hard.png': '時代錯置：19 世紀海軍軍官',
-    # 以下三張與別的角色位元組相同，是表情差分被指到了別人的臉。
-    'hylas_scared.png': '錯掛：實為盧奇烏斯（≡ master_impatient）',
-    'orestes_urgent.png': '錯掛：實為忒亞（≡ thea_afraid）',
-    'survivor_sharp.png': '錯掛：實為普林尼（≡ pliny_labored）',
-}
+# **這個分數不是可靠的壞素材偵測器。** 曾經以為是：四張壞素材落在 0.60–0.93，
+# 當時最低的好素材是 0.9788，看起來斷得很開。四張重出之後才看清楚——
+# `hylas_scared` 的 prompt 寫著「shoulders drawn up slightly」，那個合法的姿勢
+# 改變讓剪影差了 6.6%、分數只有 0.9433，跟錯掛版的 `orestes_urgent`（0.9349）
+# 只差 0.008。任何門檻都會誤判其中一邊。所以這個值只留著擋「套用垃圾變換」，
+# 偵測壞素材交給下面那道 exact 檢查。
+ALIGN_MIN_SCORE = 0.90
+
+# 已知有問題的立繪。**四張已於 2026-08-14 重出修好，這裡現在應該是空的。**
+#
+# 保留這個常數與雙向斷言：多出新的壞素材會紅，而素材修好之後沒刪這裡也會紅。
+KNOWN_BAD_SPRITES: dict[str, str] = {}
 
 
 def _score(a, b):
@@ -293,6 +292,34 @@ def slug_of(meta_id: str) -> str:
     return f"{order}-{'-'.join(rest).replace('_', '-')}"
 
 
+def detect_duplicate_sprites(picked) -> None:
+    """不同檔名、位元組完全相同的立繪 ＝ 表情差分被指到了別人的臉。
+
+    這道檢查是 exact 的、零誤判，正好補上對齊分數量不準的那一塊：三張錯掛的
+    立繪（hylas_scared≡master_impatient、orestes_urgent≡thea_afraid、
+    survivor_sharp≡pliny_labored）都是位元組相同，而它們的對齊分數
+    （0.79/0.93/0.80）跟合法的大幅表情變化重疊，光看分數分不出來。
+
+    真正需要兩個角色共用同一張圖時，把它們加進 ALLOWED_DUPLICATE_SPRITES。
+    """
+    by_digest = {}
+    for (kind, name), path in sorted(picked.items()):
+        if kind != 'sprites':
+            continue
+        by_digest.setdefault(hashlib.md5(path.read_bytes()).hexdigest(), []).append(name)
+    clashes = [
+        tuple(sorted(names)) for names in by_digest.values()
+        if len(names) > 1 and tuple(sorted(names)) not in ALLOWED_DUPLICATE_SPRITES
+    ]
+    if clashes:
+        lines = '\n'.join(f'  {" ≡ ".join(c)}' for c in sorted(clashes))
+        sys.exit(f'✗ 不同角色的立繪位元組相同（表情差分指錯基底？）：\n{lines}')
+
+
+# 刻意讓兩個角色共用同一張圖時，把 (檔名, 檔名) 排序後加進來。
+ALLOWED_DUPLICATE_SPRITES: set[tuple[str, ...]] = set()
+
+
 def collect_assets(story_dirs):
     """回傳 {('backgrounds'|'sprites', basename): 來源路徑}，同名不同內容即中止。"""
     picked, digests = {}, {}
@@ -377,6 +404,7 @@ def import_pack(webp: bool = True, use_cache: bool = True) -> dict:
         })
 
     picked = collect_assets(story_dirs)
+    detect_duplicate_sprites(picked)
     for (kind, name), src_path in sorted(picked.items()):
         if kind != 'backgrounds':
             continue
@@ -406,6 +434,18 @@ def import_pack(webp: bool = True, use_cache: bool = True) -> dict:
 # 理由與 _cache_key() 一樣：只綁來源圖的話，調了 SCALE_RANGE 或 SHIFT_LIMIT
 # 卻忘記加 --no-cache，就會靜默吐出用舊參數對齊的舊結果。
 ALIGN_PIPELINE_VERSION = 3
+
+
+def _align_stamp(key: str, base_key: str) -> str:
+    """對齊快取鍵要綁**所有會改變結果的參數**，不只手動版本號。
+
+    只綁版本號的話，調了 ALIGN_MIN_SCORE 卻忘記 +1，就會靜默吐出用舊門檻算的
+    舊 `skipped` 判定——實測踩過：門檻 0.95→0.90 之後，快取仍說 hylas_scared
+    是 skipped，害雙向斷言誤報「出現新的壞素材」。去背那邊的 `_cache_key` 早
+    就綁了參數，對齊這邊漏了同一件事。
+    """
+    params = f'{ALIGN_MIN_SCORE}:{SHIFT_LIMIT}:{SCALE_RANGE[0]}:{SCALE_RANGE[-1]}:{len(SCALE_RANGE)}'
+    return f'{key}:{base_key}:{params}:{ALIGN_PIPELINE_VERSION}'
 
 
 def process_sprites(picked, use_cache: bool, webp: bool = False) -> None:
@@ -438,8 +478,7 @@ def process_sprites(picked, use_cache: bool, webp: bool = False) -> None:
             write_sprite(img, dest, webp)
             continue
         base, base_key = cutouts[base_name]
-        align_key = hashlib.md5(
-            f'{key}:{base_key}:{ALIGN_PIPELINE_VERSION}'.encode()).hexdigest()
+        align_key = hashlib.md5(_align_stamp(key, base_key).encode()).hexdigest()
         aligned_cache = CACHE / f'{align_key}_aligned.png'
         params_cache = CACHE / f'{align_key}_aligned.json'
         # 快取一律存無損 PNG——換輸出格式不該要求重跑昂貴的去背與對齊。

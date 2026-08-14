@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lorescape_vn/src/visual_novel/providers.dart';
+import 'package:lorescape_story/src/visual_novel/providers.dart';
 
 /// 回顧列表：由下往上捲，最新的一句在最下面（貼近玩家點開時的閱讀習慣）。
 class BacklogSheet extends StatelessWidget {

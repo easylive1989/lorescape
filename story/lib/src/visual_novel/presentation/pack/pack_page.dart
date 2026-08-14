@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/play/layout.dart';
-import 'package:lorescape_vn/src/visual_novel/providers.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/play/layout.dart';
+import 'package:lorescape_story/src/visual_novel/providers.dart';
 
 /// 景點包首頁：列出這一包的所有故事，顯示標題、副標、預估分鐘數，
 /// 以及每篇的結局收藏進度（n / 3）。

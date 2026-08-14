@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/play/layout.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/play/layout.dart';
 
 class BackgroundLayer extends StatelessWidget {
   const BackgroundLayer({required this.assetPath, super.key});

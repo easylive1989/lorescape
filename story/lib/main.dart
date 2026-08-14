@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/play/layout.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/vn_router.dart';
-import 'package:lorescape_vn/src/visual_novel/providers.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/play/layout.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/vn_router.dart';
+import 'package:lorescape_story/src/visual_novel/providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> main() async {

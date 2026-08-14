@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/cursor.dart';
+import 'package:lorescape_story/src/visual_novel/domain/cursor.dart';
 
 void main() {
   group('Cursor', () {

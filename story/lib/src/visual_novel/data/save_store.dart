@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:lorescape_vn/src/visual_novel/domain/save_data.dart';
+import 'package:lorescape_story/src/visual_novel/domain/save_data.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 abstract interface class SaveStore {

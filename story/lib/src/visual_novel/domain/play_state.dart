@@ -1,4 +1,4 @@
-import 'package:lorescape_vn/src/visual_novel/domain/cursor.dart';
+import 'package:lorescape_story/src/visual_novel/domain/cursor.dart';
 
 enum PlayStatus { playing, choosing, ended }
 

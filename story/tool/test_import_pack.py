@@ -1,6 +1,6 @@
 import json, subprocess, sys, pathlib
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-OUT = ROOT / 'vn/assets/content/pompeii-79'
+OUT = ROOT / 'story/assets/content/pompeii-79'
 
 def test_slug_strips_order_prefix():
     sys.path.insert(0, str(pathlib.Path(__file__).parent))
@@ -9,7 +9,7 @@ def test_slug_strips_order_prefix():
     assert slug_of('pompeii_08_the_new_house') == '08-the-new-house'
 
 def test_import_produces_eight_stories_and_dedup_assets():
-    subprocess.run([sys.executable, str(ROOT / 'vn/tool/import_pack.py')], check=True)
+    subprocess.run([sys.executable, str(ROOT / 'story/tool/import_pack.py')], check=True)
     pack = json.loads((OUT / 'pack.json').read_text(encoding='utf-8'))
     assert len(pack['stories']) == 8
     assert [s['order'] for s in pack['stories']] == list(range(1, 9))
@@ -130,12 +130,16 @@ def test_skipped_sprites_are_untouched():
     ——Flutter 端依高度縮放。
     """
     sys.path.insert(0, str(pathlib.Path(__file__).parent))
-    from import_pack import remove_background
+    from import_pack import remove_background, KNOWN_BAD_SPRITES
     from PIL import Image
     import numpy as np
-    manifest = json.loads((ROOT / 'vn/tool/_review/align_manifest.json').read_text(encoding='utf-8'))
+    manifest = json.loads((ROOT / 'story/tool/_review/align_manifest.json').read_text(encoding='utf-8'))
     skipped = [name for name, params in manifest.items() if params.get('skipped')]
-    assert skipped, 'manifest 裡沒有任何 skipped 條目，這條測試等於沒驗到東西'
+    # 守衛：不能在「還有壞素材」的情況下靜默空過。四張已於 2026-08-14 重出修好，
+    # 所以今天 skipped 與 KNOWN_BAD_SPRITES 都是空的，這條測試沒有對象可驗——
+    # 那是好事，但一旦又出現壞素材，下面的迴圈就必須跑起來。
+    assert len(skipped) == len(KNOWN_BAD_SPRITES), \
+        f'skipped {sorted(skipped)} 與 KNOWN_BAD_SPRITES {sorted(KNOWN_BAD_SPRITES)} 對不上'
     for name in skipped:
         source = next(iter(sorted(
             (ROOT / 'writer/創作/龐貝/stories').glob(f'*/assets/sprites/{name}'))))
@@ -180,7 +184,7 @@ def test_known_bad_sprites_matches_actual_skips():
     sys.path.insert(0, str(pathlib.Path(__file__).parent))
     from import_pack import KNOWN_BAD_SPRITES
 
-    manifest = json.loads((ROOT / 'vn/tool/_review/align_manifest.json').read_text(encoding='utf-8'))
+    manifest = json.loads((ROOT / 'story/tool/_review/align_manifest.json').read_text(encoding='utf-8'))
     actually_skipped = {name for name, params in manifest.items() if params.get('skipped')}
     known_bad = set(KNOWN_BAD_SPRITES)
 

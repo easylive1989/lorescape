@@ -1,6 +1,6 @@
 {
-    "name": "lorescape_vn",
-    "short_name": "lorescape_vn",
+    "name": "lorescape_story",
+    "short_name": "lorescape_story",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

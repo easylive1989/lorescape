@@ -1,5 +1,5 @@
-import 'package:lorescape_vn/src/visual_novel/domain/cursor.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/play_state.dart';
+import 'package:lorescape_story/src/visual_novel/domain/cursor.dart';
+import 'package:lorescape_story/src/visual_novel/domain/play_state.dart';
 
 /// 規範 §6 的存檔格式，外加 `stage`。
 ///

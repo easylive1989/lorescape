@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lorescape_vn/src/visual_novel/data/save_store.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/cursor.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/play_state.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/save_data.dart';
+import 'package:lorescape_story/src/visual_novel/data/save_store.dart';
+import 'package:lorescape_story/src/visual_novel/domain/cursor.dart';
+import 'package:lorescape_story/src/visual_novel/domain/play_state.dart';
+import 'package:lorescape_story/src/visual_novel/domain/save_data.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

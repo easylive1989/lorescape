@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lorescape_vn/src/visual_novel/providers.dart';
+import 'package:lorescape_story/src/visual_novel/providers.dart';
 
 /// Web 上單張 PNG 有 2.2–2.6 MB，AssetImage 是進到那個節點才走 HTTP 抓，
 /// 不預載就會看到背景先白一下。把「這一場的背景 ＋ 下一場的背景 ＋ 台上角色的

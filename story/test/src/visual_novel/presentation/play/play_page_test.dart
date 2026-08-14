@@ -3,10 +3,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/play/dialogue_box.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/play/layout.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/play/play_page.dart';
-import 'package:lorescape_vn/src/visual_novel/providers.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/play/dialogue_box.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/play/layout.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/play/play_page.dart';
+import 'package:lorescape_story/src/visual_novel/providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> pumpPlayPage(WidgetTester tester, String storyId) async {
@@ -187,7 +187,9 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
       SharedPreferences.setMockInitialValues(<String, Object>{
-        'vn.readNodes': <String>[for (var i = 0; i < 40; i++) 'S01#$i'],
+        'vn.readNodes': <String>[
+          for (var i = 0; i < 40; i++) 'pompeii_01_harbour_stranger#S01#$i',
+        ],
       });
       final prefs = await SharedPreferences.getInstance();
       await tester.pumpWidget(
@@ -288,10 +290,55 @@ void main() {
       );
     });
 
+    testWidgets('別篇的已讀紀錄不得讓這一篇被跳過', (tester) async {
+      // 8 篇的場 id 全是 S01…S12 / E_A / E_B / E_C，實測跨篇鍵碰撞 64.7%
+      // （每篇加總 2,123 個鍵、聯集只有 749）。已讀鍵若不帶 storyId，玩家
+      // 讀完第 1 篇再進第 2 篇按快進，會沿著碰撞鍵衝過從沒看過的劇情。
+      // 這裡塞滿「第 1 篇的已讀」然後玩第 2 篇，跳過必須完全不動。
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'vn.readNodes': <String>[
+          for (var scene = 1; scene <= 12; scene++)
+            for (var i = 0; i < 60; i++)
+              'pompeii_01_harbour_stranger#S'
+                  '${scene.toString().padLeft(2, '0')}#$i',
+        ],
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: <Override>[
+            sharedPreferencesProvider.overrideWithValue(prefs),
+          ],
+          child: const MaterialApp(
+            home: PlayPage(storyId: 'pompeii_02_the_oven_went_out'),
+          ),
+        ),
+      );
+      await _pumpTyping(tester);
+      expect(find.text('火起不來。'), findsOneWidget);
+
+      await tester.tap(find.byKey(PlayPage.skipButtonKey));
+      await _pumpTyping(tester);
+      // 進入一篇時第一個節點會立刻被標成已讀（build 就 _persist），所以跳過
+      // 必然前進一格、停在第二個節點。有碰撞的話會一路衝過幾十格未讀劇情。
+      expect(
+        find.text('柴是乾的，昨天曬了一整天。引火的碎屑也夠。'),
+        findsOneWidget,
+        reason: '第 2 篇只有第一個節點是已讀的，跳過只該前進一格',
+      );
+    });
+
     testWidgets('已讀跳過碰到未讀節點就停', (tester) async {
       SharedPreferences.setMockInitialValues(<String, Object>{
         // 只把前三個節點標成已讀
-        'vn.readNodes': <String>['S01#0', 'S01#1', 'S01#2'],
+        'vn.readNodes': <String>[
+          'pompeii_01_harbour_stranger#S01#0',
+          'pompeii_01_harbour_stranger#S01#1',
+          'pompeii_01_harbour_stranger#S01#2',
+        ],
       });
       final prefs = await SharedPreferences.getInstance();
       await tester.pumpWidget(

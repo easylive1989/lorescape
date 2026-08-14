@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/cursor.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/play_state.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/save_data.dart';
+import 'package:lorescape_story/src/visual_novel/domain/cursor.dart';
+import 'package:lorescape_story/src/visual_novel/domain/play_state.dart';
+import 'package:lorescape_story/src/visual_novel/domain/save_data.dart';
 
 void main() {
   test('存檔往返：游標、變數、台上立繪都一致', () {

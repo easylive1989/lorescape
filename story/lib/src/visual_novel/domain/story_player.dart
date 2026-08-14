@@ -1,6 +1,6 @@
-import 'package:lorescape_vn/src/visual_novel/domain/cursor.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/play_state.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/story.dart';
+import 'package:lorescape_story/src/visual_novel/domain/cursor.dart';
+import 'package:lorescape_story/src/visual_novel/domain/play_state.dart';
+import 'package:lorescape_story/src/visual_novel/domain/story.dart';
 
 /// 劇本執行器：在劇本樹上走，直到停在一個玩家要看到的節點。
 ///

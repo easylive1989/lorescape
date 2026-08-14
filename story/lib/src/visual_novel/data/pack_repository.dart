@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter/services.dart';
-import 'package:lorescape_vn/src/visual_novel/data/story_json_parser.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/story.dart';
+import 'package:lorescape_story/src/visual_novel/data/story_json_parser.dart';
+import 'package:lorescape_story/src/visual_novel/domain/story.dart';
 
 /// 景點包在 asset bundle 裡的根路徑。
 const String packRoot = 'assets/content/pompeii-79';

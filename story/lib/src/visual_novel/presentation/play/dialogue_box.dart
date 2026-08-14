@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/play/layout.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/play/typewriter_text.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/play/layout.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/play/typewriter_text.dart';
 
 class DialogueBox extends StatelessWidget {
   const DialogueBox({

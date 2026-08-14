@@ -1,4 +1,4 @@
-import 'package:lorescape_vn/src/visual_novel/domain/story.dart';
+import 'package:lorescape_story/src/visual_novel/domain/story.dart';
 
 /// story.json → Story。未知的節點型別一律丟 FormatException——靜默忽略會讓
 /// 劇本默默少走一段，那種錯到播放時才看得出來，而且看起來像文案問題。

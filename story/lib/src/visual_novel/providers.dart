@@ -5,21 +5,21 @@ library;
 
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lorescape_vn/src/visual_novel/data/pack_repository.dart';
-import 'package:lorescape_vn/src/visual_novel/data/save_store.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/story.dart';
+import 'package:lorescape_story/src/visual_novel/data/pack_repository.dart';
+import 'package:lorescape_story/src/visual_novel/data/save_store.dart';
+import 'package:lorescape_story/src/visual_novel/domain/story.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-export 'package:lorescape_vn/src/visual_novel/data/pack_repository.dart'
+export 'package:lorescape_story/src/visual_novel/data/pack_repository.dart'
     show Pack, PackEntry, PackRepository;
-export 'package:lorescape_vn/src/visual_novel/data/save_store.dart'
+export 'package:lorescape_story/src/visual_novel/data/save_store.dart'
     show SaveStore;
-export 'package:lorescape_vn/src/visual_novel/domain/cursor.dart';
-export 'package:lorescape_vn/src/visual_novel/domain/play_state.dart';
-export 'package:lorescape_vn/src/visual_novel/domain/save_data.dart';
-export 'package:lorescape_vn/src/visual_novel/domain/story.dart';
-export 'package:lorescape_vn/src/visual_novel/domain/story_player.dart';
-export 'package:lorescape_vn/src/visual_novel/presentation/play/play_controller.dart'
+export 'package:lorescape_story/src/visual_novel/domain/cursor.dart';
+export 'package:lorescape_story/src/visual_novel/domain/play_state.dart';
+export 'package:lorescape_story/src/visual_novel/domain/save_data.dart';
+export 'package:lorescape_story/src/visual_novel/domain/story.dart';
+export 'package:lorescape_story/src/visual_novel/domain/story_player.dart';
+export 'package:lorescape_story/src/visual_novel/presentation/play/play_controller.dart'
     show BacklogEntry, PlayController, playControllerProvider;
 
 /// main() 於啟動時以 overrideWithValue 覆寫。
