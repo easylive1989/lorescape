@@ -15,12 +15,11 @@ const String packRoot = 'assets/content/pompeii-79';
 /// 這不是測試問題，是內容問題，等作者決定要不要改（見 task-6-report）。
 /// 用 allowlist 而不是 `skip:`，是為了讓兩個方向都有訊號：多出新的死碼會紅，
 /// 而死碼被修好之後這裡沒刪也會紅。
-const Map<String, Set<String>> knownDeadBranches = <String, Set<String>>{
-  // 結局 A 的閘門要 conviction>=2，而 conviction 與 standing 在同三個選擇點互斥
-  '03-the-well-fell': <String>{'E_A#9.then.'},
-  // 結局 A 的閘門要 nerve>=2，nerve 只有兩個來源，兩個都選走 kinship 就上不去
-  '06-the-locked-door': <String>{'E_A#12.then.'},
-};
+/// **2026-08-14 起是空的——三段死碼都修好了。**
+///
+/// 保留這個常數與下面的雙向斷言：多出新的死碼會紅，而死碼修好之後這裡沒刪
+/// 也會紅（三次修正都是被這條斷言叫出來的，不是靠人記得）。
+const Map<String, Set<String>> knownDeadBranches = <String, Set<String>>{};
 
 /// 逐篇窮舉的基準（路徑數、選項覆蓋數、非空 if 分支數）。存在的理由是補上
 /// 「內容被整段刪掉時測試依然全綠」這個洞——`declared.difference(taken)` 與

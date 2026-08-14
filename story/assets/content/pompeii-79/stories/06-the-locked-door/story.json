@@ -1232,7 +1232,7 @@
           "cond": {
             "var": "kinship",
             "op": ">=",
-            "value": 3
+            "value": 2
           },
           "then": [
             {
