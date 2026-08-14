@@ -13,6 +13,19 @@ python3 story/tool/import_pack.py
 
 沒跑這一步的話，`assets/content/pompeii-79/assets/` 是空的，測試會失敗、畫面會全黑。
 
+## 部署
+
+```bash
+./deploy.sh                 # 匯入素材 → analyze → 測試 → build → 部署
+./deploy.sh --skip-import   # 素材沒動時跳過匯入，省 2 分鐘
+```
+
+→ https://story-lorescape.web.app
+
+**任何一關沒過就不會部署。** 沒有 GitHub Actions：素材不進版控，CI 上 fresh
+clone 沒有 writer vault 就跑不了 `import_pack.py`，pubspec 宣告的 asset 目錄
+不存在會直接 build 失敗。素材在誰的機器上，部署就在誰的機器上。
+
 ## 執行
 
 ```bash
