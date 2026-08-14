@@ -129,10 +129,13 @@ em.hl { font-style: normal; color: var(--gold); }
 }
 .ws-title-xl {
   margin-top: 100px;
-  font-size: calc(150px * var(--fit));
+  /* --title-fit is set by the renderer's width pass so a long place name
+     (4+ chars) shrinks instead of wrapping mid-name. */
+  font-size: calc(150px * var(--fit) * var(--title-fit, 1));
   font-weight: 900;
   letter-spacing: 0.05em;
   line-height: 1.15;
+  white-space: nowrap;
 }
 .ws-script {
   font-family: var(--script);

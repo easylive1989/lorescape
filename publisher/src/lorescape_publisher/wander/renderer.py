@@ -40,6 +40,22 @@ _FIT_SCRIPT = """
 (opts) => {
   const plate = document.querySelector('.ws-fit');
   if (!plate) return 1;
+  // Width pass first: the cover title is nowrap, so a 4+ char place name
+  // overflows its 600px plate. Shrink it until it fits on one line.
+  const title = plate.querySelector('.ws-title-xl');
+  if (title) {
+    let tf = 1;
+    let tGuard = 0;
+    while (
+      title.scrollWidth > title.clientWidth &&
+      tf > opts.titleFloor &&
+      tGuard < 80
+    ) {
+      tf = Math.round((tf - opts.step) * 1000) / 1000;
+      title.style.setProperty('--title-fit', String(tf));
+      tGuard += 1;
+    }
+  }
   const initial = parseFloat(
     getComputedStyle(plate).getPropertyValue('--fit'),
   );
@@ -58,7 +74,7 @@ _FIT_SCRIPT = """
 }
 """
 
-_FIT_OPTS = {"floor": 0.6, "step": 0.02}
+_FIT_OPTS = {"floor": 0.6, "step": 0.02, "titleFloor": 0.5}
 
 
 def _photo_uri(photos_dir: Path, photo: str) -> str:
