@@ -14,8 +14,8 @@ def test_import_produces_eight_stories_and_dedup_assets():
     assert len(pack['stories']) == 8
     assert [s['order'] for s in pack['stories']] == list(range(1, 9))
     # 116 份重複參照去重成 57 張唯一檔
-    bgs = list((OUT / 'assets/backgrounds').glob('*.png'))
-    sprites = list((OUT / 'assets/sprites').glob('*.png'))
+    bgs = list((OUT / 'assets/backgrounds').glob('*.webp'))
+    sprites = list((OUT / 'assets/sprites').glob('*.webp'))
     assert len(bgs) == 16, len(bgs)      # 15 背景 + cg_column_rising
     assert len(sprites) == 44, len(sprites)
 
@@ -25,18 +25,26 @@ def test_scripts_are_copied_verbatim():
     assert dst.read_bytes() == src.read_bytes()
 
 def test_every_referenced_asset_exists():
+    """story.json 一律寫 .png，實際輸出可能是 .webp——副檔名的轉換是 pipeline
+    與引擎的職責（劇本逐字複製、不能改）。這條測試因此必須經過 asset_filename，
+    直接拿 story.json 的檔名去找檔案會誤判。"""
+    sys.path.insert(0, str(pathlib.Path(__file__).parent))
+    from import_pack import asset_filename
+    webp = json.loads((OUT / 'pack.json').read_text(encoding='utf-8'))['assetFormat'] == 'webp'
     for story_dir in sorted((OUT / 'stories').iterdir()):
         s = json.loads((story_dir / 'story.json').read_text(encoding='utf-8'))
         for filename in s['backgrounds'].values():
-            assert (OUT / 'assets/backgrounds' / filename).exists(), filename
+            actual = OUT / 'assets/backgrounds' / asset_filename(filename, webp)
+            assert actual.exists(), actual
         for char in s['characters'].values():
             for filename in (char.get('sprites') or {}).values():
-                assert (OUT / 'assets/sprites' / filename).exists(), filename
+                actual = OUT / 'assets/sprites' / asset_filename(filename, webp)
+                assert actual.exists(), actual
 
 def test_sprites_have_alpha_and_opaque_subject():
     from PIL import Image
     import numpy as np
-    img = Image.open(OUT / 'assets/sprites/vibia_neutral.png')
+    img = Image.open(OUT / 'assets/sprites/vibia_neutral.webp')
     assert img.mode == 'RGBA', img.mode
     a = np.asarray(img)[:, :, 3]
     # 四角應該全透明（那是被去掉的灰底）
@@ -80,7 +88,7 @@ def test_no_interior_holes():
     """
     from PIL import Image
     import numpy as np
-    for path in sorted((OUT / 'assets/sprites').glob('*.png')):
+    for path in sorted((OUT / 'assets/sprites').glob('*.webp')):
         alpha = np.asarray(Image.open(path).convert('RGBA').getchannel('A')).astype(int)
         assert _interior_islands(alpha) == 0, f'{path.name} 有內部破洞'
 
@@ -95,7 +103,7 @@ def test_genuine_gaps_are_not_bridged():
     """
     from PIL import Image
     import numpy as np
-    for path in sorted((OUT / 'assets/sprites').glob('nikias_*.png')):
+    for path in sorted((OUT / 'assets/sprites').glob('nikias_*.webp')):
         alpha = np.asarray(Image.open(path).convert('RGBA').getchannel('A')).astype(int)
         # canary：框座標是硬編碼的 1536x1024 畫布，尺寸假設被打破時要看到清楚
         # 的失敗訊息，不要變成難懂的 nan（Task 8 對齊差分後仍然是這個畫布）。
@@ -107,7 +115,7 @@ def test_genuine_gaps_are_not_bridged():
 
 def test_backgrounds_stay_opaque():
     from PIL import Image
-    img = Image.open(OUT / 'assets/backgrounds/bg_harbour.png')
+    img = Image.open(OUT / 'assets/backgrounds/bg_harbour.webp')
     assert img.mode in ('RGB', 'RGBA')
     if img.mode == 'RGBA':
         import numpy as np
@@ -132,7 +140,8 @@ def test_skipped_sprites_are_untouched():
         source = next(iter(sorted(
             (ROOT / 'writer/創作/龐貝/stories').glob(f'*/assets/sprites/{name}'))))
         cutout = remove_background(source)
-        output = Image.open(OUT / 'assets/sprites' / name).convert('RGBA')
+        output = Image.open(
+            OUT / 'assets/sprites' / (name[:-4] + '.webp')).convert('RGBA')
         assert output.size == cutout.size, f'{name} 尺寸被改了：{cutout.size} → {output.size}'
         opaque = lambda im: int((np.asarray(im)[:, :, 3] > 127).sum())
         assert opaque(output) == opaque(cutout), f'{name} 有不透明內容被裁掉'
@@ -149,9 +158,9 @@ def test_expression_variants_align_with_base():
         return cols.min(), rows.min(), cols.max(), rows.max()
 
     for character in ('vibia', 'nikias', 'philemon'):
-        base = head_box(OUT / f'assets/sprites/{character}_neutral.png')
-        for variant in sorted((OUT / 'assets/sprites').glob(f'{character}_*.png')):
-            if variant.name.endswith('_neutral.png'):
+        base = head_box(OUT / f'assets/sprites/{character}_neutral.webp')
+        for variant in sorted((OUT / 'assets/sprites').glob(f'{character}_*.webp')):
+            if variant.name.endswith('_neutral.webp'):
                 continue
             box = head_box(variant)
             # 頭頂位置與整體寬度對齊到 12px 以內，切表情才不會跳

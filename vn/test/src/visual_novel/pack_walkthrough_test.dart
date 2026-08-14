@@ -55,6 +55,18 @@ List<Map<String, String>> loadPackEntries() {
       .toList();
 }
 
+/// 素材的實際格式，由 `import_pack.py` 寫進 pack.json。
+final String packAssetFormat =
+    (jsonDecode(File('$packRoot/pack.json').readAsStringSync())
+            as Map<String, dynamic>)['assetFormat']
+        as String? ??
+    'png';
+
+String withPackExtension(String filename) =>
+    packAssetFormat == 'png' || !filename.endsWith('.png')
+    ? filename
+    : '${filename.substring(0, filename.length - 4)}.$packAssetFormat';
+
 Story loadStory(String dir) => parseStory(
   jsonDecode(File('$packRoot/stories/$dir/story.json').readAsStringSync())
       as Map<String, dynamic>,
@@ -295,9 +307,14 @@ void main() {
       });
 
       test('參照的每個資產檔都存在', () {
+        // story.json 一律寫 `.png`，實際輸出可能是 `.webp`——劇本是逐字複製
+        // 的、不能改，副檔名的轉換是引擎組路徑時的職責。這條測試因此要跟著
+        // pack.json 的 assetFormat 走，直接拿 story.json 的檔名找檔案會誤判。
         for (final filename in story.backgrounds.values) {
           expect(
-            File('$packRoot/assets/backgrounds/$filename').existsSync(),
+            File(
+              '$packRoot/assets/backgrounds/${withPackExtension(filename)}',
+            ).existsSync(),
             isTrue,
             reason: filename,
           );
@@ -306,7 +323,9 @@ void main() {
           for (final filename
               in (character.sprites ?? const <String, String>{}).values) {
             expect(
-              File('$packRoot/assets/sprites/$filename').existsSync(),
+              File(
+                '$packRoot/assets/sprites/${withPackExtension(filename)}',
+              ).existsSync(),
               isTrue,
               reason: filename,
             );
@@ -317,7 +336,8 @@ void main() {
             if (node is CgNode) {
               expect(
                 File(
-                  '$packRoot/assets/backgrounds/${node.id}.png',
+                  '$packRoot/assets/backgrounds/'
+                  '${withPackExtension('${node.id}.png')}',
                 ).existsSync(),
                 isTrue,
                 reason: node.id,

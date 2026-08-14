@@ -25,15 +25,15 @@ void main() {
     final story = await repo.loadStory('pompeii_01_harbour_stranger');
     expect(
       repo.backgroundPath(story, 'harbour'),
-      'assets/content/pompeii-79/assets/backgrounds/bg_harbour.png',
+      'assets/content/pompeii-79/assets/backgrounds/bg_harbour.webp',
     );
     expect(
       repo.spritePath(story, 'vibia', 'softened'),
-      'assets/content/pompeii-79/assets/sprites/vibia_softened.png',
+      'assets/content/pompeii-79/assets/sprites/vibia_softened.webp',
     );
     expect(
       repo.cgPath(story, 'cg_column_rising'),
-      'assets/content/pompeii-79/assets/backgrounds/cg_column_rising.png',
+      'assets/content/pompeii-79/assets/backgrounds/cg_column_rising.webp',
     );
   });
 

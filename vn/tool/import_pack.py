@@ -2,7 +2,7 @@
 """把 writer vault 的龐貝景點包匯入 vn/assets/。可重跑。
 
 用法：
-    python3 vn/tool/import_pack.py [--webp] [--no-cache]
+    python3 vn/tool/import_pack.py [--png] [--no-cache]
 
 立繪去背見 remove_background()；表情差分對齊（Task 8）見 align_to_base()，
 兩者串接於 process_sprites()。
@@ -308,22 +308,53 @@ def collect_assets(story_dirs):
     return picked
 
 
-def verify(story_paths) -> None:
+def verify(story_paths, webp: bool = False) -> None:
     missing = []
     for p in story_paths:
         s = json.loads(p.read_text(encoding='utf-8'))
         for filename in s['backgrounds'].values():
-            if not (OUT / 'assets/backgrounds' / filename).exists():
+            if not (OUT / 'assets/backgrounds' / asset_filename(filename, webp)).exists():
                 missing.append(filename)
         for char in s['characters'].values():
             for filename in (char.get('sprites') or {}).values():
-                if not (OUT / 'assets/sprites' / filename).exists():
+                if not (OUT / 'assets/sprites' / asset_filename(filename, webp)).exists():
                     missing.append(filename)
     if missing:
         sys.exit(f'✗ 參照的檔案不存在：{sorted(set(missing))}')
 
 
-def import_pack(webp: bool = False, use_cache: bool = True) -> dict:
+# WebP 的品質參數。背景沒有 alpha，立繪要保住去背成果。
+WEBP_QUALITY_BACKGROUND = 80
+WEBP_QUALITY_SPRITE = 85
+
+
+def asset_filename(name: str, webp: bool) -> str:
+    """素材的實際檔名。story.json 一律寫 `.png`，轉檔後檔名要跟著換。
+
+    劇本是逐字複製的、不能改，所以副檔名的轉換由**引擎組路徑時**處理——
+    Flutter製作規範 §1 本來就寫「資產參照是不含路徑的檔名，引擎負責組出
+    路徑」。`pack.json` 的 `assetFormat` 就是告訴引擎要組哪一種。
+    """
+    return name[:-4] + '.webp' if webp else name
+
+
+def write_sprite(image, dest: pathlib.Path, webp: bool) -> None:
+    if webp:
+        save_webp(image, dest, WEBP_QUALITY_SPRITE)
+    else:
+        image.save(dest)
+
+
+def save_webp(image, dest: pathlib.Path, quality: int) -> None:
+    """method=6 是最慢也最小的壓縮等級；這是一次性的匯入，值得。
+
+    alpha_quality=100 讓透明通道無損——實測 44 張立繪轉檔前後「完全透明」
+    與「完全不透明」的像素數一個不差，去背成果不會被壓損。
+    """
+    image.save(dest, 'WEBP', quality=quality, alpha_quality=100, method=6)
+
+
+def import_pack(webp: bool = True, use_cache: bool = True) -> dict:
     story_dirs = sorted(d for d in SRC.iterdir() if d.is_dir() and (d / 'story.json').exists())
     if len(story_dirs) != 8:
         sys.exit(f'✗ 預期 8 篇，實際 {len(story_dirs)}')
@@ -347,18 +378,26 @@ def import_pack(webp: bool = False, use_cache: bool = True) -> dict:
 
     picked = collect_assets(story_dirs)
     for (kind, name), src_path in sorted(picked.items()):
-        if kind == 'backgrounds':
-            shutil.copyfile(src_path, OUT / 'assets/backgrounds' / name)
-    process_sprites(picked, use_cache)
+        if kind != 'backgrounds':
+            continue
+        dest = OUT / 'assets/backgrounds' / asset_filename(name, webp)
+        if webp:
+            save_webp(Image.open(src_path).convert('RGB'), dest, WEBP_QUALITY_BACKGROUND)
+        else:
+            shutil.copyfile(src_path, dest)
+    process_sprites(picked, use_cache, webp)
 
     entries.sort(key=lambda e: e['order'])
     pack = {'id': 'pompeii_79', 'title': PACK_TITLE, 'place': PACK_PLACE,
-            'blurb': PACK_BLURB, 'stories': entries}
+            'blurb': PACK_BLURB, 'assetFormat': 'webp' if webp else 'png',
+            'stories': entries}
     (OUT / 'pack.json').write_text(
         json.dumps(pack, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 
-    verify(copied_scripts)
-    print(f'✅ 8 篇、{len(picked)} 張素材、pack.json 完成')
+    verify(copied_scripts, webp)
+    total = sum(f.stat().st_size for f in (OUT / 'assets').rglob('*') if f.is_file())
+    print(f'✅ 8 篇、{len(picked)} 張素材（{"webp" if webp else "png"}，'
+          f'{total // 1024 // 1024} MB）、pack.json 完成')
     return pack
 
 
@@ -369,7 +408,7 @@ def import_pack(webp: bool = False, use_cache: bool = True) -> dict:
 ALIGN_PIPELINE_VERSION = 3
 
 
-def process_sprites(picked, use_cache: bool) -> None:
+def process_sprites(picked, use_cache: bool, webp: bool = False) -> None:
     """先全部去背，再把差分對齊到同角色的 _neutral 基底。
 
     對齊需要同角色的基底一起在手上比對，不能像背景那樣逐檔獨立處理，
@@ -394,25 +433,26 @@ def process_sprites(picked, use_cache: bool) -> None:
     for name, (img, key) in sorted(cutouts.items()):
         character = name.rsplit('_', 1)[0]
         base_name = f'{character}_neutral.png'
-        dest = OUT / 'assets/sprites' / name
+        dest = OUT / 'assets/sprites' / asset_filename(name, webp)
         if name == base_name or base_name not in cutouts:
-            img.save(dest)
+            write_sprite(img, dest, webp)
             continue
         base, base_key = cutouts[base_name]
         align_key = hashlib.md5(
             f'{key}:{base_key}:{ALIGN_PIPELINE_VERSION}'.encode()).hexdigest()
         aligned_cache = CACHE / f'{align_key}_aligned.png'
         params_cache = CACHE / f'{align_key}_aligned.json'
+        # 快取一律存無損 PNG——換輸出格式不該要求重跑昂貴的去背與對齊。
         if use_cache and aligned_cache.exists() and params_cache.exists():
-            shutil.copyfile(aligned_cache, dest)
+            aligned = Image.open(aligned_cache).convert('RGBA')
             params = json.loads(params_cache.read_text(encoding='utf-8'))
         else:
             aligned, params = align_to_base(base, img)
             aligned.save(aligned_cache)
-            aligned.save(dest)
             params_cache.write_text(json.dumps(params), encoding='utf-8')
             write_align_review(name, base, img, aligned)
             print(f'  對齊 {name}: {params}')
+        write_sprite(aligned, dest, webp)
         manifest[name] = params
 
     REVIEW.mkdir(parents=True, exist_ok=True)
@@ -423,7 +463,11 @@ def process_sprites(picked, use_cache: bool) -> None:
 
 if __name__ == '__main__':
     ap = argparse.ArgumentParser()
-    ap.add_argument('--webp', action='store_true', help='轉 WebP（送審前才開）')
+    # WebP 是預設：實測背景與立繪壓縮 11–20 倍（143 MB → 11 MB），alpha 用
+    # alpha_quality=100 無損（去背成果的透明像素數轉檔前後一個不差），人物區
+    # RGB 平均差 2.5/255 肉眼看不出來。Flutter 在 iOS／Android／Web 全平台
+    # 原生支援。--png 留著當退路。
+    ap.add_argument('--png', action='store_true', help='輸出 PNG 而非 WebP')
     ap.add_argument('--no-cache', action='store_true')
     a = ap.parse_args()
-    import_pack(webp=a.webp, use_cache=not a.no_cache)
+    import_pack(webp=not a.png, use_cache=not a.no_cache)
