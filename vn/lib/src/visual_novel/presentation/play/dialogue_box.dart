@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:lorescape_vn/src/visual_novel/presentation/play/layout.dart';
+import 'package:lorescape_vn/src/visual_novel/presentation/play/typewriter_text.dart';
 
 class DialogueBox extends StatelessWidget {
   const DialogueBox({
     required this.text,
     required this.layout,
+    required this.completed,
+    required this.onCompleted,
+    required this.msPerCharacter,
     this.speakerName,
     this.graffiti = false,
     this.fontScale = 1.0,
@@ -18,6 +22,11 @@ class DialogueBox extends StatelessWidget {
   final bool graffiti;
   final double fontScale;
   final VnLayout layout;
+
+  /// 逐字顯示是否已補完——由 `_Stage` 依玩家點擊控制。
+  final bool completed;
+  final VoidCallback onCompleted;
+  final double msPerCharacter;
 
   @override
   Widget build(BuildContext context) {
@@ -69,8 +78,11 @@ class DialogueBox extends StatelessWidget {
               horizontal: layout.sideInset,
               vertical: layout.dialogueHeight * 0.16,
             ),
-            child: Text(
-              text,
+            child: TypewriterText(
+              text: text,
+              completed: completed,
+              onCompleted: onCompleted,
+              msPerCharacter: msPerCharacter,
               style: TextStyle(
                 color: graffiti ? VnColors.ochre : VnColors.body,
                 fontSize: layout.bodyFontSize * fontScale,

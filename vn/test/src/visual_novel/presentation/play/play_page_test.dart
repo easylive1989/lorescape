@@ -24,7 +24,15 @@ Future<void> pumpPlayPage(WidgetTester tester, String storyId) async {
       child: MaterialApp(home: PlayPage(storyId: storyId)),
     ),
   );
-  await tester.pumpAndSettle();
+  await _pumpTyping(tester);
+}
+
+// 逐字動畫用 Timer.periodic，每一格都會排新的 frame，pumpAndSettle 永遠等不到
+// 「沒有排新 frame」的那一刻。改成推進一段足夠久的時間，讓當前這段文字打完，
+// 供 pumpPlayPage 與底下每個「點擊推進」迴圈共用。
+Future<void> _pumpTyping(WidgetTester tester) async {
+  await tester.pump();
+  await tester.pump(const Duration(seconds: 5));
 }
 
 void main() {
@@ -54,8 +62,32 @@ void main() {
     testWidgets('點擊推進到下一個節點', (tester) async {
       await pumpPlayPage(tester, 'pompeii_01_harbour_stranger');
       await tester.tap(find.byKey(PlayPage.advanceAreaKey));
-      await tester.pumpAndSettle();
+      await _pumpTyping(tester);
       expect(find.text('天還沒全亮，海面是鉛的顏色。'), findsNothing);
+    });
+
+    testWidgets('逐字顯示中點擊先補完，再點才推進', (tester) async {
+      // pumpPlayPage 結尾已經讓第一段（14 字）打完字，直接點一次會推進——
+      // 這正是「點擊推進到下一個節點」那條測試在驗的行為。要驗「還沒顯示完先
+      // 補完」得挑一段夠長、還來不及打完的文字：第二段旁白有 39 字，
+      // 39 * 28ms ≈ 1092ms，只推進 10ms 絕對還在逐字顯示中。
+      const secondText = '我押著這批貨走了二十六天——亞麻布、玻璃器、四捆莎草紙，從亞歷山卓一路到這裡。';
+      await pumpPlayPage(tester, 'pompeii_01_harbour_stranger');
+      await tester.tap(find.byKey(PlayPage.advanceAreaKey));
+      // 只推進一個 frame，不讓第二段的逐字動畫跑完。
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 10));
+      expect(find.text(secondText), findsNothing, reason: '此時應該還在逐字顯示中');
+
+      // 第一次點：補完當前這段，不推進
+      await tester.tap(find.byKey(PlayPage.advanceAreaKey));
+      await tester.pump();
+      expect(find.text(secondText), findsOneWidget);
+
+      // 第二次點：推進到下一段
+      await tester.tap(find.byKey(PlayPage.advanceAreaKey));
+      await tester.pumpAndSettle();
+      expect(find.text(secondText), findsNothing);
     });
 
     testWidgets('對白節點顯示名牌與立繪', (tester) async {
@@ -63,7 +95,7 @@ void main() {
       // 走到第一句對白（尼基亞斯：札布達。）
       for (var i = 0; i < 8; i++) {
         await tester.tap(find.byKey(PlayPage.advanceAreaKey));
-        await tester.pumpAndSettle();
+        await _pumpTyping(tester);
         if (find.text('札布達。').evaluate().isNotEmpty) break;
       }
       expect(find.text('札布達。'), findsOneWidget);
@@ -80,7 +112,7 @@ void main() {
       for (var i = 0; i < 40; i++) {
         if (find.byKey(const ValueKey<String>('choice-0')).evaluate().isNotEmpty) break;
         await tester.tap(find.byKey(PlayPage.advanceAreaKey));
-        await tester.pumpAndSettle();
+        await _pumpTyping(tester);
       }
       expect(find.byKey(const ValueKey<String>('choice-0')), findsOneWidget,
           reason: '01 篇 S01 結尾有一個兩選項的分歧');
@@ -88,7 +120,7 @@ void main() {
       expect(find.text('先去廣場，把債權登記起來。'), findsOneWidget);
 
       await tester.tap(find.byKey(const ValueKey<String>('choice-0')));
-      await tester.pumpAndSettle();
+      await _pumpTyping(tester);
       expect(find.byKey(const ValueKey<String>('choice-0')), findsNothing,
           reason: '選完之後選項要收起來');
       expect(tester.takeException(), isNull);
@@ -98,7 +130,7 @@ void main() {
       await pumpPlayPage(tester, 'pompeii_01_harbour_stranger');
       for (var i = 0; i < 12; i++) {
         await tester.tap(find.byKey(PlayPage.advanceAreaKey));
-        await tester.pumpAndSettle();
+        await _pumpTyping(tester);
       }
       expect(tester.takeException(), isNull);
     });
