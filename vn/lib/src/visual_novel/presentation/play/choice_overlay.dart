@@ -19,8 +19,8 @@ class ChoiceOverlay extends StatelessWidget {
     return Positioned(
       left: layout.choiceInset,
       right: layout.choiceInset,
-      top: layout.h * 0.45,
-      bottom: layout.h * 0.25,
+      top: layout.choiceTop,
+      bottom: layout.choiceBottom,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[

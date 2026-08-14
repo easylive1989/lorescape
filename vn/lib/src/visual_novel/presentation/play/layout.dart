@@ -40,4 +40,8 @@ final class VnLayout {
   double get choiceInset => w * 0.10;
   double get safeInset => h * 0.08;
   double get bodyFontSize => w / 20;
+
+  /// 選項區的上下界（規範 §2：0.45H–0.75H）。距底 0.25H。
+  double get choiceTop => h * 0.45;
+  double get choiceBottom => h * 0.25;
 }

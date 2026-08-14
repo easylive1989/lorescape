@@ -48,8 +48,11 @@ class _Stage extends ConsumerWidget {
 
     final node = currentNode(story, state);
     final scene = story.scenes[state.cursor.sceneId]!;
+    // CG 是會停頓的節點型別之一，所以 node 是 CgNode 時就不可能同時是旁白或
+    // 對白——對話框本來就不會出現，`CgNode.hideDialogue` 對現在的渲染沒有可
+    // 觀察的效果。等哪天要做「CG 蓋住上一句台詞」才需要它，屆時要有『上一句』
+    // 這個狀態，不是延伸現在的邏輯就能做到。
     final cg = node is CgNode ? repository.cgPath(story, node.id) : null;
-    final hideDialogue = node is CgNode && node.hideDialogue;
 
     return GestureDetector(
       key: PlayPage.advanceAreaKey,
@@ -67,14 +70,14 @@ class _Stage extends ConsumerWidget {
               layout: layout,
               pathOf: (sprite) => repository.spritePath(story, sprite.who, sprite.sprite),
             ),
-          if (!hideDialogue && node is NarrationNode)
+          if (node is NarrationNode)
             DialogueBox(
               text: node.text,
               layout: layout,
               fontScale: fontScale,
               graffiti: node.style == 'graffiti',
             ),
-          if (!hideDialogue && node is DialogueNode)
+          if (node is DialogueNode)
             DialogueBox(
               text: node.text,
               layout: layout,
