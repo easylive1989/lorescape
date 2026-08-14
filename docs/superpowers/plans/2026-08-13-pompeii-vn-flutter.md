@@ -3745,6 +3745,28 @@ void main() {
       expect(find.byKey(const ValueKey<String>('sprite-nikias')), findsOneWidget);
     });
 
+    testWidgets('選項只顯示 cond 成立者，點選後走對分支', (tester) async {
+      // choice_overlay.dart 是這個 task 新寫的 widget，卻沒有任何 widget 測試
+      // 走到 choosing 狀態——渲染與「點第 i 個 → choose(可見索引 i)」的接線
+      // 都只靠人工截圖確認過。這條補上。
+      await pumpPlayPage(tester, 'pompeii_01_harbour_stranger');
+      for (var i = 0; i < 40; i++) {
+        if (find.byKey(const ValueKey<String>('choice-0')).evaluate().isNotEmpty) break;
+        await tester.tap(find.byKey(PlayPage.advanceAreaKey));
+        await tester.pumpAndSettle();
+      }
+      expect(find.byKey(const ValueKey<String>('choice-0')), findsOneWidget,
+          reason: '01 篇 S01 結尾有一個兩選項的分歧');
+      expect(find.text('直接進城找人。'), findsOneWidget);
+      expect(find.text('先去廣場，把債權登記起來。'), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey<String>('choice-0')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey<String>('choice-0')), findsNothing,
+          reason: '選完之後選項要收起來');
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('缺件的 sfx 與 bgm 不造成例外', (tester) async {
       await pumpPlayPage(tester, 'pompeii_01_harbour_stranger');
       for (var i = 0; i < 12; i++) {
@@ -3866,7 +3888,7 @@ class PlayController extends FamilyNotifier<PlayState, String> {
   void restart() {
     final store = ref.read(saveStoreProvider);
     store.clearSave(arg);
-    state = player.initState(_story);
+    state = initState(_story);
   }
 
   void _apply(PlayState next) {
@@ -4264,12 +4286,70 @@ class _EndingView extends StatelessWidget {
 }
 ```
 
-- [ ] **Step 7: 跑測試與 analyze**
+- [ ] **Step 7: 寫架構守門測試**
+
+`vn/test/architecture/import_rules_test.dart`：
+
+```dart
+import 'dart:io';
+
+import 'package:flutter_test/flutter_test.dart';
+
+/// 這一包日後要整包搬進另一個 Flutter 專案的 `features/visual_novel/`，屆時
+/// 跨 feature 引用只看 `providers.dart`。若 presentation 已經散著直接引用
+/// data／domain，搬過去就會拖出一串跨層依賴——那時候才發現就太晚了。
+///
+/// 用測試守而不是靠註解與 code review：規則要能自己叫。
+void main() {
+  const String providers = 'package:lorescape_vn/src/visual_novel/providers.dart';
+  const String presentation = 'package:lorescape_vn/src/visual_novel/presentation/';
+
+  Iterable<File> dartFilesIn(String path) => Directory(path)
+      .listSync(recursive: true)
+      .whereType<File>()
+      .where((File file) => file.path.endsWith('.dart'));
+
+  test('presentation 底下只准 import providers.dart', () {
+    final RegExp importLine = RegExp("^import '(package:lorescape_vn/[^']+)'");
+    final List<String> offenders = <String>[];
+
+    for (final File file in dartFilesIn('lib/src/visual_novel/presentation')) {
+      for (final String line in file.readAsLinesSync()) {
+        final RegExpMatch? match = importLine.firstMatch(line);
+        if (match == null) continue;
+        final String target = match.group(1)!;
+        // 同一層內部互相引用沒問題，那不算跨層。
+        if (target.startsWith(presentation)) continue;
+        if (target == providers) continue;
+        offenders.add('${file.path} → $target');
+      }
+    }
+
+    expect(offenders, isEmpty,
+        reason: 'presentation 只准經 providers.dart 取用 data／domain');
+  });
+
+  test('domain 底下零 Flutter 依賴', () {
+    final RegExp flutterImport = RegExp("^import 'package:flutter/");
+    final List<String> offenders = <String>[];
+
+    for (final File file in dartFilesIn('lib/src/visual_novel/domain')) {
+      for (final String line in file.readAsLinesSync()) {
+        if (flutterImport.hasMatch(line)) offenders.add('${file.path}: $line');
+      }
+    }
+
+    expect(offenders, isEmpty, reason: 'domain 要能用 dart test 跑，不得依賴 Flutter');
+  });
+}
+```
+
+- [ ] **Step 8: 跑測試與 analyze**
 
 Run: `cd vn && fvm flutter test && fvm flutter analyze --fatal-infos`
 Expected: 全 PASS
 
-- [ ] **Step 8: 用真機（瀏覽器）看一眼**
+- [ ] **Step 9: 用真機（瀏覽器）看一眼**
 
 ```bash
 cd vn && fvm flutter run -d chrome
@@ -4663,7 +4743,7 @@ Expected: FAIL — 找不到 `PlayPage.backlogButtonKey`
   List<BacklogEntry> get backlog => List<BacklogEntry>.unmodifiable(_backlog);
 
   void _record(PlayState value) {
-    final node = player.currentNode(_story, value);
+    final node = currentNode(_story, value);
     final entry = switch (node) {
       NarrationNode(:final text) => BacklogEntry(speakerName: null, text: text),
       DialogueNode(:final who, :final text) =>
@@ -4684,7 +4764,7 @@ Expected: FAIL — 找不到 `PlayPage.backlogButtonKey`
     while (guard-- > 0) {
       if (next.status != PlayStatus.playing) break;
       if (!read.contains(next.readKey)) break;
-      final candidate = player.advance(_story, next);
+      final candidate = advance(_story, next);
       if (candidate.status != PlayStatus.playing || !read.contains(candidate.readKey)) {
         next = candidate;
         break;
