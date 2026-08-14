@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -201,6 +203,52 @@ void main() {
       await _pumpTyping(tester);
       expect(controller.backlog.length, 1,
           reason: '重新開始後只該有新的第一句，不得殘留上一輪的台詞');
+    });
+
+    testWidgets(
+        '抵達結局要寫入 endingsSeen 並清掉存檔（回歸：ended 游標必然越界，'
+        '硬呼叫 currentNode 曾經 RangeError，讓 markEnding／clearSave 整段沒執行到）',
+        (tester) async {
+      // 直接餵一個就停在結局場尾端前一步的存檔，不用真的把 S01～S09 全部點完。
+      final saveJson = jsonEncode(<String, dynamic>{
+        'storyId': 'pompeii_01_harbour_stranger',
+        'cursor': <String, dynamic>{
+          'sceneId': 'E_A',
+          'path': <String>['19', 'then', '1'],
+        },
+        'vars': <String, dynamic>{'affection': 3, 'awareness': 3, 'deal': 'wait', 'bread': true},
+        'stage': const <dynamic>[],
+        'updatedAt': DateTime.now().toUtc().toIso8601String(),
+      });
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'vn.save.pompeii_01_harbour_stranger': saveJson,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: <Override>[sharedPreferencesProvider.overrideWithValue(prefs)],
+          child: const MaterialApp(home: PlayPage(storyId: 'pompeii_01_harbour_stranger')),
+        ),
+      );
+      await _pumpTyping(tester);
+
+      for (var i = 0; i < 20; i++) {
+        if (find.text('你走到了').evaluate().isNotEmpty) break;
+        await tester.tap(find.byKey(PlayPage.advanceAreaKey));
+        await _pumpTyping(tester);
+      }
+
+      expect(find.text('你走到了'), findsOneWidget, reason: '應該走到 _EndingView');
+      expect(tester.takeException(), isNull);
+      expect(
+        prefs.getStringList('vn.endingsSeen'),
+        contains('pompeii_01_harbour_stranger#A'),
+      );
+      expect(prefs.getString('vn.save.pompeii_01_harbour_stranger'), isNull,
+          reason: '結局要清掉存檔，不然回首頁後這篇的進度條會多算一個「進行中」的假存檔');
     });
 
     testWidgets('已讀跳過碰到未讀節點就停', (tester) async {

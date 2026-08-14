@@ -99,6 +99,13 @@ class PlayController extends FamilyNotifier<PlayState, String> {
   }
 
   void _record(PlayState value) {
+    // 結局狀態的游標必然越界（`_settle` 的不變式），沒有「目前節點」可記；
+    // 硬呼叫 currentNode 會 RangeError，而且是在 _apply() 呼叫鏈裡丟出，
+    // 發生在 _persist() 之前——結局因此整個沒存到，markEnding／clearSave
+    // 都不會執行，「結局收藏 n/3」永遠是 0。已實測重現（RangeError: index
+    // should be less than <scene 節點數>），這裡直接擋掉才是對的：結局沒有
+    // 對白／旁白要記進回顧。
+    if (value.status == PlayStatus.ended) return;
     final node = currentNode(_story, value);
     final entry = switch (node) {
       NarrationNode(:final text) => BacklogEntry(speakerName: null, text: text),

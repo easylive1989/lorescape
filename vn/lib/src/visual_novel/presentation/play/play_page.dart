@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lorescape_vn/src/visual_novel/presentation/play/backlog_sheet.dart';
 import 'package:lorescape_vn/src/visual_novel/presentation/play/background_layer.dart';
 import 'package:lorescape_vn/src/visual_novel/presentation/play/choice_overlay.dart';
@@ -15,6 +16,7 @@ class PlayPage extends ConsumerWidget {
   static const ValueKey<String> advanceAreaKey = ValueKey<String>('play-advance-area');
   static const ValueKey<String> backlogButtonKey = ValueKey<String>('play-backlog');
   static const ValueKey<String> skipButtonKey = ValueKey<String>('play-skip');
+  static const ValueKey<String> homeButtonKey = ValueKey<String>('play-ending-home');
 
   final String storyId;
 
@@ -195,6 +197,13 @@ class _EndingView extends StatelessWidget {
           Text('你走到了', style: Theme.of(context).textTheme.labelLarge),
           const SizedBox(height: 8),
           Text(ending?.title ?? '結局', style: Theme.of(context).textTheme.headlineMedium),
+          const SizedBox(height: 32),
+          // 結局是這篇的死路，沒有這顆按鈕玩家就卡在這裡回不去景點包首頁。
+          TextButton(
+            key: PlayPage.homeButtonKey,
+            onPressed: () => context.go('/'),
+            child: const Text('回首頁'),
+          ),
         ],
       ),
     );
