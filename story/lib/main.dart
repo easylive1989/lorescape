@@ -44,16 +44,15 @@ class VnApp extends StatelessWidget {
       // 背景是 9:16 的圖，放進較窄的框只是多裁一點下緣——規範 §2 本來就說
       // 「螢幕更長時裁下緣，因為關鍵構圖都在上半部」。
       //
-      // ⚠️ 光靠 AspectRatio + ClipRect 鎖比例還不夠：那只裁「畫出來」的範圍，
-      // `MediaQuery.sizeOf(context)`（`VnLayout.of` 就是用這個）在寬螢幕下
-      // 拿到的仍然是**整個視窗**的大小，不是裁切後的可見框——寬螢幕視窗下
-      // `VnLayout` 會拿視窗寬去算 `choiceInset`／`bodyFontSize`，插進裁切後
-      // 窄得多的框裡，選項按鈕的可用寬度被吃到只剩一截、逐字換行（已實測重
-      // 現：1510 寬視窗下選項帶量到的可見寬度不到 60px，換算回去正好等於
-      // `視窗寬度*0.10*2` 那組數字吃掉了裁切框的絕大部分）。用 LayoutBuilder
-      // 量出裁切框的實際像素大小，包一層 `MediaQuery`覆寫 `size`，讓
-      // `VnLayout` 以下所有讀 `MediaQuery.sizeOf` 的地方看到的都是裁切後的
-      // 框，不是外層視窗。
+      // 這裡的 MediaQuery 覆寫讓「視窗尺寸」對框內任何東西都指向**可見框**
+      // 而不是整個瀏覽器視窗——`AspectRatio` + `ClipRect` 只裁「畫出來」的
+      // 範圍，不會動 MediaQuery。
+      //
+      // ⚠️ 但 `VnLayout` **不依賴這個覆寫**，也不准依賴：它由 `PlayPage` 內
+      // 的 LayoutBuilder 量自己實際拿到的框。這個檔是 App 的薄殼，日後整包
+      // 搬進另一個專案時不會跟著走——版面的正確性不能掛在一個搬家會消失的
+      // 檔案上。（`test/…/play_page_test.dart` 的「版面跟著模組實際拿到的框
+      // 走」那條就是守這件事：把播放頁塞進小於視窗的框，量對話框高度。）
       builder: (context, child) => LayoutBuilder(
         builder: (context, constraints) {
           const double aspect = 390 / 844;

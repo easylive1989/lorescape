@@ -20,11 +20,19 @@ abstract final class VnColors {
 }
 
 /// Flutter製作規範 §2 的版面數值，全部收在這裡。改版面只改這個檔。
+/// Flutter製作規範 §2 的版面數值。
+///
+/// **`size` 一定要傳「這個模組實際被分配到的框」，不是 `MediaQuery.sizeOf`。**
+/// 曾經有一個 `VnLayout.of(context)` 直接讀 MediaQuery，那讓整個模組的幾何
+/// 依賴一段寫在 `main.dart`（模組之外）的 MediaQuery 覆寫——而 `main.dart`
+/// 搬家不會跟著走。這一包日後要整包搬進另一個專案的 `features/`，屆時播放頁
+/// 若不是全螢幕（外面包了 shell／bottom nav／AppBar），MediaQuery 回的是整個
+/// 視窗而不是實際畫布，`dialogueHeight`／`spriteBottom`／`choiceTop` 會全錯。
+///
+/// 現在改由 `PlayPage` 內的 `LayoutBuilder` 量自己的框再建構——模組量自己，
+/// 不問視窗。
 final class VnLayout {
   const VnLayout(this.size);
-
-  factory VnLayout.of(BuildContext context) =>
-      VnLayout(MediaQuery.sizeOf(context));
 
   final Size size;
 

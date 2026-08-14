@@ -78,7 +78,6 @@ class _StageState extends ConsumerState<_Stage> {
     final repository = ref.watch(packRepositoryProvider);
     final fontScale = ref.watch(saveStoreProvider).fontScale();
     final msPerCharacter = ref.watch(saveStoreProvider).textSpeed();
-    final layout = VnLayout.of(context);
 
     if (_lastKey != state.readKey) {
       _lastKey = state.readKey;
@@ -108,90 +107,98 @@ class _StageState extends ConsumerState<_Stage> {
       key: PlayPage.advanceAreaKey,
       behavior: HitTestBehavior.opaque,
       onTap: () => _handleTap(controller, state),
-      child: Stack(
-        fit: StackFit.expand,
-        children: <Widget>[
-          BackgroundLayer(
-            assetPath:
-                cg ?? repository.backgroundPath(widget.story, scene.background),
-          ),
-          if (cg == null)
-            SpriteLayer(
-              stage: state.stage,
-              layout: layout,
-              pathOf: (sprite) => repository.spritePath(
-                widget.story,
-                sprite.who,
-                sprite.sprite,
+      // 量這個模組實際拿到的框，不要問 MediaQuery——見 VnLayout 的說明。
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final layout = VnLayout(constraints.biggest);
+          return Stack(
+            fit: StackFit.expand,
+            children: <Widget>[
+              BackgroundLayer(
+                assetPath:
+                    cg ??
+                    repository.backgroundPath(widget.story, scene.background),
               ),
-            ),
-          if (node is NarrationNode)
-            DialogueBox(
-              text: node.text,
-              layout: layout,
-              fontScale: fontScale,
-              graffiti: node.style == 'graffiti',
-              completed: _typingDone,
-              onCompleted: _markTypingDone,
-              msPerCharacter: msPerCharacter,
-            ),
-          if (node is DialogueNode)
-            DialogueBox(
-              text: node.text,
-              layout: layout,
-              fontScale: fontScale,
-              speakerName: widget.story.characters[node.who]?.name ?? node.who,
-              completed: _typingDone,
-              onCompleted: _markTypingDone,
-              msPerCharacter: msPerCharacter,
-            ),
-          // choice 節點本身沒有文字：把剛讀完的那句留著，玩家才不是在空白畫面
-          // 上做選擇。已經讀完，不重新逐字。
-          if (state.status == PlayStatus.choosing &&
-              controller.lastEntry != null)
-            DialogueBox(
-              text: controller.lastEntry!.text,
-              layout: layout,
-              fontScale: fontScale,
-              speakerName: controller.lastEntry!.speakerName,
-              completed: true,
-              onCompleted: () {},
-              msPerCharacter: msPerCharacter,
-            ),
-          if (state.status == PlayStatus.choosing && node is ChoiceNode)
-            ChoiceOverlay(
-              options: visibleOptions(node, state.vars),
-              layout: layout,
-              onChoose: controller.choose,
-            ),
-          Positioned(
-            top: layout.safeInset,
-            right: layout.sideInset,
-            child: Row(
-              children: <Widget>[
-                IconButton(
-                  key: PlayPage.backlogButtonKey,
-                  icon: const Icon(Icons.history),
-                  color: VnColors.muted,
-                  onPressed: () => showModalBottomSheet<void>(
-                    context: context,
-                    backgroundColor: VnColors.ground.withValues(
-                      alpha: 0xF2 / 0xFF,
-                    ),
-                    builder: (context) =>
-                        BacklogSheet(entries: controller.backlog),
+              if (cg == null)
+                SpriteLayer(
+                  stage: state.stage,
+                  layout: layout,
+                  pathOf: (sprite) => repository.spritePath(
+                    widget.story,
+                    sprite.who,
+                    sprite.sprite,
                   ),
                 ),
-                IconButton(
-                  key: PlayPage.skipButtonKey,
-                  icon: const Icon(Icons.fast_forward),
-                  color: VnColors.muted,
-                  onPressed: controller.skipRead,
+              if (node is NarrationNode)
+                DialogueBox(
+                  text: node.text,
+                  layout: layout,
+                  fontScale: fontScale,
+                  graffiti: node.style == 'graffiti',
+                  completed: _typingDone,
+                  onCompleted: _markTypingDone,
+                  msPerCharacter: msPerCharacter,
                 ),
-              ],
-            ),
-          ),
-        ],
+              if (node is DialogueNode)
+                DialogueBox(
+                  text: node.text,
+                  layout: layout,
+                  fontScale: fontScale,
+                  speakerName:
+                      widget.story.characters[node.who]?.name ?? node.who,
+                  completed: _typingDone,
+                  onCompleted: _markTypingDone,
+                  msPerCharacter: msPerCharacter,
+                ),
+              // choice 節點本身沒有文字：把剛讀完的那句留著，玩家才不是在空白畫面
+              // 上做選擇。已經讀完，不重新逐字。
+              if (state.status == PlayStatus.choosing &&
+                  controller.lastEntry != null)
+                DialogueBox(
+                  text: controller.lastEntry!.text,
+                  layout: layout,
+                  fontScale: fontScale,
+                  speakerName: controller.lastEntry!.speakerName,
+                  completed: true,
+                  onCompleted: () {},
+                  msPerCharacter: msPerCharacter,
+                ),
+              if (state.status == PlayStatus.choosing && node is ChoiceNode)
+                ChoiceOverlay(
+                  options: visibleOptions(node, state.vars),
+                  layout: layout,
+                  onChoose: controller.choose,
+                ),
+              Positioned(
+                top: layout.safeInset,
+                right: layout.sideInset,
+                child: Row(
+                  children: <Widget>[
+                    IconButton(
+                      key: PlayPage.backlogButtonKey,
+                      icon: const Icon(Icons.history),
+                      color: VnColors.muted,
+                      onPressed: () => showModalBottomSheet<void>(
+                        context: context,
+                        backgroundColor: VnColors.ground.withValues(
+                          alpha: 0xF2 / 0xFF,
+                        ),
+                        builder: (context) =>
+                            BacklogSheet(entries: controller.backlog),
+                      ),
+                    ),
+                    IconButton(
+                      key: PlayPage.skipButtonKey,
+                      icon: const Icon(Icons.fast_forward),
+                      color: VnColors.muted,
+                      onPressed: controller.skipRead,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

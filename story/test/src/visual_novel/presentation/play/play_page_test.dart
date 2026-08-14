@@ -146,6 +146,46 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets('版面跟著模組實際拿到的框走，不是跟著視窗', (tester) async {
+      // 這一包日後要整包搬進另一個專案的 features/，屆時播放頁很可能不是全
+      // 螢幕（外面包 shell／bottom nav／AppBar）。若 VnLayout 讀的是
+      // MediaQuery.sizeOf，拿到的會是整個視窗而不是實際畫布，dialogueHeight／
+      // spriteBottom／choiceTop 會全錯——而讓它現在正確的那段 MediaQuery
+      // 覆寫寫在 main.dart，搬家不會跟著走。
+      //
+      // 這裡刻意把播放頁塞進一個明顯小於視窗的框：視窗 390×844，框 300×600。
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final prefs = await SharedPreferences.getInstance();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: <Override>[
+            sharedPreferencesProvider.overrideWithValue(prefs),
+          ],
+          child: const MaterialApp(
+            home: Center(
+              child: SizedBox(
+                width: 300,
+                height: 600,
+                child: PlayPage(storyId: 'pompeii_01_harbour_stranger'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await _pumpTyping(tester);
+
+      final box = tester.getSize(find.byType(DialogueBox).first);
+      expect(
+        box.height,
+        closeTo(600 * 0.35, 0.5),
+        reason: '對話框高度要是「框」的 0.35，不是視窗的 0.35（844×0.35＝295.4）',
+      );
+      expect(box.width, closeTo(300, 0.5), reason: '對話框要滿框寬');
+    });
+
     testWidgets('缺件的 sfx 與 bgm 不造成例外', (tester) async {
       await pumpPlayPage(tester, 'pompeii_01_harbour_stranger');
       for (var i = 0; i < 12; i++) {
