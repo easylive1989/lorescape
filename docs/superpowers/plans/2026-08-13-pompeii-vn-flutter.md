@@ -3689,6 +3689,12 @@ import 'package:lorescape_vn/src/visual_novel/providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> pumpPlayPage(WidgetTester tester, String storyId) async {
+  // flutter_test 預設視窗是 800×600（桌面橫向），而這個 App 鎖直式：字級與
+  // 內距都按寬度算，選項區高度卻只有 (0.45–0.25)×600 ＝ 120px，兩顆按鈕會
+  // RenderFlex overflow。固定成真機直式尺寸，測到的才是實際版面。
+  tester.view.physicalSize = const Size(390, 844);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
   SharedPreferences.setMockInitialValues(<String, Object>{});
   final prefs = await SharedPreferences.getInstance();
   await tester.pumpWidget(
@@ -3844,18 +3850,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // `show`，否則會互相看見對方的 export，名稱衝突時的錯誤訊息很難讀。
 // presentation/ 一律只 import providers.dart，這個檔也不例外。
 import 'package:lorescape_vn/src/visual_novel/providers.dart'
-    show
-        PlayState,
-        PlayStatus,
-        SaveData,
-        Story,
-        advance,
-        choose,
-        currentNode,
-        initState,
-        resume,
-        saveStoreProvider,
-        storyProvider;
+    show PlayState, PlayStatus, SaveData, Story, currentNode, initState, resume,
+        saveStoreProvider, storyProvider;
+// `advance` / `choose` 與本類別的同名方法撞名。Dart 在 class 方法體內對裸名
+// 一律先解到 instance member（等於 `this.advance`），不會落到 import 進來的
+// 頂層函式——這是名稱解析規則本身，不是 import 寫法的問題，所以這兩個必須
+// 帶 prefix。守門測試看的是 import 的目標路徑而不是有沒有 prefix，規則不變。
+import 'package:lorescape_vn/src/visual_novel/providers.dart' as engine
+    show advance, choose;
 
 class PlayController extends FamilyNotifier<PlayState, String> {
   @override
@@ -3877,12 +3879,12 @@ class PlayController extends FamilyNotifier<PlayState, String> {
 
   void advance() {
     if (state.status != PlayStatus.playing) return;
-    _apply(advance(_story, state));
+    _apply(engine.advance(_story, state));
   }
 
   void choose(int visibleIndex) {
     if (state.status != PlayStatus.choosing) return;
-    _apply(choose(_story, state, visibleIndex));
+    _apply(engine.choose(_story, state, visibleIndex));
   }
 
   void restart() {
@@ -4307,7 +4309,7 @@ void main() {
   Iterable<File> dartFilesIn(String path) => Directory(path)
       .listSync(recursive: true)
       .whereType<File>()
-      .where((File file) => file.path.endsWith('.dart'));
+      .where((file) => file.path.endsWith('.dart'));
 
   test('presentation 底下只准 import providers.dart', () {
     final RegExp importLine = RegExp("^import '(package:lorescape_vn/[^']+)'");
@@ -4764,7 +4766,7 @@ Expected: FAIL — 找不到 `PlayPage.backlogButtonKey`
     while (guard-- > 0) {
       if (next.status != PlayStatus.playing) break;
       if (!read.contains(next.readKey)) break;
-      final candidate = advance(_story, next);
+      final candidate = engine.advance(_story, next);
       if (candidate.status != PlayStatus.playing || !read.contains(candidate.readKey)) {
         next = candidate;
         break;
