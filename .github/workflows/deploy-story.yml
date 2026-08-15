@@ -5,9 +5,18 @@ name: Deploy Story
 # 手動觸發，跟 deploy-backend / deploy-app 同一個原則：出貨是決定，不是
 # 每次 push 的副作用。
 #
-# 閘門與本機共用 story/gate.sh——素材匯入、內容 lint、劇本結構與矛盾檢查、
-# analyze、flutter test、匯入腳本測試、build web。CI 上唯一的差別是沒有
-# fvm（SDK 由 flutter-action 依 .fvmrc 的版本裝好），所以把 FLUTTER 換掉。
+# 閘門與本機共用 story/gate.sh，用 --ci 模式跑。
+#
+# **CI 不做影像處理。** 去背與轉檔要在 125 張圖上跑 Pillow＋numpy，而 CI 上
+# 沒有 _processed 快取（那份 568 MB）。所以 WebP 產物直接進版控（18 MB），
+# --ci 只用 --verify-only 確認產物與 writer 來源逐字同步、參照的素材都在，
+# 然後 analyze → test → build → 部署。
+#
+# 分工：美術或劇本動了，就在本機重跑匯入並把產物一起 commit；CI 只負責把
+# 版控裡這批東西驗過、蓋起來、送上去。忘記重跑會被 --verify-only 擋下。
+#
+# CI 上沒有 fvm（SDK 由 flutter-action 依 .fvmrc 的版本裝好），所以把
+# FLUTTER 環境變數換掉。
 #
 # 前提：**所有景點包的來源都要在版控裡**。美術定版原圖與 story.json 都已
 # 進版控（.gitignore 只擋 _processed/ 快取與匯入產生的 WebP，兩者都會在
@@ -20,9 +29,8 @@ jobs:
   deploy-story:
     name: Deploy Story to Firebase Hosting
     runs-on: ubuntu-latest
-    # 素材匯入（去背 + WebP，兩包共 125 張）加 flutter test 需要時間，
-    # 給足預算免得卡在預設值。
-    timeout-minutes: 45
+    # 不做影像處理之後，重頭只剩 pub get、analyze、test 與 build web。
+    timeout-minutes: 20
 
     steps:
       - name: Checkout repository
@@ -43,15 +51,17 @@ jobs:
           python-version: "3.12"
 
       - name: Install Python dependencies
-        # import_pack.py 用 Pillow + numpy 做去背與 WebP；test_import_pack.py 用 pytest。
-        # story_tool.py 與 lint_content.py 只用標準函式庫。
-        run: python3 -m pip install --upgrade pillow numpy pytest
+        # --verify-only 只讀 JSON 與檢查檔案存在，但 import_pack.py 在模組層
+        # import 了 Pillow 與 numpy，所以還是得裝。pytest 不需要——匯入腳本
+        # 測試只在本機跑。
+        run: python3 -m pip install --upgrade pillow numpy
 
       - name: Run the shipping gate
-        # 與本機 ./deploy.sh 跑的是同一支腳本，同一組檢查。
+        # 與本機 ./deploy.sh 跑的是同一支腳本；--ci 的差別只有「不做影像處理、
+        # 改成驗證版控裡的產物」與「不跑會實際匯入的那組 pytest」。
         env:
           FLUTTER: flutter
-        run: ./story/gate.sh
+        run: ./story/gate.sh --ci
 
       - name: Deploy to Firebase Hosting (live)
         uses: FirebaseExtended/action-hosting-deploy@v0

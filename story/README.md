@@ -37,13 +37,35 @@ python3 story/tool/import_pack.py --pack versailles --partial   # 凡爾賽（�
 ./deploy.sh                 # 本機：閘門 → firebase deploy（用你的 firebase login）
 ./deploy.sh --skip-import   # 素材沒動時跳過匯入，省 2 分鐘
 ./gate.sh                   # 只跑閘門不部署（想確認會不會過就跑這個）
+./gate.sh --ci              # CI 模式，本機也能跑來預演
 ```
 
-CI：GitHub Actions 的 **Deploy Story**（`workflow_dispatch` 手動觸發），跑同一支
-`gate.sh`，改用 service account 部署。CI 上沒有 fvm，SDK 由 flutter-action 依
-`.fvmrc` 的版本裝好，所以 workflow 把 `FLUTTER` 環境變數換成 `flutter`。
+CI：GitHub Actions 的 **Deploy Story**（`workflow_dispatch` 手動觸發），跑
+`gate.sh --ci`，改用 service account 部署。CI 上沒有 fvm，SDK 由 flutter-action
+依 `.fvmrc` 的版本裝好，所以 workflow 把 `FLUTTER` 環境變數換成 `flutter`。
 
 → https://story-lorescape.web.app
+
+### 影像處理只在本機做
+
+**匯入產生的 WebP 進版控**（18 MB／121 檔）。去背與轉檔要在 125 張圖上跑
+Pillow＋numpy，CI 上又沒有 `_processed` 快取（那份 568 MB，不可能進版控），
+所以分工是：
+
+| | 本機 | CI |
+|---|---|---|
+| 素材去背／轉檔 | ✅ 有素材、有快取 | ❌ 完全不做 |
+| 產物驗證 | 完整匯入即等於驗證 | `--verify-only` |
+| 測試／build／部署 | ✅ | ✅ |
+
+工作流程：**改了美術或劇本 → 本機重跑匯入 → 把 WebP 與 story.json 一起
+commit → CI 部署。** 只改劇本文字時匯入很快（快取全中）。
+
+忘記重跑匯入不會靜默出貨：`--verify-only` 拿 writer 來源與版控裡的產物**逐字
+比對**，不同就擋；再檢查劇本引用的每張圖都在，缺件也擋。
+
+`test_import_pack.py` 會實際跑一次匯入（去背容差、對齊分數、WebP 品質都是量
+真實輸出），所以它跟影像處理綁在一起，`--ci` 不跑它。
 
 **任何一關沒過就不會部署。** 閘門依序是：素材匯入 → 內容 lint（凡爾賽）→
 劇本結構與矛盾檢查（全部包，見 [[劇本矛盾檢查規範]]）→ `analyze --fatal-infos`

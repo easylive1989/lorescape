@@ -44,8 +44,17 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# 匯入的美術素材：可由 tool/import_pack.py 從 writer vault 重生，不進版控
-assets/content/**/assets/backgrounds/
-assets/content/**/assets/sprites/
+# 匯入的美術素材（WebP）**進版控**——18 MB／121 檔，相對於 writer vault 裡
+# 已經進版控的 283 MB 來源 PNG 只有 6%。
+#
+# 為什麼產物也進版控：去背與轉檔要跑 Pillow＋numpy 處理 125 張圖，在 CI 上
+# 又慢又沒有 _processed 快取（那份快取 568 MB，不可能進版控）。把 18 MB 的
+# 產物存起來，CI 就完全不必碰影像處理——只做「驗證 ＋ build ＋ 部署」。
+#
+# 代價：美術一動就要在本機重跑匯入並把 WebP 一起 commit。這是刻意的分工——
+# 影像處理留在有素材、有快取的機器上。gate.sh --ci 會擋住忘記重跑的情況。
+#
+# 注意：不同 Pillow 版本編出來的 WebP 位元組不同，升級 Pillow 會讓 121 個檔
+# 一起變動。那是預期內的雜訊，不是壞掉。
 assets/content/**/assets/audio/
 tool/_review/

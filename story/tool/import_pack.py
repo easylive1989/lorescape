@@ -372,6 +372,48 @@ def collect_assets(story_dirs):
     return picked
 
 
+def verify_only() -> None:
+    """只驗不做：確認已匯入的產物與 writer 來源同步、且參照的素材都在。
+
+    這是 CI 的入口。CI 不跑影像處理——去背與轉檔留在有素材、有 _processed
+    快取的本機。CI 只負責回答一個問題：**版控裡這批產物，能不能直接出貨。**
+
+    擋兩種事故：
+      1. 改了 writer 的 story.json 卻忘記重跑匯入 → 產物是舊的
+      2. 劇本新引用了一張圖，但那張圖沒被匯入 → 線上破圖
+    """
+    if not OUT.exists():
+        sys.exit(f'✗ {PACK["title"]} 沒有匯入產物：{OUT}\n'
+                 f'  在本機跑一次 python3 story/tool/import_pack.py --pack ... 再 commit')
+
+    src_dirs = sorted(d for d in SRC.iterdir()
+                      if d.is_dir() and (d / 'story.json').exists())
+    expect = PACK['expect']
+    if len(src_dirs) != expect:
+        sys.exit(f'✗ {PACK["title"]} 預期 {expect} 篇，來源有 {len(src_dirs)} 篇')
+
+    stale, copied = [], []
+    for d in src_dirs:
+        src_json = d / 'story.json'
+        meta = json.loads(src_json.read_text(encoding='utf-8'))['meta']
+        dest = OUT / 'stories' / slug_of(meta['id']) / 'story.json'
+        if not dest.exists():
+            stale.append(f'{d.name} → 產物不存在')
+        elif dest.read_bytes() != src_json.read_bytes():
+            # 匯入是逐字複製，不同就是產物過期。
+            stale.append(f'{d.name} → 產物與來源不同')
+        else:
+            copied.append(dest)
+    if stale:
+        sys.exit('✗ 匯入產物已過期：\n  ' + '\n  '.join(stale) +
+                 '\n  在本機重跑匯入並把產物一起 commit')
+
+    webp = json.loads((OUT / 'pack.json').read_text(encoding='utf-8'))\
+        .get('assetFormat') == 'webp'
+    verify(copied, webp)
+    print(f'✅ {PACK["title"]}：{len(copied)} 篇產物與來源同步，素材齊全')
+
+
 def verify(story_paths, webp: bool = False) -> None:
     missing = []
     for p in story_paths:
@@ -591,7 +633,12 @@ if __name__ == '__main__':
                     help='允許匯入篇數未滿的包（製作中才用）')
     ap.add_argument('--skip-verify', action='store_true',
                     help='跳過素材完整性檢查（製作中才用，會推出破圖）')
+    ap.add_argument('--verify-only', action='store_true',
+                    help='只驗證版控裡的產物與來源同步且素材齊全，不做任何影像處理（CI 用）')
     a = ap.parse_args()
     configure(a.pack)
-    SKIP_VERIFY = a.skip_verify
-    import_pack(webp=not a.png, use_cache=not a.no_cache, partial=a.partial)
+    if a.verify_only:
+        verify_only()
+    else:
+        SKIP_VERIFY = a.skip_verify
+        import_pack(webp=not a.png, use_cache=not a.no_cache, partial=a.partial)

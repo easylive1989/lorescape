@@ -9,8 +9,17 @@
 # 「CI 沒跑到的那幾步剛好是壞的」。一份腳本，兩個入口。
 #
 # 用法：
-#   ./gate.sh                完整
-#   ./gate.sh --skip-import  跳過素材匯入（素材沒動時省 2 分鐘）
+#   ./gate.sh                完整：重跑素材匯入（去背＋轉檔）
+#   ./gate.sh --skip-import  跳過匯入，沿用現有產物（素材沒動時省 2 分鐘）
+#   ./gate.sh --ci           CI 模式：不做影像處理，只驗證版控裡的產物
+#
+# **--ci 為什麼不做影像處理**：去背與轉檔要在 125 張圖上跑 Pillow＋numpy，
+# 而 CI 上沒有 _processed 快取（那份 568 MB，不可能進版控）。所以 WebP 產物
+# 直接進版控（18 MB），CI 只回答一個問題：版控裡這批東西能不能出貨。
+# 分工是刻意的——**影像處理留在有素材、有快取的本機**：
+#   美術動了 → 本機重跑匯入 → 把 WebP 一起 commit → CI 部署
+#   只改劇本文字 → 本機重跑匯入（很快，快取全中）→ commit → CI 部署
+# 忘記重跑的話 --ci 的 --verify-only 會擋下來（產物與來源逐字比對）。
 #
 # 環境變數：
 #   FLUTTER  預設 "fvm flutter"。CI 上設成 "flutter"——那邊 SDK 由
@@ -44,18 +53,29 @@ print(import_pack.PACKS['$p']['src'])")"
   fi
 done
 
-if [[ "${1:-}" != "--skip-import" ]]; then
-  for p in $packs; do
-    echo "▶ 從 writer vault 匯入素材（$p）"
-    # 🔒 部署路徑上**不加** --partial／--skip-verify。那兩個是製作中的旗標，
-    # 一旦進了閘門，缺篇與破圖就會被靜默推上線。要出貨就得先補齊。
-    python3 tool/import_pack.py --pack "$p"
-  done
-else
-  echo "▶ 跳過素材匯入"
-  [[ -d assets/content/pompeii-79/assets/backgrounds ]] || {
-    echo "✗ 素材目錄不存在，不能跳過匯入——先跑一次不帶 --skip-import"; exit 1; }
-fi
+MODE="${1:-}"
+
+case "$MODE" in
+  --ci)
+    echo "▶ 驗證版控裡的匯入產物（CI 不做影像處理）"
+    for p in $packs; do
+      python3 tool/import_pack.py --pack "$p" --verify-only
+    done
+    ;;
+  --skip-import)
+    echo "▶ 跳過素材匯入"
+    [[ -d assets/content/pompeii-79/assets/backgrounds ]] || {
+      echo "✗ 素材目錄不存在，不能跳過匯入——先跑一次不帶 --skip-import"; exit 1; }
+    ;;
+  *)
+    for p in $packs; do
+      echo "▶ 從 writer vault 匯入素材（$p）"
+      # 🔒 部署路徑上**不加** --partial／--skip-verify。那兩個是製作中的旗標，
+      # 一旦進了閘門，缺篇與破圖就會被靜默推上線。要出貨就得先補齊。
+      python3 tool/import_pack.py --pack "$p"
+    done
+    ;;
+esac
 
 echo "▶ 內容守門（凡爾賽）"
 # story_tool.py check 驗結構與變數；這支驗內容——反君主制、時代錯置、
@@ -89,8 +109,14 @@ $FLUTTER analyze --fatal-infos
 echo "▶ Flutter 測試"
 $FLUTTER test
 
-echo "▶ 匯入腳本測試"
-(cd "$ROOT" && python3 -m pytest story/tool/test_import_pack.py -q)
+if [[ "$MODE" != "--ci" ]]; then
+  echo "▶ 匯入腳本測試"
+  # 這組測試會實際跑一次匯入（去背、對齊、WebP 品質都是拿真實輸出量的），
+  # 所以它跟影像處理綁在一起，只在本機跑。CI 那邊由 --verify-only 接手。
+  (cd "$ROOT" && python3 -m pytest story/tool/test_import_pack.py -q)
+else
+  echo "▶ 跳過匯入腳本測試（會實際跑匯入，只在本機跑）"
+fi
 
 echo "▶ Build web"
 $FLUTTER build web --release
