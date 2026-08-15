@@ -8,26 +8,36 @@ import 'package:lorescape_story/src/visual_novel/domain/play_state.dart';
 import 'package:lorescape_story/src/visual_novel/domain/story.dart';
 import 'package:lorescape_story/src/visual_novel/domain/story_player.dart';
 
-const String packRoot = 'assets/content/pompeii-79';
+/// 每個景點包的走訪設定。**新增景點包在這裡加一筆**，其餘測試碼完全共用。
+///
+/// 為什麼走訪測試要跨包跑：`story_tool.py check` 只驗 JSON 的結構與可達性，
+/// 驗不到「引擎實際跑起來會怎樣」。第二個包沒有這一層守著，等於沒進引擎。
+typedef PackSpec = ({
+  String root,
+  Map<String, Set<String>> deadBranches,
+  Map<String, ({int paths, int options, int branches})> baselines,
+});
 
 /// 已確認的死碼——劇本裡在任何路徑上都走不到的 if 分支。
 ///
-/// 這不是測試問題，是內容問題，等作者決定要不要改（見 task-6-report）。
-/// 用 allowlist 而不是 `skip:`，是為了讓兩個方向都有訊號：多出新的死碼會紅，
-/// 而死碼被修好之後這裡沒刪也會紅。
-/// **2026-08-14 起是空的——三段死碼都修好了。**
+/// 這不是測試問題，是內容問題。用 allowlist 而不是 `skip:`，是為了讓兩個方向
+/// 都有訊號：多出新的死碼會紅，而死碼被修好之後這裡沒刪也會紅。
+/// **2026-08-14 起龐貝是空的——三段死碼都修好了。**
 ///
-/// 保留這個常數與下面的雙向斷言：多出新的死碼會紅，而死碼修好之後這裡沒刪
-/// 也會紅（三次修正都是被這條斷言叫出來的，不是靠人記得）。
-const Map<String, Set<String>> knownDeadBranches = <String, Set<String>>{};
-
-/// 逐篇窮舉的基準（路徑數、選項覆蓋數、非空 if 分支數）。存在的理由是補上
+/// 逐篇窮舉的基準（路徑數、選項覆蓋數、非空 if 分支數）存在的理由是補上
 /// 「內容被整段刪掉時測試依然全綠」這個洞——`declared.difference(taken)` 與
 /// `unreached` 這類集合斷言在集合為空時也會通過，只有跟實測基準比對才擋得住
-/// 分歧被誤刪。數字來自 task-6-report.md 記錄的實測結果。
-const Map<String, ({int paths, int options, int branches})> walkBaselines =
-    <String, ({int paths, int options, int branches})>{
-      '01-harbour-stranger': (paths: 128, options: 14, branches: 9),
+/// 分歧被誤刪。數字一律來自實測，不是手算。
+const List<PackSpec> packs = <PackSpec>[
+  (
+    root: 'assets/content/pompeii-79',
+    deadBranches: <String, Set<String>>{},
+    baselines: <String, ({int paths, int options, int branches})>{
+      // branches 由 9 升到 22：2026-08-15 依「劇本矛盾檢查規範」修矛盾時，
+      // 把結局裡假設「貨還在城裡」的段落改成依 deal／bread／beans／vibiaHalf
+      // 分岔的寫法。路徑數與選項數沒變——沒有增刪選擇點，只是把原本一路寫死
+      // 的敘述換成有條件的兩種寫法。
+      '01-harbour-stranger': (paths: 128, options: 14, branches: 22),
       '02-the-oven-went-out': (paths: 40, options: 11, branches: 3),
       '03-the-well-fell': (paths: 16, options: 8, branches: 4),
       '04-the-tree-in-the-sky': (paths: 20, options: 9, branches: 2),
@@ -35,9 +45,27 @@ const Map<String, ({int paths, int options, int branches})> walkBaselines =
       '06-the-locked-door': (paths: 32, options: 10, branches: 4),
       '07-cannot-land': (paths: 32, options: 10, branches: 2),
       '08-the-new-house': (paths: 20, options: 9, branches: 3),
-    };
+    },
+  ),
+  (
+    // 凡爾賽 1789，八篇全數轉檔完成。
+    root: 'assets/content/versailles-1789',
+    deadBranches: <String, Set<String>>{},
+    // 八篇的實測基準。數字一律跑出來填，不手算。
+    baselines: <String, ({int paths, int options, int branches})>{
+      '01-the-shutter': (paths: 63, options: 13, branches: 1),
+      '02-twenty-kilometres': (paths: 27, options: 11, branches: 2),
+      '03-both-sides': (paths: 108, options: 13, branches: 0),
+      '04-three-days': (paths: 30, options: 11, branches: 1),
+      '05-the-balcony': (paths: 36, options: 11, branches: 0),
+      '06-the-milk': (paths: 24, options: 12, branches: 2),
+      '07-the-bakers-family': (paths: 36, options: 12, branches: 2),
+      '08-no-lamps-tonight': (paths: 48, options: 12, branches: 0),
+    },
+  ),
+];
 
-List<Map<String, String>> loadPackEntries() {
+List<Map<String, String>> loadPackEntries(String packRoot) {
   final pack =
       jsonDecode(File('$packRoot/pack.json').readAsStringSync())
           as Map<String, dynamic>;
@@ -53,18 +81,20 @@ List<Map<String, String>> loadPackEntries() {
 }
 
 /// 素材的實際格式，由 `import_pack.py` 寫進 pack.json。
-final String packAssetFormat =
+String packAssetFormat(String packRoot) =>
     (jsonDecode(File('$packRoot/pack.json').readAsStringSync())
             as Map<String, dynamic>)['assetFormat']
         as String? ??
     'png';
 
-String withPackExtension(String filename) =>
-    packAssetFormat == 'png' || !filename.endsWith('.png')
-    ? filename
-    : '${filename.substring(0, filename.length - 4)}.$packAssetFormat';
+String withPackExtension(String packRoot, String filename) {
+  final format = packAssetFormat(packRoot);
+  return format == 'png' || !filename.endsWith('.png')
+      ? filename
+      : '${filename.substring(0, filename.length - 4)}.$format';
+}
 
-Story loadStory(String dir) => parseStory(
+Story loadStory(String packRoot, String dir) => parseStory(
   jsonDecode(File('$packRoot/stories/$dir/story.json').readAsStringSync())
       as Map<String, dynamic>,
 );
@@ -146,20 +176,28 @@ void walk(Story story, PlayState state, WalkResult result, int budget) {
 }
 
 void main() {
-  final entries = loadPackEntries();
-
-  test('pack.json 列出 8 篇', () {
-    expect(entries, hasLength(8));
-  });
-
-  for (final entry in entries) {
+  // 原本這裡有一條獨立的「pack.json 列出 8 篇」。它被下面迴圈裡的
+  // `entries == baselines.keys` 取代了——後者更強：它同時擋住「篇數不對」與
+  // 「轉了新的 story.json 卻沒補基準」，而且對製作中的包（凡爾賽 1/8）一樣成立。
+  for (final pack in packs) {
+    final packRoot = pack.root;
+    final entries = loadPackEntries(packRoot);
+    test('[$packRoot] 篇數與 baselines 一致', () {
+      expect(
+        entries.map((e) => e['dir']).toSet(),
+        pack.baselines.keys.toSet(),
+        reason: '轉了新的 story.json 就要在 packs 補一筆基準；'
+            '刪了篇也一樣要刪基準',
+      );
+    });
+    for (final entry in entries) {
     final dir = entry['dir']!;
-    group('${entry['title']} ($dir)', () {
+    group('[${entry['title']}] $dir', () {
       late Story story;
       late WalkResult result;
 
       setUpAll(() {
-        story = loadStory(dir);
+        story = loadStory(packRoot, dir);
         result = WalkResult();
         walk(story, initState(story), result, 20000);
         for (final scene in story.scenes.values) {
@@ -173,7 +211,7 @@ void main() {
 
       test('走訪規模符合實測基準', () {
         // 沒有下限斷言的話，內容被刪掉一整段分歧時這組測試依然全綠。
-        final baseline = walkBaselines[dir]!;
+        final baseline = pack.baselines[dir]!;
         expect(result.paths, baseline.paths, reason: '路徑數變了');
         expect(result.takenOptions.length, baseline.options, reason: '選項數變了');
         expect(result.branchCount, baseline.branches, reason: '非空 if 分支數變了');
@@ -278,7 +316,7 @@ void main() {
         for (final scene in story.scenes.values) {
           scan(scene.id, scene.nodes, const <String>[]);
         }
-        final known = knownDeadBranches[dir] ?? const <String>{};
+        final known = pack.deadBranches[dir] ?? const <String>{};
         expect(
           unreached.toSet().difference(known),
           isEmpty,
@@ -310,7 +348,7 @@ void main() {
         for (final filename in story.backgrounds.values) {
           expect(
             File(
-              '$packRoot/assets/backgrounds/${withPackExtension(filename)}',
+              '$packRoot/assets/backgrounds/${withPackExtension(packRoot, filename)}',
             ).existsSync(),
             isTrue,
             reason: filename,
@@ -321,20 +359,26 @@ void main() {
               in (character.sprites ?? const <String, String>{}).values) {
             expect(
               File(
-                '$packRoot/assets/sprites/${withPackExtension(filename)}',
+                '$packRoot/assets/sprites/${withPackExtension(packRoot, filename)}',
               ).existsSync(),
               isTrue,
               reason: filename,
             );
           }
         }
+        // 宣告在 missingAssets['cg'] 的 id 是「已知還沒畫」，引擎的 cgPath()
+        // 對它回 null 而不是崩。測試不跟著這條契約走，就會把刻意的缺件誤判成
+        // 錯誤——凡爾賽的垂直切片正是這個狀態。
+        final declaredMissingCg =
+            story.missingAssets['cg'] ?? const <String>[];
         void scanCg(List<StoryNode> nodes) {
           for (final node in nodes) {
             if (node is CgNode) {
+              if (declaredMissingCg.contains(node.id)) continue;
               expect(
                 File(
                   '$packRoot/assets/backgrounds/'
-                  '${withPackExtension('${node.id}.png')}',
+                  '${withPackExtension(packRoot, '${node.id}.png')}',
                 ).existsSync(),
                 isTrue,
                 reason: node.id,
@@ -386,5 +430,6 @@ void main() {
         }
       });
     });
+  }
   }
 }
