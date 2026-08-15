@@ -11,8 +11,8 @@ Lorescape 是 AI 景點故事導覽 App：為使用者眼前的景點生成以 W
 | `backend/` | Python FastAPI 服務（只服務 App）：narration API（含訂閱 402 驗證）、訂閱 webhook 與 reconcile。Docker 部署於 VPS |
 | `publisher/` | Social publisher（Python）：daily story 產線、Discord 審核 bot、IG 發布。獨立 image 與 .env，Docker 部署於 VPS |
 | `landing/` | Next.js 雙語官網 lorescape.app，含 `/place/[slug]` SEO 景點頁 |
-| `story/` | 獨立 Flutter 專案：直式視覺小說引擎，播放 `writer/創作/龐貝/` 的龐貝景點包 8 篇。先跑 Flutter Web 驗證（部署於 story-lorescape.web.app），之後整包搬進 `frontend/lib/features/visual_novel/`。素材由 `tool/import_pack.py` 從 writer vault 匯入（WebP，不進版控），見 `story/README.md` |
-| `writer/` | Obsidian vault（**不進版控**）：劇本、美術與製作規範。`製作規範/story_tool.py` 驗 `story.json`，`創作/<景點>/` 放各景點包的內容與素材 |
+| `story/` | 獨立 Flutter 專案：直式視覺小說引擎，播放 `writer/創作/龐貝/` 的龐貝景點包 8 篇。先跑 Flutter Web 驗證（部署於 story-lorescape.web.app），之後整包搬進 `frontend/lib/features/visual_novel/`。素材由 `tool/import_pack.py` 從 writer vault 匯入（產出的 WebP 不進版控，會重生）。出貨閘門 `gate.sh` 由本機 `deploy.sh` 與 GitHub Actions `deploy-story.yml`（手動觸發）共用，見 `story/README.md` |
+| `writer/` | Obsidian vault（**進版控**：劇本、製作規範、出圖腳本與美術定版原圖；只有 `_processed/` 快取與匯入產生的 WebP 被 ignore）。`製作規範/story_tool.py` 驗 `story.json` 結構與兩個語意 lint，判準見 `製作規範/劇本矛盾檢查規範.md`；`創作/<景點>/` 放各景點包的內容與素材 |
 | `supabase/` | Supabase schema 與 migrations |
 | `marketing/` | 行銷產出與工具（子資料夾見下表） |
 | `scripts/` | 每日故事 / reel / metrics 自動化腳本（Python，uv 管理）；metrics 全走 API（GSC / GA4 / IG / RevenueCat / App Store / Play） |
@@ -74,7 +74,7 @@ Lorescape 是 AI 景點故事導覽 App：為使用者眼前的景點生成以 W
 - 依賴用 uv 管理；測試 `uv run pytest`。
 - 部署：GitHub Actions `deploy-backend.yml`（手動觸發）→ VPS docker compose。
   其他 workflow：`ci.yml`、`deploy-app.yml`（App 上架）、`deploy-landing.yml`、
-  `deploy-publisher.yml`（`publisher/` 獨立部署，見下）。
+  `deploy-publisher.yml`（`publisher/` 獨立部署，見下）、`deploy-story.yml`（視覺小說，手動觸發）。
 
 ## Publisher（Python，社群發布）
 

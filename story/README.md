@@ -1,30 +1,60 @@
-# vn — 龐貝景點包視覺小說
+# story — 景點包視覺小說
 
-直式手機視覺小說引擎，播放 `writer/創作/龐貝/` 的 8 篇群像短篇。
+直式手機視覺小說引擎。目前有兩個景點包：
+
+| 包 | 來源 | 狀態 |
+|---|---|---|
+| **龐貝 79** | `writer/創作/龐貝/` | 8 篇，完成 |
+| **凡爾賽 1789** | `writer/創作/凡爾賽/` | **1/8 篇，製作中** |
+
+App 首頁是書架（`/`），選包進 `/pack/:packId`，再選篇進 `/play/:storyId`。
 目前跑 **Flutter Web** 做驗證，確認後整包搬進 `frontend/lib/features/visual_novel/`。
 
 ## 先決條件
 
-素材與劇本來自 **`writer/`（Obsidian vault，不在版控裡）**。首次 clone 後必須先匯入：
+素材與劇本來自 **`writer/`（Obsidian vault）**。美術定版原圖與 `story.json` 都在
+版控裡；`.gitignore` 只擋 `美術測試/_processed/`（快取）與 `stories/*/assets/`
+（匯入產生的 WebP），兩者都由匯入腳本重生。首次 clone 後必須先匯入**每一個包**：
 
 ```bash
-python3 story/tool/import_pack.py
+python3 story/tool/import_pack.py                          # 龐貝
+python3 story/tool/import_pack.py --pack versailles --partial   # 凡爾賽（未滿 8 篇）
 ```
 
-沒跑這一步的話，`assets/content/pompeii-79/assets/` 是空的，測試會失敗、畫面會全黑。
+沒跑這一步的話，`assets/content/*/assets/` 是空的，測試會失敗、畫面會全黑。
+
+**`--partial` 是刻意要手動加的**：篇數未滿的包預設會被擋下並印出缺哪幾篇——
+靜默放行等於讓做了一半的包看起來像做完的包。
+
+`packs.json`（書架清單）由匯入腳本**掃描磁碟**產生，不是寫死的常數。
+只匯入了龐貝的機器上，書架就只會有龐貝，不會列出一個載不進來的凡爾賽。
 
 ## 部署
 
+兩個入口，**跑同一支閘門 `gate.sh`**：
+
 ```bash
-./deploy.sh                 # 匯入素材 → analyze → 測試 → build → 部署
+./deploy.sh                 # 本機：閘門 → firebase deploy（用你的 firebase login）
 ./deploy.sh --skip-import   # 素材沒動時跳過匯入，省 2 分鐘
+./gate.sh                   # 只跑閘門不部署（想確認會不會過就跑這個）
 ```
+
+CI：GitHub Actions 的 **Deploy Story**（`workflow_dispatch` 手動觸發），跑同一支
+`gate.sh`，改用 service account 部署。CI 上沒有 fvm，SDK 由 flutter-action 依
+`.fvmrc` 的版本裝好，所以 workflow 把 `FLUTTER` 環境變數換成 `flutter`。
 
 → https://story-lorescape.web.app
 
-**任何一關沒過就不會部署。** 沒有 GitHub Actions：素材不進版控，CI 上 fresh
-clone 沒有 writer vault 就跑不了 `import_pack.py`，pubspec 宣告的 asset 目錄
-不存在會直接 build 失敗。素材在誰的機器上，部署就在誰的機器上。
+**任何一關沒過就不會部署。** 閘門依序是：素材匯入 → 內容 lint（凡爾賽）→
+劇本結構與矛盾檢查（全部包，見 [[劇本矛盾檢查規範]]）→ `analyze --fatal-infos`
+→ `flutter test` → 匯入腳本測試 → `build web`。
+
+**閘門只有一份的理由**：本機與 CI 各寫一份，遲早分岔，然後「CI 綠燈」變成
+「CI 沒跑到的那幾步剛好是壞的」。改檢查請改 `gate.sh`，兩個入口自動同步。
+
+**缺包是硬錯誤，不是跳過**：`packs.json` 掃磁碟產生，部署又會覆蓋線上版本，
+所以少匯入一包等於把少一個景點的書架推上線。`gate.sh` 開頭會檢查每個包的
+來源在不在，缺了就停。
 
 ## 執行
 
