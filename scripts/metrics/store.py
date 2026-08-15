@@ -46,11 +46,28 @@ class MetricsStore:
 
     def upsert(
         self, source: DailySource, headers: list[str], new_rows: list[list[str]]
-    ) -> None:
-        """Merge `new_rows` into `source`'s dataset and persist the result."""
+    ) -> int:
+        """Merge `new_rows` into `source`'s dataset and persist the result.
+
+        Returns how many rows actually changed the dataset — a key that was
+        not stored before, or a stored key whose values differ. Rows that
+        come back identical count zero, so callers report what was really
+        written rather than what was fetched (sources like ``retention``
+        re-compute a multi-day window every run and would otherwise look
+        like they wrote rows when the file did not change).
+        """
         _, existing = self.read(source)
+        ki = source.key_index
+        width = key_width(ki)
+        before = {
+            row_key(row, ki): row for row in existing if len(row) > width
+        }
+        changed = sum(
+            1 for row in new_rows if before.get(row_key(row, ki)) != row
+        )
         self._write(source, headers, merge_rows(
-            existing, new_rows, source.key_index, source.sort_index))
+            existing, new_rows, ki, source.sort_index))
+        return changed
 
 
 class FileStore(MetricsStore):

@@ -123,8 +123,8 @@ def accumulate(
     if window is None:
         return AccumResult(source.name, ok=True, note="up to date")
     rows = source.fetch(cfg, window[0], window[1])
-    store.upsert(source, source.headers, rows)
-    return AccumResult(source.name, ok=True, written=len(rows), window=window)
+    written = store.upsert(source, source.headers, rows)
+    return AccumResult(source.name, ok=True, written=written, window=window)
 
 
 def run(

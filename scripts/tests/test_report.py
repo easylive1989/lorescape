@@ -165,3 +165,26 @@ def test_format_results_renders_each_outcome():
     assert "gsc: +2 row(s)" in text
     assert "ga4: up to date" in text
     assert "ig: skipped — missing config" in text
+
+
+def test_accumulate_reports_zero_when_refetched_rows_are_unchanged():
+    """Re-fetching rows identical to the stored ones must not be reported as
+    written. retention ignores the planned window and re-computes a 14-day
+    span every run, so counting fetched rows made an unchanged file look
+    like 10 freshly written rows."""
+    src = _demo_source([["2026-06-22", "1"], ["2026-06-23", "9"]])
+    store = MemoryStore()
+    store.seed("demo", ["date", "v"],
+               [["2026-06-22", "1"], ["2026-06-23", "9"]])
+    r = report.accumulate(src, READY, "2026-06-25", store)
+    assert r.ok is True
+    assert r.written == 0
+
+
+def test_accumulate_counts_rows_whose_values_changed():
+    src = _demo_source([["2026-06-22", "1"], ["2026-06-23", "42"]])
+    store = MemoryStore()
+    store.seed("demo", ["date", "v"],
+               [["2026-06-22", "1"], ["2026-06-23", "9"]])
+    r = report.accumulate(src, READY, "2026-06-25", store)
+    assert r.written == 1

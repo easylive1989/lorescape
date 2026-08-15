@@ -999,5 +999,12 @@ CSV 上系統性早一天，做逐日對照或期末檢核時容易錯配。**�
 `2026-08-12`。不是資料遺失（該來源本來就可能無資料），而是回報訊息會讓人
 以為有寫入。
 
-- [ ] T3: 確認 retention 來源在無資料時的回報邏輯，讓 `+N row(s)` 只在真的
-  寫入時才印。
+- [x] T3: 確認 retention 來源在無資料時的回報邏輯，讓 `+N row(s)` 只在真的
+  寫入時才印。（2026-08-15）
+  - 根因不在 retention，在引擎：`report.accumulate` 用 `written=len(rows)`
+    記「抓回來的列數」，而 `store.upsert` 對同 key 的列直接覆蓋、不回報計數。
+    任何窗口重疊的來源都會虛報，retention 只是最明顯的（`fetch_daily` 刻意
+    忽略引擎給的 start，每次重算 14 天讓 D7 成熟）。
+  - 修法：`MetricsStore.upsert` 回傳「真的改變資料集的列數」（新 key，或
+    同 key 但值不同），`accumulate` 改用該值。實測 retention 由 `+10` 變
+    `+0`，與檔案無 diff 一致。
