@@ -50,9 +50,16 @@ final Provider<SaveStore> saveStoreProvider = Provider<SaveStore>(
   (ref) => SharedPreferencesSaveStore(ref.watch(sharedPreferencesProvider)),
 );
 
-final FutureProvider<Pack> packProvider = FutureProvider<Pack>(
-  (ref) => ref.watch(packRepositoryProvider).loadPack(),
+/// 書架：所有已匯入的景點包。首頁與結局收藏頁都看這個。
+final FutureProvider<List<Pack>> libraryProvider = FutureProvider<List<Pack>>(
+  (ref) => ref.watch(packRepositoryProvider).loadLibrary(),
 );
+
+/// 單一景點包。`packId` 是 `pack.json` 的 id（例：`pompeii_79`）。
+final FutureProviderFamily<Pack, String> packProvider =
+    FutureProvider.family<Pack, String>(
+      (ref, packId) => ref.watch(packRepositoryProvider).loadPack(packId),
+    );
 
 final FutureProviderFamily<Story, String> storyProvider =
     FutureProvider.family<Story, String>(

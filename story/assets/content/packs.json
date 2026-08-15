@@ -1,0 +1,18 @@
+{
+  "packs": [
+    {
+      "id": "pompeii_79",
+      "dir": "pompeii-79",
+      "title": "龐貝 79",
+      "place": "龐貝",
+      "stories": 8
+    },
+    {
+      "id": "versailles_1789",
+      "dir": "versailles-1789",
+      "title": "凡爾賽 1789",
+      "place": "凡爾賽",
+      "stories": 8
+    }
+  ]
+}

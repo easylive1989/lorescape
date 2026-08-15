@@ -1,9 +1,28 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lorescape_story/src/visual_novel/presentation/endings/endings_page.dart';
 import 'package:lorescape_story/src/visual_novel/providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+/// 書架上所有包的總篇數 × 3 個結局。
+///
+/// **刻意從 packs.json 現算，不寫死。** 寫死的話每加一個景點包、每轉一篇新的
+/// story.json，這兩條測試都會紅——而那是內容變多的正常結果，不是缺陷。
+/// 現算之後，它擋的變成真正該擋的事：某一篇的結局在頁面上沒被建出來。
+int totalEndings() {
+  final manifest =
+      jsonDecode(File('assets/content/packs.json').readAsStringSync())
+          as Map<String, dynamic>;
+  var stories = 0;
+  for (final row in (manifest['packs'] as List<dynamic>)) {
+    stories += (row as Map<String, dynamic>)['stories'] as int;
+  }
+  return stories * 3;
+}
 
 Future<void> pumpEndingsPage(
   WidgetTester tester,
@@ -38,7 +57,7 @@ void main() {
       findsNothing,
       reason: '結局 A 的標題不得劇透',
     );
-    expect(find.byIcon(Icons.lock_outline), findsNWidgets(24));
+    expect(find.byIcon(Icons.lock_outline), findsNWidgets(totalEndings()));
   });
 
   testWidgets('達成過的結局顯示標題', (tester) async {
@@ -46,6 +65,6 @@ void main() {
       'vn.endingsSeen': <String>['pompeii_01_harbour_stranger#A'],
     });
     expect(find.widgetWithText(ListTile, '天上那棵樹'), findsOneWidget);
-    expect(find.byIcon(Icons.lock_outline), findsNWidgets(23));
+    expect(find.byIcon(Icons.lock_outline), findsNWidgets(totalEndings() - 1));
   });
 }

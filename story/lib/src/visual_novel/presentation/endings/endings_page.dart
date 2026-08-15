@@ -13,7 +13,7 @@ class EndingsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<Pack> packAsync = ref.watch(packProvider);
+    final AsyncValue<List<Pack>> libraryAsync = ref.watch(libraryProvider);
     final Set<String> seen = ref.watch(saveStoreProvider).endingsSeen();
 
     return Scaffold(
@@ -22,18 +22,28 @@ class EndingsPage extends ConsumerWidget {
         title: const Text('結局收藏'),
         backgroundColor: Colors.transparent,
       ),
-      body: packAsync.when(
+      body: libraryAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(child: Text('讀不到景點包：$error')),
-        data: (pack) => SingleChildScrollView(
+        error: (error, _) => Center(child: Text('讀不到書架：$error')),
+        data: (packs) => SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
-          // 固定 8 篇 × 3 結局，筆數不多也不會再長——用一般 Column 就好，不必
-          // 上 ListView 的 lazy building（否則畫面外的結局不會被建出來，玩家
-          // 得先滑到那一段才看得到自己解鎖了沒，體驗上也怪）。
+          // 筆數不多也不會爆長——用一般 Column 就好，不必上 ListView 的 lazy
+          // building（否則畫面外的結局不會被建出來，玩家得先滑到那一段才看得到
+          // 自己解鎖了沒，體驗上也怪）。
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              for (final PackEntry entry in pack.stories)
-                _StoryEndings(entry: entry, seen: seen),
+              // 多包之後要分段：不分段的話兩個景點的篇名會混成一串，
+              // 玩家看不出哪三個結局屬於哪一座城。
+              for (final Pack pack in packs) ...<Widget>[
+                const SizedBox(height: 24),
+                Text(
+                  pack.title,
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                for (final PackEntry entry in pack.stories)
+                  _StoryEndings(entry: entry, seen: seen),
+              ],
             ],
           ),
         ),

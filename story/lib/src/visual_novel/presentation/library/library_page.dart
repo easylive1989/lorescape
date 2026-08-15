@@ -4,30 +4,26 @@ import 'package:go_router/go_router.dart';
 import 'package:lorescape_story/src/visual_novel/presentation/play/layout.dart';
 import 'package:lorescape_story/src/visual_novel/providers.dart';
 
-/// 景點包頁：列出這一包的所有故事，顯示標題、副標、預估分鐘數，
-/// 以及每篇的結局收藏進度（n / 3）。
-class PackPage extends ConsumerWidget {
-  const PackPage({required this.packId, super.key});
+/// 書架：列出所有景點包。
+///
+/// 為什麼首頁從「一個包的故事清單」變成「包的清單」：線上要同時放得下多組
+/// 景點，而每個包是獨立的 SKU（產品規格書 §2.3）。包與包之間沒有順序，也不
+/// 共用背景庫與角色——它們是並列的作品，不是章節。
+class LibraryPage extends ConsumerWidget {
+  const LibraryPage({super.key});
 
-  /// `pack.json` 的 id，例：`pompeii_79`。由路由 `/pack/:packId` 帶入。
-  final String packId;
-
-  static ValueKey<String> storyCardKey(String storyId) =>
-      ValueKey<String>('story-card-$storyId');
+  static ValueKey<String> packCardKey(String packId) =>
+      ValueKey<String>('pack-card-$packId');
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<Pack> packAsync = ref.watch(packProvider(packId));
+    final AsyncValue<List<Pack>> libraryAsync = ref.watch(libraryProvider);
     final Set<String> seen = ref.watch(saveStoreProvider).endingsSeen();
 
     return Scaffold(
       backgroundColor: VnColors.backdrop,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/'),
-        ),
         actions: <Widget>[
           IconButton(
             icon: const Icon(Icons.auto_stories_outlined),
@@ -39,37 +35,35 @@ class PackPage extends ConsumerWidget {
           ),
         ],
       ),
-      body: packAsync.when(
+      body: libraryAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(child: Text('讀不到景點包：$error')),
-        data: (pack) => ListView(
+        error: (error, _) => Center(child: Text('讀不到書架：$error')),
+        data: (packs) => ListView(
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
           children: <Widget>[
-            Text(pack.title, style: Theme.of(context).textTheme.headlineLarge),
-            const SizedBox(height: 8),
-            Text(pack.blurb, style: Theme.of(context).textTheme.bodyMedium),
+            Text('景點', style: Theme.of(context).textTheme.headlineLarge),
             const SizedBox(height: 24),
-            for (final PackEntry entry in pack.stories)
+            for (final Pack pack in packs)
               Card(
-                key: storyCardKey(entry.id),
+                key: packCardKey(pack.id),
                 color: VnColors.ground,
                 child: ListTile(
-                  onTap: () => context.go('/play/${entry.id}'),
-                  title: Text(entry.title),
-                  // 副標與分鐘數拆成兩個 Text：它們是兩件事，排版與測試都比較好處理。
+                  onTap: () => context.go('/pack/${pack.id}'),
+                  title: Text(pack.title),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
-                      Text(entry.subtitle),
+                      Text(pack.blurb),
                       Text(
-                        '${entry.estimatedMinutes} 分鐘',
+                        '${pack.stories.length} 篇',
                         style: Theme.of(context).textTheme.labelSmall,
                       ),
                     ],
                   ),
+                  // 整包的結局進度。每篇 3 個結局，所以分母是篇數 ×3。
                   trailing: Text(
-                    '${seen.where((e) => e.startsWith('${entry.id}#')).length} / 3',
+                    '${_seenIn(pack, seen)} / ${pack.stories.length * 3}',
                     style: Theme.of(context).textTheme.labelLarge,
                   ),
                 ),
@@ -78,5 +72,10 @@ class PackPage extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  int _seenIn(Pack pack, Set<String> seen) {
+    final ids = pack.stories.map((e) => e.id).toSet();
+    return seen.where((e) => ids.contains(e.split('#').first)).length;
   }
 }

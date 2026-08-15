@@ -22,6 +22,9 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    # 書架清單。**這一行漏了的話 packs.json 不會進 bundle**，app 一開就報
+    # 「讀不到書架」——目錄項不含父層的散檔。
+    - assets/content/
     - assets/content/pompeii-79/
     - assets/content/pompeii-79/assets/backgrounds/
     - assets/content/pompeii-79/assets/sprites/
@@ -33,3 +36,15 @@ flutter:
     - assets/content/pompeii-79/stories/06-the-locked-door/
     - assets/content/pompeii-79/stories/07-cannot-land/
     - assets/content/pompeii-79/stories/08-the-new-house/
+    # 凡爾賽 1789，八篇。app 內從書架頁選，不需要 build flag。
+    - assets/content/versailles-1789/
+    - assets/content/versailles-1789/assets/backgrounds/
+    - assets/content/versailles-1789/assets/sprites/
+    - assets/content/versailles-1789/stories/01-the-shutter/
+    - assets/content/versailles-1789/stories/02-twenty-kilometres/
+    - assets/content/versailles-1789/stories/03-both-sides/
+    - assets/content/versailles-1789/stories/04-three-days/
+    - assets/content/versailles-1789/stories/05-the-balcony/
+    - assets/content/versailles-1789/stories/06-the-milk/
+    - assets/content/versailles-1789/stories/07-the-bakers-family/
+    - assets/content/versailles-1789/stories/08-no-lamps-tonight/
