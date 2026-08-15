@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""把 writer vault 的龐貝景點包匯入 story/assets/。可重跑。
+"""把 writer vault 的景點包匯入 story/assets/。可重跑。
 
 用法：
-    python3 story/tool/import_pack.py [--png] [--no-cache]
+    python3 story/tool/import_pack.py [--pack pompeii|versailles] [--png] [--no-cache]
+                                      [--partial] [--skip-verify]
 
 立繪去背見 remove_background()；表情差分對齊（Task 8）見 align_to_base()，
 兩者串接於 process_sprites()。
@@ -12,15 +13,51 @@ from PIL import Image, ImageFilter
 import numpy as np
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-SRC = ROOT / 'writer/創作/龐貝/stories'
-OUT = ROOT / 'story/assets/content/pompeii-79'
 
-PACK_TITLE = '龐貝 79'
-PACK_PLACE = '龐貝'
-PACK_BLURB = '同一座城，同一場災難，八個人各自的最後一個選擇。'
+# 景點包設定。**新增景點包只改這裡**，其餘流程完全共用。
+# 影像處理的參數（去背容差、對齊分數、WebP 品質）刻意不做成每包可調——
+# 那些是全案的美術規格，一包一個值等於放棄一致性。
+PACKS = {
+    'pompeii': {
+        'src': 'writer/創作/龐貝/stories',
+        'out': 'story/assets/content/pompeii-79',
+        'cache': 'writer/創作/龐貝/美術測試/_processed',
+        'id': 'pompeii_79',
+        'title': '龐貝 79',
+        'place': '龐貝',
+        'blurb': '同一座城，同一場災難，八個人各自的最後一個選擇。',
+        'expect': 8,
+    },
+    'versailles': {
+        'src': 'writer/創作/凡爾賽/stories',
+        'out': 'story/assets/content/versailles-1789',
+        'cache': 'writer/創作/凡爾賽/美術測試/_processed',
+        'id': 'versailles_1789',
+        'title': '凡爾賽 1789',
+        'place': '凡爾賽',
+        'blurb': '同樣的三十小時，八個人各自站在不同的位置。',
+        'expect': 8,
+    },
+}
 
-CACHE = ROOT / 'writer/創作/龐貝/美術測試/_processed'
-REVIEW = ROOT / 'story/tool/_review'
+# 這五個由 configure() 依 --pack 設定。放成模組層變數而非到處傳參數，是為了
+# 讓這次改動的 diff 只落在設定層，影像處理那幾百行完全不動。
+SRC = OUT = CACHE = REVIEW = None
+PACK = None
+SKIP_VERIFY = False
+
+
+def configure(key: str) -> None:
+    global SRC, OUT, CACHE, REVIEW, PACK
+    PACK = PACKS[key]
+    SRC = ROOT / PACK['src']
+    OUT = ROOT / PACK['out']
+    CACHE = ROOT / PACK['cache']
+    # review 圖要分包放，否則兩個包的同名對齊檢視圖會互相覆蓋。
+    REVIEW = ROOT / 'story/tool/_review' / key
+
+
+configure('pompeii')
 
 # 灰底判定的容差。AI 出的平灰底其實有輕微雜訊，純等值比對會留下一圈麻點。
 BG_TOLERANCE = 26
@@ -381,10 +418,43 @@ def save_webp(image, dest: pathlib.Path, quality: int) -> None:
     image.save(dest, 'WEBP', quality=quality, alpha_quality=100, method=6)
 
 
-def import_pack(webp: bool = True, use_cache: bool = True) -> dict:
+def write_library_manifest() -> list[dict]:
+    """掃出 assets/content/ 底下所有已匯入的包，寫成 packs.json。
+
+    為什麼要有這一層：app 得知道「有哪些包」才列得出書架，而那份清單的真相
+    在磁碟上，不在 Dart 常數裡。**掃描而非讀 PACKS 設定**——只匯入了龐貝的
+    機器上，清單就該只有龐貝，不該列出一個載不進來的凡爾賽。
+
+    `dir` 是資產路徑用的資料夾名，`id` 是 story.json 的 meta.pack。兩者刻意
+    分開：資料夾名要能當 URL 片段（`pompeii-79`），id 要跟劇本裡的一致
+    （`pompeii_79`）。
+    """
+    content = OUT.parent
+    packs = []
+    for pack_json in sorted(content.glob('*/pack.json')):
+        data = json.loads(pack_json.read_text(encoding='utf-8'))
+        packs.append({'id': data['id'], 'dir': pack_json.parent.name,
+                      'title': data['title'], 'place': data['place'],
+                      'stories': len(data['stories'])})
+    (content / 'packs.json').write_text(
+        json.dumps({'packs': packs}, ensure_ascii=False, indent=2) + '\n',
+        encoding='utf-8')
+    return packs
+
+
+def import_pack(webp: bool = True, use_cache: bool = True, partial: bool = False) -> dict:
     story_dirs = sorted(d for d in SRC.iterdir() if d.is_dir() and (d / 'story.json').exists())
-    if len(story_dirs) != 8:
-        sys.exit(f'✗ 預期 8 篇，實際 {len(story_dirs)}')
+    expect = PACK['expect']
+    if len(story_dirs) > expect:
+        sys.exit(f'✗ {PACK["title"]} 預期 {expect} 篇，實際 {len(story_dirs)}')
+    if len(story_dirs) < expect:
+        # 不預設容忍缺篇：少一篇就少一篇，要嘛補齊、要嘛明講。靜默放行等於
+        # 讓「只做了一半的包」看起來像做完的包。
+        have = ', '.join(d.name for d in story_dirs)
+        if not partial:
+            sys.exit(f'✗ {PACK["title"]} 預期 {expect} 篇，只有 {len(story_dirs)} 篇'
+                     f'（{have}）。確定要匯入未完成的包請加 --partial')
+        print(f'⚠️  部分匯入：{len(story_dirs)}/{expect} 篇（{have}）')
 
     for kind in ('backgrounds', 'sprites', 'audio'):
         (OUT / 'assets' / kind).mkdir(parents=True, exist_ok=True)
@@ -416,16 +486,23 @@ def import_pack(webp: bool = True, use_cache: bool = True) -> dict:
     process_sprites(picked, use_cache, webp)
 
     entries.sort(key=lambda e: e['order'])
-    pack = {'id': 'pompeii_79', 'title': PACK_TITLE, 'place': PACK_PLACE,
-            'blurb': PACK_BLURB, 'assetFormat': 'webp' if webp else 'png',
+    pack = {'id': PACK['id'], 'title': PACK['title'], 'place': PACK['place'],
+            'blurb': PACK['blurb'], 'assetFormat': 'webp' if webp else 'png',
             'stories': entries}
     (OUT / 'pack.json').write_text(
         json.dumps(pack, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 
-    verify(copied_scripts, webp)
+    write_library_manifest()
+
+    if SKIP_VERIFY:
+        # 製作中專用。**預設一定要驗**——引擎在缺圖時會顯示破圖或崩，
+        # 靜默放行等於把破圖推上線。
+        print('⚠️  跳過素材完整性檢查（--skip-verify）')
+    else:
+        verify(copied_scripts, webp)
     total = sum(f.stat().st_size for f in (OUT / 'assets').rglob('*') if f.is_file())
-    print(f'✅ 8 篇、{len(picked)} 張素材（{"webp" if webp else "png"}，'
-          f'{total // 1024 // 1024} MB）、pack.json 完成')
+    print(f'✅ {PACK["title"]}：{len(entries)} 篇、{len(picked)} 張素材'
+          f'（{"webp" if webp else "png"}，{total // 1024 // 1024} MB）、pack.json 完成')
     return pack
 
 
@@ -506,7 +583,15 @@ if __name__ == '__main__':
     # alpha_quality=100 無損（去背成果的透明像素數轉檔前後一個不差），人物區
     # RGB 平均差 2.5/255 肉眼看不出來。Flutter 在 iOS／Android／Web 全平台
     # 原生支援。--png 留著當退路。
+    ap.add_argument('--pack', default='pompeii', choices=sorted(PACKS),
+                    help='要匯入哪一個景點包（預設 pompeii）')
     ap.add_argument('--png', action='store_true', help='輸出 PNG 而非 WebP')
     ap.add_argument('--no-cache', action='store_true')
+    ap.add_argument('--partial', action='store_true',
+                    help='允許匯入篇數未滿的包（製作中才用）')
+    ap.add_argument('--skip-verify', action='store_true',
+                    help='跳過素材完整性檢查（製作中才用，會推出破圖）')
     a = ap.parse_args()
-    import_pack(webp=not a.png, use_cache=not a.no_cache)
+    configure(a.pack)
+    SKIP_VERIFY = a.skip_verify
+    import_pack(webp=not a.png, use_cache=not a.no_cache, partial=a.partial)

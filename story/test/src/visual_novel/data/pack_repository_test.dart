@@ -7,7 +7,7 @@ void main() {
   final repo = BundlePackRepository(rootBundle);
 
   test('讀得到 pack.json 的 8 篇，且依 order 排序', () async {
-    final pack = await repo.loadPack();
+    final pack = await repo.loadPack('pompeii_79');
     expect(pack.stories, hasLength(8));
     expect(pack.stories.first.title, '港口的外地人');
     expect(

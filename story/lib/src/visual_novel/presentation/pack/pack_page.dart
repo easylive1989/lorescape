@@ -4,23 +4,30 @@ import 'package:go_router/go_router.dart';
 import 'package:lorescape_story/src/visual_novel/presentation/play/layout.dart';
 import 'package:lorescape_story/src/visual_novel/providers.dart';
 
-/// 景點包首頁：列出這一包的所有故事，顯示標題、副標、預估分鐘數，
+/// 景點包頁：列出這一包的所有故事，顯示標題、副標、預估分鐘數，
 /// 以及每篇的結局收藏進度（n / 3）。
 class PackPage extends ConsumerWidget {
-  const PackPage({super.key});
+  const PackPage({required this.packId, super.key});
+
+  /// `pack.json` 的 id，例：`pompeii_79`。由路由 `/pack/:packId` 帶入。
+  final String packId;
 
   static ValueKey<String> storyCardKey(String storyId) =>
       ValueKey<String>('story-card-$storyId');
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<Pack> packAsync = ref.watch(packProvider);
+    final AsyncValue<Pack> packAsync = ref.watch(packProvider(packId));
     final Set<String> seen = ref.watch(saveStoreProvider).endingsSeen();
 
     return Scaffold(
       backgroundColor: VnColors.backdrop,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/'),
+        ),
         actions: <Widget>[
           IconButton(
             icon: const Icon(Icons.auto_stories_outlined),

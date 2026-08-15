@@ -1,0 +1,63 @@
+name: Deploy Story
+
+# 視覺小說（story/）部署到 https://story-lorescape.web.app。
+#
+# 手動觸發，跟 deploy-backend / deploy-app 同一個原則：出貨是決定，不是
+# 每次 push 的副作用。
+#
+# 閘門與本機共用 story/gate.sh——素材匯入、內容 lint、劇本結構與矛盾檢查、
+# analyze、flutter test、匯入腳本測試、build web。CI 上唯一的差別是沒有
+# fvm（SDK 由 flutter-action 依 .fvmrc 的版本裝好），所以把 FLUTTER 換掉。
+#
+# 前提：**所有景點包的來源都要在版控裡**。美術定版原圖與 story.json 都已
+# 進版控（.gitignore 只擋 _processed/ 快取與匯入產生的 WebP，兩者都會在
+# gate.sh 裡重生）。少一包，gate.sh 會硬錯——不是跳過，因為 packs.json 是
+# 掃磁碟產生的，缺包等於把少一個景點的書架推上線。
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy-story:
+    name: Deploy Story to Firebase Hosting
+    runs-on: ubuntu-latest
+    # 素材匯入（去背 + WebP，兩包共 125 張）加 flutter test 需要時間，
+    # 給足預算免得卡在預設值。
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: master
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          # 與 story/.fvmrc 一致。改版本時兩邊要一起改。
+          flutter-version: "3.38.5"
+          channel: "stable"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        # import_pack.py 用 Pillow + numpy 做去背與 WebP；test_import_pack.py 用 pytest。
+        # story_tool.py 與 lint_content.py 只用標準函式庫。
+        run: python3 -m pip install --upgrade pillow numpy pytest
+
+      - name: Run the shipping gate
+        # 與本機 ./deploy.sh 跑的是同一支腳本，同一組檢查。
+        env:
+          FLUTTER: flutter
+        run: ./story/gate.sh
+
+      - name: Deploy to Firebase Hosting (live)
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_INSTANT_EXPLORE_7B442 }}
+          channelId: live
+          projectId: instant-explore-7b442
+          target: story

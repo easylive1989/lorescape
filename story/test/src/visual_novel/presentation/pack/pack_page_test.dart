@@ -20,7 +20,7 @@ Future<void> pumpPackPage(
   await tester.pumpWidget(
     ProviderScope(
       overrides: <Override>[sharedPreferencesProvider.overrideWithValue(prefs)],
-      child: const MaterialApp(home: PackPage()),
+      child: const MaterialApp(home: PackPage(packId: 'pompeii_79')),
     ),
   );
   await tester.pump();
