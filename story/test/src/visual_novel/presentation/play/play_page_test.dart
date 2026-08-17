@@ -26,15 +26,12 @@ Future<void> pumpPlayPage(WidgetTester tester, String storyId) async {
       child: MaterialApp(home: PlayPage(storyId: storyId)),
     ),
   );
-  await _pumpTyping(tester);
+  await _pumpFrame(tester);
 }
 
-// 逐字動畫用 Timer.periodic，每一格都會排新的 frame，pumpAndSettle 永遠等不到
-// 「沒有排新 frame」的那一刻。改成推進一段足夠久的時間，讓當前這段文字打完，
-// 供 pumpPlayPage 與底下每個「點擊推進」迴圈共用。
-Future<void> _pumpTyping(WidgetTester tester) async {
+Future<void> _pumpFrame(WidgetTester tester) async {
   await tester.pump();
-  await tester.pump(const Duration(seconds: 5));
+  await tester.pump();
 }
 
 void main() {
@@ -68,32 +65,16 @@ void main() {
     testWidgets('點擊推進到下一個節點', (tester) async {
       await pumpPlayPage(tester, 'pompeii_01_harbour_stranger');
       await tester.tap(find.byKey(PlayPage.advanceAreaKey));
-      await _pumpTyping(tester);
+      await _pumpFrame(tester);
       expect(find.text('天還沒全亮，海面是鉛的顏色。'), findsNothing);
     });
 
-    testWidgets('逐字顯示中點擊先補完，再點才推進', (tester) async {
-      // pumpPlayPage 結尾已經讓第一段（14 字）打完字，直接點一次會推進——
-      // 這正是「點擊推進到下一個節點」那條測試在驗的行為。要驗「還沒顯示完先
-      // 補完」得挑一段夠長、還來不及打完的文字：第二段旁白有 39 字，
-      // 39 * 28ms ≈ 1092ms，只推進 10ms 絕對還在逐字顯示中。
+    testWidgets('節點進場時立即顯示完整字幕', (tester) async {
       const secondText = '我押著這批貨走了二十六天——亞麻布、玻璃器、四捆莎草紙，從亞歷山卓一路到這裡。';
       await pumpPlayPage(tester, 'pompeii_01_harbour_stranger');
       await tester.tap(find.byKey(PlayPage.advanceAreaKey));
-      // 只推進一個 frame，不讓第二段的逐字動畫跑完。
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 10));
-      expect(find.text(secondText), findsNothing, reason: '此時應該還在逐字顯示中');
-
-      // 第一次點：補完當前這段，不推進
-      await tester.tap(find.byKey(PlayPage.advanceAreaKey));
-      await tester.pump();
+      await _pumpFrame(tester);
       expect(find.text(secondText), findsOneWidget);
-
-      // 第二次點：推進到下一段
-      await tester.tap(find.byKey(PlayPage.advanceAreaKey));
-      await tester.pumpAndSettle();
-      expect(find.text(secondText), findsNothing);
     });
 
     testWidgets('對白節點顯示名牌與立繪', (tester) async {
@@ -101,7 +82,7 @@ void main() {
       // 走到第一句對白（尼基亞斯：札布達。）
       for (var i = 0; i < 8; i++) {
         await tester.tap(find.byKey(PlayPage.advanceAreaKey));
-        await _pumpTyping(tester);
+        await _pumpFrame(tester);
         if (find.text('札布達。').evaluate().isNotEmpty) break;
       }
       expect(find.text('札布達。'), findsOneWidget);
@@ -117,7 +98,7 @@ void main() {
       // choice_overlay.dart 是這個 task 新寫的 widget，卻沒有任何 widget 測試
       // 走到 choosing 狀態——渲染與「點第 i 個 → choose(可見索引 i)」的接線
       // 都只靠人工截圖確認過。這條補上。
-      await pumpPlayPage(tester, 'pompeii_01_harbour_stranger');
+      await pumpPlayPage(tester, 'versailles_01_the_shutter');
       for (var i = 0; i < 40; i++) {
         if (find
             .byKey(const ValueKey<String>('choice-0'))
@@ -126,18 +107,16 @@ void main() {
           break;
         }
         await tester.tap(find.byKey(PlayPage.advanceAreaKey));
-        await _pumpTyping(tester);
+        await _pumpFrame(tester);
       }
       expect(
         find.byKey(const ValueKey<String>('choice-0')),
         findsOneWidget,
-        reason: '01 篇 S01 結尾有一個兩選項的分歧',
+        reason: '凡爾賽篇應保留選項，以驗證引擎的選項畫面',
       );
-      expect(find.text('直接進城找人。'), findsOneWidget);
-      expect(find.text('先核對字據和地址。'), findsOneWidget);
 
       await tester.tap(find.byKey(const ValueKey<String>('choice-0')));
-      await _pumpTyping(tester);
+      await _pumpFrame(tester);
       expect(
         find.byKey(const ValueKey<String>('choice-0')),
         findsNothing,
@@ -175,7 +154,7 @@ void main() {
           ),
         ),
       );
-      await _pumpTyping(tester);
+      await _pumpFrame(tester);
 
       final box = tester.getSize(find.byType(DialogueBox).first);
       expect(
@@ -190,7 +169,7 @@ void main() {
       await pumpPlayPage(tester, 'pompeii_01_harbour_stranger');
       for (var i = 0; i < 12; i++) {
         await tester.tap(find.byKey(PlayPage.advanceAreaKey));
-        await _pumpTyping(tester);
+        await _pumpFrame(tester);
       }
       expect(tester.takeException(), isNull);
     });
@@ -201,14 +180,14 @@ void main() {
       await pumpPlayPage(tester, 'pompeii_01_harbour_stranger');
       // 每次點擊都要等打字動畫跑完才算真的推進一段，否則同一段文字還沒補完，
       // 這次點擊只是把它補完、不會前進——沿用 pumpPlayPage 內部同一顆
-      // `_pumpTyping`，跟其餘測試「點擊→等打完」同一套節奏。
+      // `_pumpFrame`，跟其餘測試「點擊→更新畫面」同一套節奏。
       //
       // 只推進 6 段，剛好停在第一句對白（尼基亞斯：札布達。）：BacklogSheet
       // 的 ListView 是懶渲染，entries 一多，最舊的那句（天還沒全亮）會被捲出
       // 版面外、找不到；6 段連同開場那句都還在同一屏內。
       for (var i = 0; i < 6; i++) {
         await tester.tap(find.byKey(PlayPage.advanceAreaKey));
-        await _pumpTyping(tester);
+        await _pumpFrame(tester);
       }
       await tester.tap(find.byKey(PlayPage.backlogButtonKey));
       await tester.pump(const Duration(seconds: 1));
@@ -228,7 +207,8 @@ void main() {
       addTearDown(tester.view.reset);
       SharedPreferences.setMockInitialValues(<String, Object>{
         'vn.readNodes': <String>[
-          for (var i = 0; i < 40; i++) 'pompeii_01_harbour_stranger#S01#$i',
+          for (var i = 0; i < 40; i++) 'versailles_01_the_shutter#S01#$i',
+          for (var i = 0; i < 40; i++) 'versailles_01_the_shutter#S02#$i',
         ],
       });
       final prefs = await SharedPreferences.getInstance();
@@ -238,14 +218,14 @@ void main() {
             sharedPreferencesProvider.overrideWithValue(prefs),
           ],
           child: const MaterialApp(
-            home: PlayPage(storyId: 'pompeii_01_harbour_stranger'),
+            home: PlayPage(storyId: 'versailles_01_the_shutter'),
           ),
         ),
       );
-      await _pumpTyping(tester);
+      await _pumpFrame(tester);
 
       await tester.tap(find.byKey(PlayPage.skipButtonKey));
-      await _pumpTyping(tester);
+      await _pumpFrame(tester);
       expect(
         find.byKey(const ValueKey<String>('choice-0')),
         findsOneWidget,
@@ -257,7 +237,7 @@ void main() {
       await pumpPlayPage(tester, 'pompeii_01_harbour_stranger');
       for (var i = 0; i < 4; i++) {
         await tester.tap(find.byKey(PlayPage.advanceAreaKey));
-        await _pumpTyping(tester);
+        await _pumpFrame(tester);
       }
       // BuildContext 沒有內建 `.read`（那是 `provider` 套件的擴充方法，不是
       // riverpod 的）；riverpod 要透過 ProviderScope.containerOf 拿到
@@ -268,7 +248,7 @@ void main() {
       expect(controller.backlog.length, greaterThan(1));
 
       controller.restart();
-      await _pumpTyping(tester);
+      await _pumpFrame(tester);
       expect(controller.backlog.length, 1, reason: '重新開始後只該有新的第一句，不得殘留上一輪的台詞');
     });
 
@@ -281,14 +261,9 @@ void main() {
         'storyId': 'pompeii_01_harbour_stranger',
         'cursor': <String, dynamic>{
           'sceneId': 'E_A',
-          'path': <String>['19', 'then', '1'],
+          'path': <String>['18'],
         },
-        'vars': <String, dynamic>{
-          'affection': 3,
-          'awareness': 3,
-          'deal': 'wait',
-          'bread': true,
-        },
+        'vars': <String, dynamic>{},
         'stage': const <dynamic>[],
         'updatedAt': DateTime.now().toUtc().toIso8601String(),
       });
@@ -309,12 +284,12 @@ void main() {
           ),
         ),
       );
-      await _pumpTyping(tester);
+      await _pumpFrame(tester);
 
       for (var i = 0; i < 20; i++) {
         if (find.text('你走到了').evaluate().isNotEmpty) break;
         await tester.tap(find.byKey(PlayPage.advanceAreaKey));
-        await _pumpTyping(tester);
+        await _pumpFrame(tester);
       }
 
       expect(find.text('你走到了'), findsOneWidget, reason: '應該走到 _EndingView');
@@ -357,11 +332,11 @@ void main() {
           ),
         ),
       );
-      await _pumpTyping(tester);
+      await _pumpFrame(tester);
       expect(find.text('火起不來。'), findsOneWidget);
 
       await tester.tap(find.byKey(PlayPage.skipButtonKey));
-      await _pumpTyping(tester);
+      await _pumpFrame(tester);
       // 進入一篇時第一個節點會立刻被標成已讀（build 就 _persist），所以跳過
       // 必然前進一格、停在第二個節點。有碰撞的話會一路衝過幾十格未讀劇情。
       expect(
@@ -395,7 +370,7 @@ void main() {
       await tester.pump(const Duration(seconds: 5));
 
       await tester.tap(find.byKey(PlayPage.skipButtonKey));
-      await _pumpTyping(tester);
+      await _pumpFrame(tester);
       // 第 4 段（索引 3）未讀，應停在這裡
       expect(find.text('我要裝滿它。裝魚醬。'), findsOneWidget);
     });

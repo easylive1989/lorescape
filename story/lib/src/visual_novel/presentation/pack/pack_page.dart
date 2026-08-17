@@ -5,7 +5,7 @@ import 'package:lorescape_story/src/visual_novel/presentation/play/layout.dart';
 import 'package:lorescape_story/src/visual_novel/providers.dart';
 
 /// 景點包頁：列出這一包的所有故事，顯示標題、副標、預估分鐘數，
-/// 以及每篇的結局收藏進度（n / 3）。
+/// 以及每篇依劇本實際宣告數量計算的結局收藏進度。
 class PackPage extends ConsumerWidget {
   const PackPage({required this.packId, super.key});
 
@@ -68,10 +68,19 @@ class PackPage extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  trailing: Text(
-                    '${seen.where((e) => e.startsWith('${entry.id}#')).length} / 3',
-                    style: Theme.of(context).textTheme.labelLarge,
-                  ),
+                  trailing: ref
+                      .watch(storyProvider(entry.id))
+                      .when(
+                        loading: () => const SizedBox.square(
+                          dimension: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        error: (_, _) => const Text('—'),
+                        data: (story) => Text(
+                          '${seen.where((e) => e.startsWith('${entry.id}#')).length} / ${story.endings.length}',
+                          style: Theme.of(context).textTheme.labelLarge,
+                        ),
+                      ),
                 ),
               ),
           ],

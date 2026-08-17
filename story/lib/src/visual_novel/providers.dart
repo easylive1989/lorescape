@@ -65,3 +65,15 @@ final FutureProviderFamily<Story, String> storyProvider =
     FutureProvider.family<Story, String>(
       (ref, storyId) => ref.watch(packRepositoryProvider).loadStory(storyId),
     );
+
+final FutureProviderFamily<int, String> packEndingCountProvider =
+    FutureProvider.family<int, String>((ref, packId) async {
+      final pack = await ref.watch(packProvider(packId).future);
+      final stories = await Future.wait(
+        pack.stories.map((entry) => ref.watch(storyProvider(entry.id).future)),
+      );
+      return stories.fold<int>(
+        0,
+        (total, story) => total + story.endings.length,
+      );
+    });

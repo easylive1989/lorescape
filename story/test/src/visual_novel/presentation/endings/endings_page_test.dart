@@ -8,7 +8,7 @@ import 'package:lorescape_story/src/visual_novel/presentation/endings/endings_pa
 import 'package:lorescape_story/src/visual_novel/providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// 書架上所有包的總篇數 × 3 個結局。
+/// 書架上所有 story.json 實際宣告的結局總數。
 ///
 /// **刻意從 packs.json 現算，不寫死。** 寫死的話每加一個景點包、每轉一篇新的
 /// story.json，這兩條測試都會紅——而那是內容變多的正常結果，不是缺陷。
@@ -17,11 +17,25 @@ int totalEndings() {
   final manifest =
       jsonDecode(File('assets/content/packs.json').readAsStringSync())
           as Map<String, dynamic>;
-  var stories = 0;
+  var endings = 0;
   for (final row in (manifest['packs'] as List<dynamic>)) {
-    stories += (row as Map<String, dynamic>)['stories'] as int;
+    final packDir = (row as Map<String, dynamic>)['dir'] as String;
+    final pack =
+        jsonDecode(File('assets/content/$packDir/pack.json').readAsStringSync())
+            as Map<String, dynamic>;
+    for (final entry in pack['stories'] as List<dynamic>) {
+      final storyDir = (entry as Map<String, dynamic>)['dir'] as String;
+      final story =
+          jsonDecode(
+                File(
+                  'assets/content/$packDir/stories/$storyDir/story.json',
+                ).readAsStringSync(),
+              )
+              as Map<String, dynamic>;
+      endings += (story['endings'] as Map<String, dynamic>).length;
+    }
   }
-  return stories * 3;
+  return endings;
 }
 
 Future<void> pumpEndingsPage(

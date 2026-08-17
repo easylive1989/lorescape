@@ -51,22 +51,9 @@ class _Stage extends ConsumerStatefulWidget {
 }
 
 class _StageState extends ConsumerState<_Stage> {
-  bool _typingDone = false;
-
-  // 節點換了就重置。用 readKey 當識別，同一段文字在不同節點也算換了一段。
-  String? _lastKey;
-
   void _handleTap(PlayController controller, PlayState state) {
     if (state.status != PlayStatus.playing) return;
-    if (!_typingDone) {
-      setState(() => _typingDone = true);
-      return;
-    }
     controller.advance();
-  }
-
-  void _markTypingDone() {
-    if (!_typingDone) setState(() => _typingDone = true);
   }
 
   @override
@@ -77,12 +64,6 @@ class _StageState extends ConsumerState<_Stage> {
     );
     final repository = ref.watch(packRepositoryProvider);
     final fontScale = ref.watch(saveStoreProvider).fontScale();
-    final msPerCharacter = ref.watch(saveStoreProvider).textSpeed();
-
-    if (_lastKey != state.readKey) {
-      _lastKey = state.readKey;
-      _typingDone = false;
-    }
 
     if (state.status == PlayStatus.ended) {
       return _EndingView(story: widget.story, endingId: state.endingId);
@@ -135,9 +116,6 @@ class _StageState extends ConsumerState<_Stage> {
                   layout: layout,
                   fontScale: fontScale,
                   graffiti: node.style == 'graffiti',
-                  completed: _typingDone,
-                  onCompleted: _markTypingDone,
-                  msPerCharacter: msPerCharacter,
                 ),
               if (node is DialogueNode)
                 DialogueBox(
@@ -146,12 +124,9 @@ class _StageState extends ConsumerState<_Stage> {
                   fontScale: fontScale,
                   speakerName:
                       widget.story.characters[node.who]?.name ?? node.who,
-                  completed: _typingDone,
-                  onCompleted: _markTypingDone,
-                  msPerCharacter: msPerCharacter,
                 ),
               // choice 節點本身沒有文字：把剛讀完的那句留著，玩家才不是在空白畫面
-              // 上做選擇。已經讀完，不重新逐字。
+              // 上做選擇。
               if (state.status == PlayStatus.choosing &&
                   controller.lastEntry != null)
                 DialogueBox(
@@ -159,9 +134,6 @@ class _StageState extends ConsumerState<_Stage> {
                   layout: layout,
                   fontScale: fontScale,
                   speakerName: controller.lastEntry!.speakerName,
-                  completed: true,
-                  onCompleted: () {},
-                  msPerCharacter: msPerCharacter,
                 ),
               if (state.status == PlayStatus.choosing && node is ChoiceNode)
                 ChoiceOverlay(

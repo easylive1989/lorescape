@@ -33,18 +33,15 @@ const List<PackSpec> packs = <PackSpec>[
     root: 'assets/content/pompeii-79',
     deadBranches: <String, Set<String>>{},
     baselines: <String, ({int paths, int options, int branches})>{
-      // branches 由 9 升到 22：2026-08-15 依「劇本矛盾檢查規範」修矛盾時，
-      // 把結局裡假設「貨還在城裡」的段落改成依 deal／bread／beans／vibiaHalf
-      // 分岔的寫法。路徑數與選項數沒變——沒有增刪選擇點，只是把原本一路寫死
-      // 的敘述換成有條件的兩種寫法。
-      '01-harbour-stranger': (paths: 128, options: 14, branches: 22),
-      '02-the-oven-went-out': (paths: 40, options: 11, branches: 3),
-      '03-the-well-fell': (paths: 16, options: 8, branches: 4),
-      '04-the-tree-in-the-sky': (paths: 20, options: 9, branches: 2),
-      '05-the-tablets': (paths: 80, options: 13, branches: 3),
-      '06-the-locked-door': (paths: 32, options: 10, branches: 4),
-      '07-cannot-land': (paths: 32, options: 10, branches: 2),
-      '08-the-new-house': (paths: 20, options: 9, branches: 3),
+      // 龐貝自 2026-08-17 起採單一路徑：無選項、條件分支與額外結局。
+      '01-harbour-stranger': (paths: 1, options: 0, branches: 0),
+      '02-the-oven-went-out': (paths: 1, options: 0, branches: 0),
+      '03-the-well-fell': (paths: 1, options: 0, branches: 0),
+      '04-the-tree-in-the-sky': (paths: 1, options: 0, branches: 0),
+      '05-the-tablets': (paths: 1, options: 0, branches: 0),
+      '06-the-locked-door': (paths: 1, options: 0, branches: 0),
+      '07-cannot-land': (paths: 1, options: 0, branches: 0),
+      '08-the-new-house': (paths: 1, options: 0, branches: 0),
     },
   ),
   (
@@ -186,250 +183,257 @@ void main() {
       expect(
         entries.map((e) => e['dir']).toSet(),
         pack.baselines.keys.toSet(),
-        reason: '轉了新的 story.json 就要在 packs 補一筆基準；'
+        reason:
+            '轉了新的 story.json 就要在 packs 補一筆基準；'
             '刪了篇也一樣要刪基準',
       );
     });
     for (final entry in entries) {
-    final dir = entry['dir']!;
-    group('[${entry['title']}] $dir', () {
-      late Story story;
-      late WalkResult result;
+      final dir = entry['dir']!;
+      group('[${entry['title']}] $dir', () {
+        late Story story;
+        late WalkResult result;
 
-      setUpAll(() {
-        story = loadStory(packRoot, dir);
-        result = WalkResult();
-        walk(story, initState(story), result, 20000);
-        for (final scene in story.scenes.values) {
-          result.branchCount += countNonEmptyIfBranches(scene.nodes);
-        }
-      });
-
-      test('三個結局全部可達', () {
-        expect(result.endings, story.endings.keys.toSet());
-      });
-
-      test('走訪規模符合實測基準', () {
-        // 沒有下限斷言的話，內容被刪掉一整段分歧時這組測試依然全綠。
-        final baseline = pack.baselines[dir]!;
-        expect(result.paths, baseline.paths, reason: '路徑數變了');
-        expect(result.takenOptions.length, baseline.options, reason: '選項數變了');
-        expect(result.branchCount, baseline.branches, reason: '非空 if 分支數變了');
-      });
-
-      test('每個非空 if 分支都至少有一個直接的停頓節點', () {
-        // 前綴判定的前提。若有人寫出 `if (x) { show ... }` 這種只有副作用的分支，
-        // 判定會誤報成走不到——註解擋不住，這條斷言才擋得住。
-        void scan(List<StoryNode> nodes) {
-          for (final node in nodes) {
-            if (node is IfNode) {
-              for (final side in <List<StoryNode>>[node.then, node.orElse]) {
-                if (side.isEmpty) continue;
-                expect(
-                  side.any(
-                    (n) =>
-                        n is NarrationNode ||
-                        n is DialogueNode ||
-                        n is CgNode ||
-                        n is ChoiceNode,
-                  ),
-                  isTrue,
-                  reason: '這個 if 分支沒有直接的停頓節點，前綴判定會誤報',
-                );
-                scan(side);
-              }
-            } else if (node is ChoiceNode) {
-              for (final option in node.options) {
-                scan(option.then);
-              }
-            }
+        setUpAll(() {
+          story = loadStory(packRoot, dir);
+          result = WalkResult();
+          walk(story, initState(story), result, 20000);
+          for (final scene in story.scenes.values) {
+            result.branchCount += countNonEmptyIfBranches(scene.nodes);
           }
-        }
+        });
 
-        for (final scene in story.scenes.values) {
-          scan(scene.nodes);
-        }
-      });
+        test('所有宣告的結局都可達', () {
+          expect(result.endings, story.endings.keys.toSet());
+        });
 
-      test('每個選項至少被走過一次', () {
-        final declared = <String>{};
-        void scan(String sceneId, List<StoryNode> nodes, List<String> path) {
-          for (var i = 0; i < nodes.length; i++) {
-            final node = nodes[i];
-            final here = <String>[...path, '$i'];
-            if (node is ChoiceNode) {
-              for (var j = 0; j < node.options.length; j++) {
-                declared.add('$sceneId#${here.join('.')}#opt$j');
-                scan(sceneId, node.options[j].then, <String>[...here, 'opt$j']);
-              }
-            } else if (node is IfNode) {
-              scan(sceneId, node.then, <String>[...here, 'then']);
-              scan(sceneId, node.orElse, <String>[...here, 'else']);
-            }
-          }
-        }
+        test('走訪規模符合實測基準', () {
+          // 沒有下限斷言的話，內容被刪掉一整段分歧時這組測試依然全綠。
+          final baseline = pack.baselines[dir]!;
+          expect(result.paths, baseline.paths, reason: '路徑數變了');
+          expect(result.takenOptions.length, baseline.options, reason: '選項數變了');
+          expect(result.branchCount, baseline.branches, reason: '非空 if 分支數變了');
+        });
 
-        for (final scene in story.scenes.values) {
-          scan(scene.id, scene.nodes, const <String>[]);
-        }
-        expect(
-          declared.difference(result.takenOptions),
-          isEmpty,
-          reason: '有選項在任何路徑上都走不到',
-        );
-      });
-
-      test('每個 if 的 then 與非空 else 都走得到', () {
-        final unreached = <String>[];
-        void scan(String sceneId, List<StoryNode> nodes, List<String> path) {
-          for (var i = 0; i < nodes.length; i++) {
-            final node = nodes[i];
-            final here = <String>[...path, '$i'];
-            if (node is IfNode) {
-              for (final side in <(String, List<StoryNode>)>[
-                ('then', node.then),
-                ('else', node.orElse),
-              ]) {
-                if (side.$2.isEmpty) continue;
-                // 判定「這個分支走到了沒」要看**有沒有任何已讀鍵落在它底下**，
-                // 不能只看 `.then.0`。readKeys 只記錄游標停下來的位置，而分支的
-                // 第一個節點若是 show／sfx 這種不停頓的型別，游標永遠不會停在
-                // `.0` 上——實測 8 篇有 4 個分支正是如此（01/S07、01/E_C、
-                // 05/S06、08/S04），用 `.0` 判定會全部誤報成走不到。
-                // 前綴比對是可靠的：實測沒有任何分支是純副作用節點，每個分支
-                // 內都至少有一個會停頓的節點。
-                final prefix =
-                    '$sceneId#${<String>[...here, side.$1].join('.')}.';
-                if (!result.readKeys.any((key) => key.startsWith(prefix))) {
-                  unreached.add(prefix);
+        test('每個非空 if 分支都至少有一個直接的停頓節點', () {
+          // 前綴判定的前提。若有人寫出 `if (x) { show ... }` 這種只有副作用的分支，
+          // 判定會誤報成走不到——註解擋不住，這條斷言才擋得住。
+          void scan(List<StoryNode> nodes) {
+            for (final node in nodes) {
+              if (node is IfNode) {
+                for (final side in <List<StoryNode>>[node.then, node.orElse]) {
+                  if (side.isEmpty) continue;
+                  expect(
+                    side.any(
+                      (n) =>
+                          n is NarrationNode ||
+                          n is DialogueNode ||
+                          n is CgNode ||
+                          n is ChoiceNode,
+                    ),
+                    isTrue,
+                    reason: '這個 if 分支沒有直接的停頓節點，前綴判定會誤報',
+                  );
+                  scan(side);
                 }
-                scan(sceneId, side.$2, <String>[...here, side.$1]);
-              }
-            } else if (node is ChoiceNode) {
-              for (var j = 0; j < node.options.length; j++) {
-                scan(sceneId, node.options[j].then, <String>[...here, 'opt$j']);
+              } else if (node is ChoiceNode) {
+                for (final option in node.options) {
+                  scan(option.then);
+                }
               }
             }
           }
-        }
 
-        for (final scene in story.scenes.values) {
-          scan(scene.id, scene.nodes, const <String>[]);
-        }
-        final known = pack.deadBranches[dir] ?? const <String>{};
-        expect(
-          unreached.toSet().difference(known),
-          isEmpty,
-          reason: '出現新的死碼——這些 if 分支在任何路徑上都進不去',
-        );
-        expect(
-          known.difference(unreached.toSet()),
-          isEmpty,
-          reason: '這些死碼已經走得到了，請從 knownDeadBranches 刪掉',
-        );
-      });
+          for (final scene in story.scenes.values) {
+            scan(scene.nodes);
+          }
+        });
 
-      test('變數不超過宣告的上限', () {
-        story.variables.forEach((name, spec) {
-          final reached = result.maxima[name];
-          if (reached == null) return;
+        test('每個選項至少被走過一次', () {
+          final declared = <String>{};
+          void scan(String sceneId, List<StoryNode> nodes, List<String> path) {
+            for (var i = 0; i < nodes.length; i++) {
+              final node = nodes[i];
+              final here = <String>[...path, '$i'];
+              if (node is ChoiceNode) {
+                for (var j = 0; j < node.options.length; j++) {
+                  declared.add('$sceneId#${here.join('.')}#opt$j');
+                  scan(sceneId, node.options[j].then, <String>[
+                    ...here,
+                    'opt$j',
+                  ]);
+                }
+              } else if (node is IfNode) {
+                scan(sceneId, node.then, <String>[...here, 'then']);
+                scan(sceneId, node.orElse, <String>[...here, 'else']);
+              }
+            }
+          }
+
+          for (final scene in story.scenes.values) {
+            scan(scene.id, scene.nodes, const <String>[]);
+          }
           expect(
-            reached,
-            lessThanOrEqualTo(spec.max),
-            reason: '$name 超過宣告的 max',
+            declared.difference(result.takenOptions),
+            isEmpty,
+            reason: '有選項在任何路徑上都走不到',
           );
         });
-      });
 
-      test('參照的每個資產檔都存在', () {
-        // story.json 一律寫 `.png`，實際輸出可能是 `.webp`——劇本是逐字複製
-        // 的、不能改，副檔名的轉換是引擎組路徑時的職責。這條測試因此要跟著
-        // pack.json 的 assetFormat 走，直接拿 story.json 的檔名找檔案會誤判。
-        for (final filename in story.backgrounds.values) {
+        test('每個 if 的 then 與非空 else 都走得到', () {
+          final unreached = <String>[];
+          void scan(String sceneId, List<StoryNode> nodes, List<String> path) {
+            for (var i = 0; i < nodes.length; i++) {
+              final node = nodes[i];
+              final here = <String>[...path, '$i'];
+              if (node is IfNode) {
+                for (final side in <(String, List<StoryNode>)>[
+                  ('then', node.then),
+                  ('else', node.orElse),
+                ]) {
+                  if (side.$2.isEmpty) continue;
+                  // 判定「這個分支走到了沒」要看**有沒有任何已讀鍵落在它底下**，
+                  // 不能只看 `.then.0`。readKeys 只記錄游標停下來的位置，而分支的
+                  // 第一個節點若是 show／sfx 這種不停頓的型別，游標永遠不會停在
+                  // `.0` 上——實測 8 篇有 4 個分支正是如此（01/S07、01/E_C、
+                  // 05/S06、08/S04），用 `.0` 判定會全部誤報成走不到。
+                  // 前綴比對是可靠的：實測沒有任何分支是純副作用節點，每個分支
+                  // 內都至少有一個會停頓的節點。
+                  final prefix =
+                      '$sceneId#${<String>[...here, side.$1].join('.')}.';
+                  if (!result.readKeys.any((key) => key.startsWith(prefix))) {
+                    unreached.add(prefix);
+                  }
+                  scan(sceneId, side.$2, <String>[...here, side.$1]);
+                }
+              } else if (node is ChoiceNode) {
+                for (var j = 0; j < node.options.length; j++) {
+                  scan(sceneId, node.options[j].then, <String>[
+                    ...here,
+                    'opt$j',
+                  ]);
+                }
+              }
+            }
+          }
+
+          for (final scene in story.scenes.values) {
+            scan(scene.id, scene.nodes, const <String>[]);
+          }
+          final known = pack.deadBranches[dir] ?? const <String>{};
           expect(
-            File(
-              '$packRoot/assets/backgrounds/${withPackExtension(packRoot, filename)}',
-            ).existsSync(),
-            isTrue,
-            reason: filename,
+            unreached.toSet().difference(known),
+            isEmpty,
+            reason: '出現新的死碼——這些 if 分支在任何路徑上都進不去',
           );
-        }
-        for (final character in story.characters.values) {
-          for (final filename
-              in (character.sprites ?? const <String, String>{}).values) {
+          expect(
+            known.difference(unreached.toSet()),
+            isEmpty,
+            reason: '這些死碼已經走得到了，請從 knownDeadBranches 刪掉',
+          );
+        });
+
+        test('變數不超過宣告的上限', () {
+          story.variables.forEach((name, spec) {
+            final reached = result.maxima[name];
+            if (reached == null) return;
+            expect(
+              reached,
+              lessThanOrEqualTo(spec.max),
+              reason: '$name 超過宣告的 max',
+            );
+          });
+        });
+
+        test('參照的每個資產檔都存在', () {
+          // story.json 一律寫 `.png`，實際輸出可能是 `.webp`——劇本是逐字複製
+          // 的、不能改，副檔名的轉換是引擎組路徑時的職責。這條測試因此要跟著
+          // pack.json 的 assetFormat 走，直接拿 story.json 的檔名找檔案會誤判。
+          for (final filename in story.backgrounds.values) {
             expect(
               File(
-                '$packRoot/assets/sprites/${withPackExtension(packRoot, filename)}',
+                '$packRoot/assets/backgrounds/${withPackExtension(packRoot, filename)}',
               ).existsSync(),
               isTrue,
               reason: filename,
             );
           }
-        }
-        // 宣告在 missingAssets['cg'] 的 id 是「已知還沒畫」，引擎的 cgPath()
-        // 對它回 null 而不是崩。測試不跟著這條契約走，就會把刻意的缺件誤判成
-        // 錯誤——凡爾賽的垂直切片正是這個狀態。
-        final declaredMissingCg =
-            story.missingAssets['cg'] ?? const <String>[];
-        void scanCg(List<StoryNode> nodes) {
-          for (final node in nodes) {
-            if (node is CgNode) {
-              if (declaredMissingCg.contains(node.id)) continue;
+          for (final character in story.characters.values) {
+            for (final filename
+                in (character.sprites ?? const <String, String>{}).values) {
               expect(
                 File(
-                  '$packRoot/assets/backgrounds/'
-                  '${withPackExtension(packRoot, '${node.id}.png')}',
+                  '$packRoot/assets/sprites/${withPackExtension(packRoot, filename)}',
                 ).existsSync(),
                 isTrue,
-                reason: node.id,
+                reason: filename,
               );
-            } else if (node is IfNode) {
-              scanCg(node.then);
-              scanCg(node.orElse);
-            } else if (node is ChoiceNode) {
-              for (final option in node.options) {
-                scanCg(option.then);
+            }
+          }
+          // 宣告在 missingAssets['cg'] 的 id 是「已知還沒畫」，引擎的 cgPath()
+          // 對它回 null 而不是崩。測試不跟著這條契約走，就會把刻意的缺件誤判成
+          // 錯誤——凡爾賽的垂直切片正是這個狀態。
+          final declaredMissingCg =
+              story.missingAssets['cg'] ?? const <String>[];
+          void scanCg(List<StoryNode> nodes) {
+            for (final node in nodes) {
+              if (node is CgNode) {
+                if (declaredMissingCg.contains(node.id)) continue;
+                expect(
+                  File(
+                    '$packRoot/assets/backgrounds/'
+                    '${withPackExtension(packRoot, '${node.id}.png')}',
+                  ).existsSync(),
+                  isTrue,
+                  reason: node.id,
+                );
+              } else if (node is IfNode) {
+                scanCg(node.then);
+                scanCg(node.orElse);
+              } else if (node is ChoiceNode) {
+                for (final option in node.options) {
+                  scanCg(option.then);
+                }
               }
             }
           }
-        }
 
-        for (final scene in story.scenes.values) {
-          scanCg(scene.nodes);
-        }
-      });
+          for (final scene in story.scenes.values) {
+            scanCg(scene.nodes);
+          }
+        });
 
-      test('每個對話框的文字不超過 60 字', () {
-        void scan(List<StoryNode> nodes) {
-          for (final node in nodes) {
-            final text = switch (node) {
-              NarrationNode(:final text) => text,
-              DialogueNode(:final text) => text,
-              _ => null,
-            };
-            if (text != null) {
-              expect(
-                text.characters.length,
-                lessThanOrEqualTo(60),
-                reason: text,
-              );
-            }
-            if (node is IfNode) {
-              scan(node.then);
-              scan(node.orElse);
-            } else if (node is ChoiceNode) {
-              for (final option in node.options) {
-                scan(option.then);
+        test('每個對話框的文字不超過 60 字', () {
+          void scan(List<StoryNode> nodes) {
+            for (final node in nodes) {
+              final text = switch (node) {
+                NarrationNode(:final text) => text,
+                DialogueNode(:final text) => text,
+                _ => null,
+              };
+              if (text != null) {
+                expect(
+                  text.characters.length,
+                  lessThanOrEqualTo(60),
+                  reason: text,
+                );
+              }
+              if (node is IfNode) {
+                scan(node.then);
+                scan(node.orElse);
+              } else if (node is ChoiceNode) {
+                for (final option in node.options) {
+                  scan(option.then);
+                }
               }
             }
           }
-        }
 
-        for (final scene in story.scenes.values) {
-          scan(scene.nodes);
-        }
+          for (final scene in story.scenes.values) {
+            scan(scene.nodes);
+          }
+        });
       });
-    });
-  }
+    }
   }
 }

@@ -18,7 +18,7 @@ void main() {
 
   test('用 storyId 載入劇本', () async {
     final story = await repo.loadStory('pompeii_01_harbour_stranger');
-    expect(story.scenes, hasLength(12));
+    expect(story.scenes, hasLength(10));
   });
 
   test('資產路徑組成景點包共用池的位置', () async {

@@ -61,11 +61,19 @@ class LibraryPage extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  // 整包的結局進度。每篇 3 個結局，所以分母是篇數 ×3。
-                  trailing: Text(
-                    '${_seenIn(pack, seen)} / ${pack.stories.length * 3}',
-                    style: Theme.of(context).textTheme.labelLarge,
-                  ),
+                  trailing: ref
+                      .watch(packEndingCountProvider(pack.id))
+                      .when(
+                        loading: () => const SizedBox.square(
+                          dimension: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        error: (_, _) => const Text('—'),
+                        data: (total) => Text(
+                          '${_seenIn(pack, seen)} / $total',
+                          style: Theme.of(context).textTheme.labelLarge,
+                        ),
+                      ),
                 ),
               ),
           ],

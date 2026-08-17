@@ -44,13 +44,10 @@ void main() {
     await pumpPackPage(
       tester,
       prefsValues: <String, Object>{
-        'vn.endingsSeen': <String>[
-          'pompeii_01_harbour_stranger#A',
-          'pompeii_01_harbour_stranger#B',
-        ],
+        'vn.endingsSeen': <String>['pompeii_01_harbour_stranger#A'],
       },
     );
-    expect(find.text('2 / 3'), findsOneWidget);
-    expect(find.text('0 / 3'), findsNWidgets(7));
+    expect(find.text('1 / 1'), findsOneWidget);
+    expect(find.text('0 / 1'), findsNWidgets(7));
   });
 }

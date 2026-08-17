@@ -33,19 +33,15 @@ Iterable<StoryNode> flattenNodes(List<StoryNode> nodes) sync* {
 
 void main() {
   group('parseStory', () {
-    test('讀出 meta 與宣告的變數', () {
+    test('讀出線性故事的 meta 與單一結局', () {
       final story = loadFixture('01-harbour-stranger');
       expect(story.meta.id, 'pompeii_01_harbour_stranger');
       expect(story.meta.order, 1);
       expect(story.meta.subtitle, '爆發前一日');
-      expect(
-        story.variables.keys,
-        containsAll(<String>['affection', 'awareness']),
-      );
-      expect(story.variables['affection']!.max, 4);
+      expect(story.variables, isEmpty);
       expect(story.start, 'S01');
-      expect(story.scenes.length, 12);
-      expect(story.endings.keys, containsAll(<String>['A', 'B', 'C']));
+      expect(story.scenes.length, 10);
+      expect(story.endings.keys, <String>['A']);
     });
 
     test('主角是無立繪角色', () {
@@ -66,40 +62,26 @@ void main() {
       expect(scene.nodes.whereType<CgNode>().single.hideDialogue, isTrue);
     });
 
-    test('解得出巢狀的 if／then／else', () {
-      final scene = loadFixture('01-harbour-stranger').scenes['S09']!;
-      final ifNode = scene.nodes.whereType<IfNode>().first;
-      expect(ifNode.cond.varName, 'deal');
-      expect(ifNode.cond.op, '==');
-      expect(ifNode.cond.value, 'wait');
-      expect(ifNode.then, isNotEmpty);
-      expect(ifNode.orElse, isNotEmpty);
-    });
-
-    test('選項的 goto／branch／then 三種出口都解得出來', () {
-      final scene = loadFixture('01-harbour-stranger').scenes['S09']!;
-      final choice = scene.nodes.whereType<ChoiceNode>().last;
-      expect(choice.options[0].goto, 'E_A');
-      final rules = choice.options[1].branch;
-      expect(rules.first.cond!.varName, 'affection');
-      expect(rules.first.goto, 'E_C');
-      expect(rules.last.cond, isNull, reason: 'default 規則的 cond 為 null');
-      expect(rules.last.goto, 'E_B');
-    });
-
-    test('規範漏寫但資料在用的欄位：option.cond 與 show.filter', () {
-      final withOptionCond = loadFixture('02-the-oven-went-out')
-          .scenes['S07']!
-          .nodes
-          .whereType<ChoiceNode>()
-          .expand((n) => n.options)
-          .where((o) => o.cond != null);
-      expect(withOptionCond, isNotEmpty);
-
-      final filtered = flattenNodes(
-        loadFixture('08-the-new-house').scenes['S04']!.nodes,
-      ).whereType<ShowNode>().where((n) => n.filter == 'memory_desaturate');
-      expect(filtered, hasLength(1));
+    test('八篇均無選項、條件分支與狀態變數', () {
+      for (final dir in const <String>[
+        '01-harbour-stranger',
+        '02-the-oven-went-out',
+        '03-the-well-fell',
+        '04-the-tree-in-the-sky',
+        '05-the-tablets',
+        '06-the-locked-door',
+        '07-cannot-land',
+        '08-the-new-house',
+      ]) {
+        final story = loadFixture(dir);
+        final nodes = story.scenes.values.expand(
+          (scene) => flattenNodes(scene.nodes),
+        );
+        expect(story.variables, isEmpty, reason: dir);
+        expect(story.endings, hasLength(1), reason: dir);
+        expect(nodes.whereType<ChoiceNode>(), isEmpty, reason: dir);
+        expect(nodes.whereType<IfNode>(), isEmpty, reason: dir);
+      }
     });
 
     test('八篇都解得出來，且沒有未知節點型別', () {

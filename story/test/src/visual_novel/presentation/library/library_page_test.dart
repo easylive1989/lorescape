@@ -17,6 +17,26 @@ List<Map<String, dynamic>> manifestPacks() =>
         .map((e) => e as Map<String, dynamic>)
         .toList();
 
+int endingCount(Map<String, dynamic> manifestEntry) {
+  final packDir = manifestEntry['dir'] as String;
+  final pack =
+      jsonDecode(File('assets/content/$packDir/pack.json').readAsStringSync())
+          as Map<String, dynamic>;
+  var count = 0;
+  for (final entry in pack['stories'] as List<dynamic>) {
+    final storyDir = (entry as Map<String, dynamic>)['dir'] as String;
+    final story =
+        jsonDecode(
+              File(
+                'assets/content/$packDir/stories/$storyDir/story.json',
+              ).readAsStringSync(),
+            )
+            as Map<String, dynamic>;
+    count += (story['endings'] as Map<String, dynamic>).length;
+  }
+  return count;
+}
+
 Future<void> pumpLibraryPage(
   WidgetTester tester, {
   Map<String, Object>? prefsValues,
@@ -76,10 +96,7 @@ void main() {
     final packs = manifestPacks();
     final pompeii = packs.firstWhere((p) => p['id'] == 'pompeii_79');
     final versailles = packs.firstWhere((p) => p['id'] == 'versailles_1789');
-    expect(find.text('1 / ${(pompeii['stories'] as int) * 3}'), findsOneWidget);
-    expect(
-      find.text('0 / ${(versailles['stories'] as int) * 3}'),
-      findsOneWidget,
-    );
+    expect(find.text('1 / ${endingCount(pompeii)}'), findsOneWidget);
+    expect(find.text('0 / ${endingCount(versailles)}'), findsOneWidget);
   });
 }
