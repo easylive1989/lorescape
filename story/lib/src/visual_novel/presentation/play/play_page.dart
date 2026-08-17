@@ -71,7 +71,7 @@ class _StageState extends ConsumerState<_Stage> {
     final fontScale = ref.watch(saveStoreProvider).fontScale();
 
     if (state.status == PlayStatus.ended) {
-      return _EndingView(story: widget.story, endingId: state.endingId);
+      return const _EndingView();
     }
 
     final node = currentNode(widget.story, state);
@@ -217,24 +217,15 @@ class _ScreenShake extends StatelessWidget {
 }
 
 class _EndingView extends StatelessWidget {
-  const _EndingView({required this.story, required this.endingId});
-
-  final Story story;
-  final String? endingId;
+  const _EndingView();
 
   @override
   Widget build(BuildContext context) {
-    final ending = endingId == null ? null : story.endings[endingId];
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          Text('你走到了', style: Theme.of(context).textTheme.labelLarge),
-          const SizedBox(height: 8),
-          Text(
-            ending?.title ?? '結局',
-            style: Theme.of(context).textTheme.headlineMedium,
-          ),
+          Text('故事結束', style: Theme.of(context).textTheme.headlineMedium),
           const SizedBox(height: 32),
           // 結局是這篇的死路，沒有這顆按鈕玩家就卡在這裡回不去景點包首頁。
           TextButton(

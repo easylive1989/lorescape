@@ -17,26 +17,6 @@ List<Map<String, dynamic>> manifestPacks() =>
         .map((e) => e as Map<String, dynamic>)
         .toList();
 
-int endingCount(Map<String, dynamic> manifestEntry) {
-  final packDir = manifestEntry['dir'] as String;
-  final pack =
-      jsonDecode(File('assets/content/$packDir/pack.json').readAsStringSync())
-          as Map<String, dynamic>;
-  var count = 0;
-  for (final entry in pack['stories'] as List<dynamic>) {
-    final storyDir = (entry as Map<String, dynamic>)['dir'] as String;
-    final story =
-        jsonDecode(
-              File(
-                'assets/content/$packDir/stories/$storyDir/story.json',
-              ).readAsStringSync(),
-            )
-            as Map<String, dynamic>;
-    count += (story['endings'] as Map<String, dynamic>).length;
-  }
-  return count;
-}
-
 Future<void> pumpLibraryPage(
   WidgetTester tester, {
   Map<String, Object>? prefsValues,
@@ -82,21 +62,5 @@ void main() {
         reason: '${pack['title']} 的篇數沒顯示',
       );
     }
-  });
-
-  testWidgets('結局進度只算自己包裡的篇', (tester) async {
-    // 龐貝解了一個結局。凡爾賽那一包的分子必須是 0——多包之後最容易寫錯的
-    // 就是這裡：把整個 endingsSeen 的筆數算進每一個包。
-    await pumpLibraryPage(
-      tester,
-      prefsValues: <String, Object>{
-        'vn.endingsSeen': <String>['pompeii_01_harbour_stranger#A'],
-      },
-    );
-    final packs = manifestPacks();
-    final pompeii = packs.firstWhere((p) => p['id'] == 'pompeii_79');
-    final versailles = packs.firstWhere((p) => p['id'] == 'versailles_1789');
-    expect(find.text('1 / ${endingCount(pompeii)}'), findsOneWidget);
-    expect(find.text('0 / ${endingCount(versailles)}'), findsOneWidget);
   });
 }

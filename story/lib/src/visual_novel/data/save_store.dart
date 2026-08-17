@@ -13,10 +13,6 @@ abstract interface class SaveStore {
   Set<String> readNodes();
   Future<void> markRead(String key);
 
-  /// 收藏的結局，以 `<storyId>#<endingId>` 記錄，跨故事累積。
-  Set<String> endingsSeen();
-  Future<void> markEnding(String storyId, String endingId);
-
   /// 每字顯示間隔（毫秒），預設 28。
   double textSpeed();
   Future<void> setTextSpeed(double value);
@@ -26,12 +22,11 @@ abstract interface class SaveStore {
   Future<void> setFontScale(double value);
 }
 
-/// 用 SharedPreferences 存讀檔、已讀進度、結局收藏與設定。
+/// 用 SharedPreferences 存讀檔、已讀進度與設定。
 final class SharedPreferencesSaveStore implements SaveStore {
   SharedPreferencesSaveStore(this._prefs);
 
   static const String _readKey = 'vn.readNodes';
-  static const String _endingsKey = 'vn.endingsSeen';
   static const String _textSpeedKey = 'vn.textSpeed';
   static const String _fontScaleKey = 'vn.fontScale';
 
@@ -68,17 +63,6 @@ final class SharedPreferencesSaveStore implements SaveStore {
     final current = readNodes();
     if (!current.add(key)) return;
     await _prefs.setStringList(_readKey, current.toList()..sort());
-  }
-
-  @override
-  Set<String> endingsSeen() =>
-      (_prefs.getStringList(_endingsKey) ?? const <String>[]).toSet();
-
-  @override
-  Future<void> markEnding(String storyId, String endingId) async {
-    final current = endingsSeen();
-    if (!current.add('$storyId#$endingId')) return;
-    await _prefs.setStringList(_endingsKey, current.toList()..sort());
   }
 
   @override

@@ -93,7 +93,9 @@ final class BundlePackRepository implements PackRepository {
             as Map<String, dynamic>;
     final packs = <Pack>[];
     for (final row in (manifest['packs'] as List<dynamic>)) {
-      packs.add(await _readPack((row as Map<String, dynamic>)['dir'] as String));
+      packs.add(
+        await _readPack((row as Map<String, dynamic>)['dir'] as String),
+      );
     }
     for (final pack in packs) {
       _packById[pack.id] = pack;
@@ -170,7 +172,9 @@ final class BundlePackRepository implements PackRepository {
 
   /// 把 story.json 寫的 `.png` 換成該包實際的素材格式。
   String _withExtension(Pack pack, String filename) {
-    if (pack.assetFormat == 'png' || !filename.endsWith('.png')) return filename;
+    if (pack.assetFormat == 'png' || !filename.endsWith('.png')) {
+      return filename;
+    }
     return '${filename.substring(0, filename.length - 4)}.${pack.assetFormat}';
   }
 

@@ -40,11 +40,6 @@ void main() {
     expect(store.readNodes(), <String>{'S01#0', 'S01#1'});
   });
 
-  test('結局收藏以 storyId#endingId 記錄', () async {
-    await store.markEnding('pompeii_01_harbour_stranger', 'A');
-    expect(store.endingsSeen(), contains('pompeii_01_harbour_stranger#A'));
-  });
-
   test('設定有預設值且可改', () async {
     expect(store.textSpeed(), 28);
     expect(store.fontScale(), 1.0);
@@ -54,11 +49,9 @@ void main() {
     expect(SharedPreferencesSaveStore(prefs).fontScale(), 1.2);
   });
 
-  test('清存檔不影響已讀與結局', () async {
+  test('清存檔不影響已讀紀錄', () async {
     await store.markRead('S01#0');
-    await store.markEnding('pompeii_01_harbour_stranger', 'A');
     await store.clearSave('pompeii_01_harbour_stranger');
     expect(store.readNodes(), isNotEmpty);
-    expect(store.endingsSeen(), isNotEmpty);
   });
 }

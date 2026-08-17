@@ -50,7 +50,7 @@ final Provider<SaveStore> saveStoreProvider = Provider<SaveStore>(
   (ref) => SharedPreferencesSaveStore(ref.watch(sharedPreferencesProvider)),
 );
 
-/// 書架：所有已匯入的景點包。首頁與結局收藏頁都看這個。
+/// 書架：所有已匯入的景點包。
 final FutureProvider<List<Pack>> libraryProvider = FutureProvider<List<Pack>>(
   (ref) => ref.watch(packRepositoryProvider).loadLibrary(),
 );
@@ -65,15 +65,3 @@ final FutureProviderFamily<Story, String> storyProvider =
     FutureProvider.family<Story, String>(
       (ref, storyId) => ref.watch(packRepositoryProvider).loadStory(storyId),
     );
-
-final FutureProviderFamily<int, String> packEndingCountProvider =
-    FutureProvider.family<int, String>((ref, packId) async {
-      final pack = await ref.watch(packProvider(packId).future);
-      final stories = await Future.wait(
-        pack.stories.map((entry) => ref.watch(storyProvider(entry.id).future)),
-      );
-      return stories.fold<int>(
-        0,
-        (total, story) => total + story.endings.length,
-      );
-    });

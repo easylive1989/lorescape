@@ -39,15 +39,4 @@ void main() {
     expect(find.textContaining('12 分鐘'), findsWidgets);
     expect(find.text('普特奧利的新房子'), findsOneWidget);
   });
-
-  testWidgets('顯示每篇的結局進度', (tester) async {
-    await pumpPackPage(
-      tester,
-      prefsValues: <String, Object>{
-        'vn.endingsSeen': <String>['pompeii_01_harbour_stranger#A'],
-      },
-    );
-    expect(find.text('1 / 1'), findsOneWidget);
-    expect(find.text('0 / 1'), findsNWidgets(7));
-  });
 }

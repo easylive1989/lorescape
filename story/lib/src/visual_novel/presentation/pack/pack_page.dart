@@ -4,8 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lorescape_story/src/visual_novel/presentation/play/layout.dart';
 import 'package:lorescape_story/src/visual_novel/providers.dart';
 
-/// 景點包頁：列出這一包的所有故事，顯示標題、副標、預估分鐘數，
-/// 以及每篇依劇本實際宣告數量計算的結局收藏進度。
+/// 景點包頁：列出這一包的所有故事，顯示標題、副標與預估分鐘數。
 class PackPage extends ConsumerWidget {
   const PackPage({required this.packId, super.key});
 
@@ -18,7 +17,6 @@ class PackPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AsyncValue<Pack> packAsync = ref.watch(packProvider(packId));
-    final Set<String> seen = ref.watch(saveStoreProvider).endingsSeen();
 
     return Scaffold(
       backgroundColor: VnColors.backdrop,
@@ -29,10 +27,6 @@ class PackPage extends ConsumerWidget {
           onPressed: () => context.go('/'),
         ),
         actions: <Widget>[
-          IconButton(
-            icon: const Icon(Icons.auto_stories_outlined),
-            onPressed: () => context.go('/endings'),
-          ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             onPressed: () => context.go('/settings'),
@@ -68,19 +62,6 @@ class PackPage extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  trailing: ref
-                      .watch(storyProvider(entry.id))
-                      .when(
-                        loading: () => const SizedBox.square(
-                          dimension: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                        error: (_, _) => const Text('—'),
-                        data: (story) => Text(
-                          '${seen.where((e) => e.startsWith('${entry.id}#')).length} / ${story.endings.length}',
-                          style: Theme.of(context).textTheme.labelLarge,
-                        ),
-                      ),
                 ),
               ),
           ],

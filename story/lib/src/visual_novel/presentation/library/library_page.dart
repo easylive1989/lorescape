@@ -18,17 +18,12 @@ class LibraryPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AsyncValue<List<Pack>> libraryAsync = ref.watch(libraryProvider);
-    final Set<String> seen = ref.watch(saveStoreProvider).endingsSeen();
 
     return Scaffold(
       backgroundColor: VnColors.backdrop,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         actions: <Widget>[
-          IconButton(
-            icon: const Icon(Icons.auto_stories_outlined),
-            onPressed: () => context.go('/endings'),
-          ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             onPressed: () => context.go('/settings'),
@@ -61,29 +56,11 @@ class LibraryPage extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  trailing: ref
-                      .watch(packEndingCountProvider(pack.id))
-                      .when(
-                        loading: () => const SizedBox.square(
-                          dimension: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                        error: (_, _) => const Text('—'),
-                        data: (total) => Text(
-                          '${_seenIn(pack, seen)} / $total',
-                          style: Theme.of(context).textTheme.labelLarge,
-                        ),
-                      ),
                 ),
               ),
           ],
         ),
       ),
     );
-  }
-
-  int _seenIn(Pack pack, Set<String> seen) {
-    final ids = pack.stories.map((e) => e.id).toSet();
-    return seen.where((e) => ids.contains(e.split('#').first)).length;
   }
 }

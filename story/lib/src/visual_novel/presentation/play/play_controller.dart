@@ -90,7 +90,6 @@ class PlayController extends FamilyNotifier<PlayState, String> {
   /// 碰撞鍵一路衝過從沒看過的劇情（實測其他七篇各有 43–57% 的節點被誤判成
   /// 已讀），直接違反規範 §5.3「只跳已讀節點，碰到未讀即停」。
   ///
-  /// 同一個 SaveStore 裡 `markEnding` 與存檔鍵本來就帶 storyId，只有已讀漏了。
   String _readKey(PlayState value) => '$arg#${value.readKey}';
 
   /// 只跳已讀節點。未讀、選項、結局都要停——這是規範 §5.3 的硬要求。
@@ -118,8 +117,7 @@ class PlayController extends FamilyNotifier<PlayState, String> {
   void _record(PlayState value) {
     // 結局狀態的游標必然越界（`_settle` 的不變式），沒有「目前節點」可記；
     // 硬呼叫 currentNode 會 RangeError，而且是在 _apply() 呼叫鏈裡丟出，
-    // 發生在 _persist() 之前——結局因此整個沒存到，markEnding／clearSave
-    // 都不會執行，「結局收藏 n/3」永遠是 0。已實測重現（RangeError: index
+    // 發生在 _persist() 之前——結束後的存檔因此無法清除。已實測重現（RangeError: index
     // should be less than <scene 節點數>），這裡直接擋掉才是對的：結局沒有
     // 對白／旁白要記進回顧。
     if (value.status == PlayStatus.ended) return;
@@ -151,8 +149,6 @@ class PlayController extends FamilyNotifier<PlayState, String> {
     // 寫進已讀集合只是污染。
     if (value.status != PlayStatus.ended) store.markRead(_readKey(value));
     if (value.status == PlayStatus.ended) {
-      final endingId = value.endingId;
-      if (endingId != null) store.markEnding(storyId, endingId);
       store.clearSave(storyId);
       return;
     }

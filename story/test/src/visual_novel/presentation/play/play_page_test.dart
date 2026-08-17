@@ -284,10 +284,7 @@ void main() {
       expect(controller.backlog.length, 1, reason: '重新開始後只該有新的第一句，不得殘留上一輪的台詞');
     });
 
-    testWidgets('抵達結局要寫入 endingsSeen 並清掉存檔（回歸：ended 游標必然越界，'
-        '硬呼叫 currentNode 曾經 RangeError，讓 markEnding／clearSave 整段沒執行到）', (
-      tester,
-    ) async {
+    testWidgets('故事結束後清掉存檔，且不建立結局紀錄', (tester) async {
       // 直接餵一個就停在結局場尾端前一步的存檔，不用真的把 S01～S09 全部點完。
       final saveJson = jsonEncode(<String, dynamic>{
         'storyId': 'pompeii_01_harbour_stranger',
@@ -319,17 +316,15 @@ void main() {
       await _pumpFrame(tester);
 
       for (var i = 0; i < 20; i++) {
-        if (find.text('你走到了').evaluate().isNotEmpty) break;
+        if (find.text('故事結束').evaluate().isNotEmpty) break;
         await tester.tap(find.byKey(PlayPage.advanceAreaKey));
         await _pumpFrame(tester);
       }
 
-      expect(find.text('你走到了'), findsOneWidget, reason: '應該走到 _EndingView');
+      expect(find.text('故事結束'), findsOneWidget, reason: '應該走到 _EndingView');
+      expect(find.text('你走到了'), findsNothing);
       expect(tester.takeException(), isNull);
-      expect(
-        prefs.getStringList('vn.endingsSeen'),
-        contains('pompeii_01_harbour_stranger#A'),
-      );
+      expect(prefs.getStringList('vn.endingsSeen'), isNull);
       expect(
         prefs.getString('vn.save.pompeii_01_harbour_stranger'),
         isNull,
