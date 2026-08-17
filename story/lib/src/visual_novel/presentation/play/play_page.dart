@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -22,6 +24,9 @@ class PlayPage extends ConsumerWidget {
   static const ValueKey<String> skipButtonKey = ValueKey<String>('play-skip');
   static const ValueKey<String> homeButtonKey = ValueKey<String>(
     'play-ending-home',
+  );
+  static const ValueKey<String> shakeStageKey = ValueKey<String>(
+    'play-shake-stage',
   );
 
   final String storyId;
@@ -71,6 +76,13 @@ class _StageState extends ConsumerState<_Stage> {
 
     final node = currentNode(widget.story, state);
     final scene = widget.story.scenes[state.cursor.sceneId]!;
+    final currentIndex = state.cursor.path.length == 1
+        ? state.cursor.last.index
+        : -1;
+    final shouldShake =
+        currentIndex > 0 &&
+        scene.nodes[currentIndex - 1] is SfxNode &&
+        (scene.nodes[currentIndex - 1] as SfxNode).id == 'earthquake_shake';
     // CG 是會停頓的節點型別之一，所以 node 是 CgNode 時就不可能同時是旁白或
     // 對白——對話框本來就不會出現，`CgNode.hideDialogue` 對現在的渲染沒有可
     // 觀察的效果。等哪天要做「CG 蓋住上一句台詞」才需要它，屆時要有『上一句』
@@ -92,86 +104,114 @@ class _StageState extends ConsumerState<_Stage> {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final layout = VnLayout(constraints.biggest);
-          return Stack(
-            fit: StackFit.expand,
-            children: <Widget>[
-              BackgroundLayer(
-                assetPath:
-                    cg ??
-                    repository.backgroundPath(widget.story, scene.background),
-              ),
-              if (cg == null)
-                SpriteLayer(
-                  stage: state.stage,
-                  layout: layout,
-                  pathOf: (sprite) => repository.spritePath(
-                    widget.story,
-                    sprite.who,
-                    sprite.sprite,
+          return _ScreenShake(
+            key: ValueKey<String>(shouldShake ? state.cursor.readKey : 'still'),
+            active: shouldShake,
+            child: Stack(
+              fit: StackFit.expand,
+              children: <Widget>[
+                BackgroundLayer(
+                  assetPath:
+                      cg ??
+                      repository.backgroundPath(widget.story, scene.background),
+                ),
+                if (cg == null)
+                  SpriteLayer(
+                    stage: state.stage,
+                    layout: layout,
+                    pathOf: (sprite) => repository.spritePath(
+                      widget.story,
+                      sprite.who,
+                      sprite.sprite,
+                    ),
+                  ),
+                if (node is NarrationNode)
+                  DialogueBox(
+                    text: node.text,
+                    layout: layout,
+                    fontScale: fontScale,
+                    graffiti: node.style == 'graffiti',
+                  ),
+                if (node is DialogueNode)
+                  DialogueBox(
+                    text: node.text,
+                    layout: layout,
+                    fontScale: fontScale,
+                    speakerName:
+                        widget.story.characters[node.who]?.name ?? node.who,
+                  ),
+                // choice 節點本身沒有文字：把剛讀完的那句留著，玩家才不是在空白畫面
+                // 上做選擇。
+                if (state.status == PlayStatus.choosing &&
+                    controller.lastEntry != null)
+                  DialogueBox(
+                    text: controller.lastEntry!.text,
+                    layout: layout,
+                    fontScale: fontScale,
+                    speakerName: controller.lastEntry!.speakerName,
+                  ),
+                if (state.status == PlayStatus.choosing && node is ChoiceNode)
+                  ChoiceOverlay(
+                    options: visibleOptions(node, state.vars),
+                    layout: layout,
+                    onChoose: controller.choose,
+                  ),
+                Positioned(
+                  top: layout.safeInset,
+                  right: layout.sideInset,
+                  child: Row(
+                    children: <Widget>[
+                      IconButton(
+                        key: PlayPage.backlogButtonKey,
+                        icon: const Icon(Icons.history),
+                        color: VnColors.muted,
+                        onPressed: () => showModalBottomSheet<void>(
+                          context: context,
+                          backgroundColor: VnColors.ground.withValues(
+                            alpha: 0xF2 / 0xFF,
+                          ),
+                          builder: (context) =>
+                              BacklogSheet(entries: controller.backlog),
+                        ),
+                      ),
+                      IconButton(
+                        key: PlayPage.skipButtonKey,
+                        icon: const Icon(Icons.fast_forward),
+                        color: VnColors.muted,
+                        onPressed: controller.skipRead,
+                      ),
+                    ],
                   ),
                 ),
-              if (node is NarrationNode)
-                DialogueBox(
-                  text: node.text,
-                  layout: layout,
-                  fontScale: fontScale,
-                  graffiti: node.style == 'graffiti',
-                ),
-              if (node is DialogueNode)
-                DialogueBox(
-                  text: node.text,
-                  layout: layout,
-                  fontScale: fontScale,
-                  speakerName:
-                      widget.story.characters[node.who]?.name ?? node.who,
-                ),
-              // choice 節點本身沒有文字：把剛讀完的那句留著，玩家才不是在空白畫面
-              // 上做選擇。
-              if (state.status == PlayStatus.choosing &&
-                  controller.lastEntry != null)
-                DialogueBox(
-                  text: controller.lastEntry!.text,
-                  layout: layout,
-                  fontScale: fontScale,
-                  speakerName: controller.lastEntry!.speakerName,
-                ),
-              if (state.status == PlayStatus.choosing && node is ChoiceNode)
-                ChoiceOverlay(
-                  options: visibleOptions(node, state.vars),
-                  layout: layout,
-                  onChoose: controller.choose,
-                ),
-              Positioned(
-                top: layout.safeInset,
-                right: layout.sideInset,
-                child: Row(
-                  children: <Widget>[
-                    IconButton(
-                      key: PlayPage.backlogButtonKey,
-                      icon: const Icon(Icons.history),
-                      color: VnColors.muted,
-                      onPressed: () => showModalBottomSheet<void>(
-                        context: context,
-                        backgroundColor: VnColors.ground.withValues(
-                          alpha: 0xF2 / 0xFF,
-                        ),
-                        builder: (context) =>
-                            BacklogSheet(entries: controller.backlog),
-                      ),
-                    ),
-                    IconButton(
-                      key: PlayPage.skipButtonKey,
-                      icon: const Icon(Icons.fast_forward),
-                      color: VnColors.muted,
-                      onPressed: controller.skipRead,
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),
+    );
+  }
+}
+
+class _ScreenShake extends StatelessWidget {
+  const _ScreenShake({required this.active, required this.child, super.key});
+
+  final bool active;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!active) return child;
+    return TweenAnimationBuilder<double>(
+      key: PlayPage.shakeStageKey,
+      tween: Tween<double>(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 650),
+      child: child,
+      builder: (context, progress, child) {
+        final strength = (1 - progress) * 9;
+        final x = math.sin(progress * math.pi * 10) * strength;
+        final y = math.sin(progress * math.pi * 14) * strength * 0.45;
+        return Transform.translate(offset: Offset(x, y), child: child);
+      },
     );
   }
 }

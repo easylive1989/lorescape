@@ -173,6 +173,38 @@ void main() {
       }
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('無花果老人前的地震會震動畫面', (tester) async {
+      final saveJson = jsonEncode(<String, dynamic>{
+        'storyId': 'pompeii_01_harbour_stranger',
+        'cursor': <String, dynamic>{
+          'sceneId': 'S07',
+          'path': <String>['5'],
+        },
+        'vars': <String, dynamic>{},
+        'stage': const <dynamic>[],
+        'updatedAt': DateTime.now().toUtc().toIso8601String(),
+      });
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'vn.save.pompeii_01_harbour_stranger': saveJson,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: <Override>[
+            sharedPreferencesProvider.overrideWithValue(prefs),
+          ],
+          child: const MaterialApp(
+            home: PlayPage(storyId: 'pompeii_01_harbour_stranger'),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.byKey(PlayPage.shakeStageKey), findsOneWidget);
+      expect(find.text('腳底下動了一下。'), findsOneWidget);
+    });
   });
 
   group('backlog 與已讀跳過', () {
