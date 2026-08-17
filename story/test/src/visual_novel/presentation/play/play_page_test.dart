@@ -134,7 +134,7 @@ void main() {
         reason: '01 篇 S01 結尾有一個兩選項的分歧',
       );
       expect(find.text('直接進城找人。'), findsOneWidget);
-      expect(find.text('先去廣場，把債權登記起來。'), findsOneWidget);
+      expect(find.text('先核對字據和地址。'), findsOneWidget);
 
       await tester.tap(find.byKey(const ValueKey<String>('choice-0')));
       await _pumpTyping(tester);
