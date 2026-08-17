@@ -18,6 +18,7 @@ Lorescape 是 AI 景點故事導覽 App：為使用者眼前的景點生成以 W
 | `scripts/` | 每日故事 / reel / metrics 自動化腳本（Python，uv 管理）；metrics 全走 API（GSC / GA4 / IG / RevenueCat / App Store / Play） |
 | `dashboard/` | 產品數據單頁（Python，純標準函式庫、無框架）：`python3 dashboard/build_metric.py` 把 `data/metrics/*.csv` 內嵌成單檔 `out/metric.html`（gitignored），雙擊離線開啟。要看最新數據就重跑一次；不部署 |
 | `data/metrics/` | 累積的每日產品數據 CSV（一個來源一檔），由 lorescape-metrics skill 寫入 |
+| `research/` | 一次性的市場／定價研究報告（Markdown）：定價方案、營收天花板與地板估算、付費趨勢、競品案例。屬決策依據，不是產線資產，寫完就放著不再維護 |
 | `docs/` | 專案文件（子資料夾見下表） |
 | `demo/` | Remotion 專案：30 秒 App 介紹影片（UI 皆為 code mockup） |
 | `BACKLOG.md` | 專案工作項：features（F1…）與 tasks（T1…）；epic 見檔內「Epic」段 |
