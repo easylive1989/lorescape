@@ -25,7 +25,11 @@ from metrics._asc import token as _token
 from metrics._common import DailySource, MetricsConfig
 from metrics.store_ios import APPLE_APP_ID
 
-REPORT_NAME = "App Store Discovery and Engagement"
+# Apple split this report into Standard/Detailed variants; the bare name no
+# longer matches anything, and filter[name] just returns nothing (no error),
+# so a stale name here silently records 0 rows every run. Standard carries the
+# impression / product-page-view totals this source needs.
+REPORT_NAME = "App Store Discovery and Engagement Standard"
 
 _DAILY_HEADERS = ["date", "impressions", "product_page_views"]
 
@@ -173,9 +177,17 @@ def parse_engagement(text: str) -> dict[str, list[int]]:
 def fetch_daily(cfg: MetricsConfig, start: str, end: str) -> list[list[str]]:
     """Return per-day impression/page-view rows over [start, end].
 
-    Only days with a generated DAILY instance produce rows; absent days
-    (not generated yet, or predating the ONGOING request) yield nothing
-    and the tail is picked up by a later run's gap-fill.
+    An instance's processingDate is its *delivery* date, not the date of
+    the data inside: each DAILY instance carries a rolling window of the
+    few days before it (the 2026-08-17 instance holds 08-14…08-16). So
+    rows are keyed by each segment row's own Date, never by the instance
+    it arrived in. Overlapping days repeat identically across instances,
+    so a later instance overwrites rather than adds to an earlier one —
+    summing them would multiply every figure by the window width.
+
+    Days no instance covers yet (the 1-day delivery lag, or days
+    predating the ONGOING request) yield nothing and are picked up by a
+    later run's gap-fill.
     """
     request_id = _report_request_id(cfg)
     if request_id is None:
@@ -184,20 +196,25 @@ def fetch_daily(cfg: MetricsConfig, start: str, end: str) -> list[list[str]]:
     if report_id is None:
         return []
     instances = _daily_instances(cfg, report_id)
+    totals: dict[str, list[int]] = {}
+    for _, instance_id in sorted(instances.items()):
+        # An instance's segments are partitions of the same window, so they
+        # add up; the finished window then replaces what an earlier
+        # instance said about those days.
+        window: dict[str, list[int]] = {}
+        for segment in _instance_segments(cfg, instance_id):
+            for seg_day, (imp, views) in parse_engagement(segment).items():
+                slot = window.setdefault(seg_day, [0, 0])
+                slot[0] += imp
+                slot[1] += views
+        totals.update(window)
     rows: list[list[str]] = []
     cursor = date.fromisoformat(start)
     last = date.fromisoformat(end)
     while cursor <= last:
         day = cursor.isoformat()
-        instance_id = instances.get(day)
-        if instance_id is not None:
-            totals: dict[str, list[int]] = {}
-            for segment in _instance_segments(cfg, instance_id):
-                for seg_day, (imp, views) in parse_engagement(segment).items():
-                    slot = totals.setdefault(seg_day, [0, 0])
-                    slot[0] += imp
-                    slot[1] += views
-            impressions, page_views = totals.get(day, [0, 0])
+        if day in totals:
+            impressions, page_views = totals[day]
             rows.append([day, str(impressions), str(page_views)])
         cursor += timedelta(days=1)
     return rows

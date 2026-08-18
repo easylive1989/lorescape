@@ -66,12 +66,14 @@ def _cfg():
     )
 
 
-def test_fetch_daily_builds_one_row_per_generated_instance(monkeypatch):
+def test_fetch_daily_sums_an_instances_segments(monkeypatch):
     _patch_network(
         monkeypatch,
-        instances={"2026-07-19": "i-19", "2026-07-20": "i-20"},
+        instances={"2026-07-20": "i-20"},
         segments={
-            "i-19": [
+            # One instance's segments are partitions of the same window,
+            # so their counts add up (40 + 10).
+            "i-20": [
                 "\n".join([_HEADER, _row("2026-07-19", "Impression", "40")]),
                 "\n".join([
                     _HEADER,
@@ -79,15 +81,38 @@ def test_fetch_daily_builds_one_row_per_generated_instance(monkeypatch):
                     _row("2026-07-19", "Product Page View", "12"),
                 ]),
             ],
-            "i-20": ["\n".join([_HEADER])],
         },
     )
-    # 2026-07-18 has no instance (predates the ONGOING request): skipped;
-    # 2026-07-21 has none either (not generated yet): left for gap-fill.
+    # Rows are keyed by the data's own Date, not the instance it arrived
+    # in, so the 07-20 instance yields a 07-19 row and nothing for 07-20.
+    rows = store_ios_pages.fetch_daily(_cfg(), "2026-07-18", "2026-07-21")
+    assert rows == [["2026-07-19", "50", "12"]]
+
+
+def test_fetch_daily_restates_days_repeated_across_instances(monkeypatch):
+    _patch_network(
+        monkeypatch,
+        instances={"2026-07-20": "i-20", "2026-07-21": "i-21"},
+        segments={
+            # Each instance carries a rolling window; 07-19 appears in
+            # both and must not be counted twice.
+            "i-20": ["\n".join([
+                _HEADER,
+                _row("2026-07-18", "Impression", "8"),
+                _row("2026-07-19", "Impression", "40"),
+            ])],
+            "i-21": ["\n".join([
+                _HEADER,
+                _row("2026-07-19", "Impression", "40"),
+                _row("2026-07-20", "Impression", "5"),
+            ])],
+        },
+    )
     rows = store_ios_pages.fetch_daily(_cfg(), "2026-07-18", "2026-07-21")
     assert rows == [
-        ["2026-07-19", "50", "12"],
-        ["2026-07-20", "0", "0"],
+        ["2026-07-18", "8", "0"],
+        ["2026-07-19", "40", "0"],
+        ["2026-07-20", "5", "0"],
     ]
 
 
