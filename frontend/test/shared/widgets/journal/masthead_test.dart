@@ -11,8 +11,8 @@ void main() {
 
   group('Masthead', () {
     testWidgets(
-      'given an eyebrow, title and actions, when the masthead renders, '
-      'then all three sit at the shared inset with the rule drawn below',
+      'given a title and actions, when the masthead renders, '
+      'then both sit at the shared inset with the rule drawn below',
       (tester) async {
         await _givenMasthead(
           tester,
@@ -20,7 +20,6 @@ void main() {
         );
 
         _thenTitleStartsAtSharedInset(tester);
-        expect(find.text('12 個地點 · ATLAS'), findsOneWidget);
         expect(find.byKey(const Key('actions')), findsOneWidget);
         expect(_ruleFinder, findsOneWidget);
       },
@@ -37,6 +36,18 @@ void main() {
         _thenTitleStartsAtSharedInset(tester);
       },
     );
+
+    testWidgets('given a masthead, '
+        'when it renders, '
+        'then only the title is shown', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(body: Masthead(title: '探索')),
+        ),
+      );
+
+      expect(find.text('探索'), findsOneWidget);
+    });
   });
 }
 
@@ -54,12 +65,7 @@ Future<void> _givenMasthead(
     tester,
     child: Scaffold(
       body: SafeArea(
-        child: Masthead(
-          eyebrow: '12 個地點 · ATLAS',
-          title: '探索',
-          actions: actions,
-          showRule: showRule,
-        ),
+        child: Masthead(title: '探索', actions: actions, showRule: showRule),
       ),
     ),
   );

@@ -197,7 +197,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             ],
           ),
           _MapTopOverlay(
-            placeCount: places.length,
             searchController: _searchController,
             onRefresh: _searchVisibleArea,
             onOpenShelf: () => context.push('/journey'),
@@ -472,7 +471,6 @@ class _PlaceThumb extends StatelessWidget {
 /// 干擾文字，但只有實際控制項吃得到觸控（`pointer-events` 的等價作法）。
 class _MapTopOverlay extends StatelessWidget {
   const _MapTopOverlay({
-    required this.placeCount,
     required this.searchController,
     required this.onRefresh,
     required this.onOpenShelf,
@@ -482,7 +480,6 @@ class _MapTopOverlay extends StatelessWidget {
     required this.onSearchClear,
   });
 
-  final int placeCount;
   final TextEditingController searchController;
   final VoidCallback onRefresh;
   final VoidCallback onOpenShelf;
@@ -533,7 +530,6 @@ class _MapTopOverlay extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Masthead(
-                  eyebrow: 'explore.atlas_eyebrow'.tr(args: ['$placeCount']),
                   title: 'explore.title'.tr(),
                   // 地圖上不畫分隔線，靠漸層與底圖分隔。
                   showRule: false,

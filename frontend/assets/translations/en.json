@@ -91,8 +91,7 @@
       "entry_no": "Note · No.{}",
       "no_photo": "No photo"
     },
-    "bookshelf": "Bookshelf · {} volumes",
-    "eyebrow": "Chronicle"
+    "bookshelf": "Bookshelf · {} volumes"
   },
   "trip": {
     "list_title": "My Trips",
@@ -177,7 +176,6 @@
         "action": "Open settings"
       }
     },
-    "atlas_eyebrow": "{} places · Atlas",
     "view_place": "View place"
   },
   "date_picker": {

@@ -92,8 +92,7 @@
       "entry_no": "手記 · No.{}",
       "no_photo": "無照片"
     },
-    "bookshelf": "旅程書架 · {} 本",
-    "eyebrow": "旅程紀錄 · Chronicle"
+    "bookshelf": "旅程書架 · {} 本"
   },
   "trip": {
     "list_title": "我的旅程",
@@ -178,7 +177,6 @@
         "action": "前往設定"
       }
     },
-    "atlas_eyebrow": "{} 個地點 · Atlas",
     "view_place": "查看地點"
   },
   "date_picker": {

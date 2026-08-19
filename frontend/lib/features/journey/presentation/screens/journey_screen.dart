@@ -32,10 +32,7 @@ class JourneyScreen extends ConsumerWidget {
                   // 讓出頁首左上角浮動返回鈕的位置。
                   const SizedBox(height: 44),
                   // 建立旅程的入口不在頁首——它是書架末端那本虛線佔位書。
-                  Masthead(
-                    eyebrow: 'journey.eyebrow'.tr(),
-                    title: 'journey.title'.tr(),
-                  ),
+                  Masthead(title: 'journey.title'.tr()),
                   const _CurrentTripBanner(),
                   asyncTrips.when(
                     loading: () => const Padding(
