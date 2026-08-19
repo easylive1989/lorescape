@@ -108,6 +108,13 @@ class _SelectStoryHookScreenState extends ConsumerState<SelectStoryHookScreen> {
 
   void _showErrorDialog(NarrationGenerationState genState) {
     ref.read(narrationGenerationControllerProvider.notifier).reset();
+    if (genState.errorType == NarrationGenerationErrorType.quotaExceeded) {
+      // 今日免費額度用盡（backend 回 402）。不顯示錯誤，直接把使用者
+      // 帶到付費牆——那裡才有他要的答案。
+      if (!context.mounted) return;
+      context.push('/subscription');
+      return;
+    }
     final isInsufficient =
         genState.errorType == NarrationGenerationErrorType.insufficientSource;
     final title = isInsufficient

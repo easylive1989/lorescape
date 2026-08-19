@@ -33,6 +33,7 @@ class SettingsScreen extends ConsumerWidget {
                     style: Theme.of(context).textTheme.displayLarge,
                   ),
                 ),
+                const _UpgradeCard(),
                 const _PreferencesGroup(),
                 const SizedBox(height: 26),
                 const _AccountGroup(),
@@ -57,6 +58,61 @@ class SettingsScreen extends ConsumerWidget {
 // ============================================================================
 // Setting groups
 // ============================================================================
+
+/// 深色升級卡：設定清單最上方的付費牆入口（設計稿 `.upgrade`）。
+class _UpgradeCard extends StatelessWidget {
+  const _UpgradeCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(22, 16, 22, 8),
+      child: Material(
+        key: const Key('settings-upgrade-card'),
+        color: tokens.inkBg,
+        borderRadius: BorderRadius.circular(18),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => context.push('/subscription'),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            child: Row(
+              children: [
+                Icon(Icons.diamond_outlined, size: 30, color: tokens.claySoft),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'subscription.upgrade_title'.tr(),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: tokens.onDark,
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'subscription.upgrade_subtitle'.tr(),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: tokens.onDark2),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right, size: 22, color: tokens.onDark2),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _PreferencesGroup extends ConsumerWidget {
   const _PreferencesGroup();

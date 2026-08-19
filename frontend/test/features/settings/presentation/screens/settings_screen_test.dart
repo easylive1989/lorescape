@@ -32,7 +32,7 @@ void main() {
 
       _thenPreferencesSectionIsVisible();
       _thenUsageSectionIsHidden();
-      // 付費牆已暫時移除（ADR 0006）：設定頁不再有任何訂閱入口。
+      // 付費牆回來後改用升級卡（見另一個測試），不是這兩個舊 banner key。
       expect(find.text('subscription.upgrade_banner_title'), findsNothing);
       expect(find.text('subscription.premium_banner_title'), findsNothing);
     });
@@ -131,6 +131,14 @@ void main() {
 
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getBool('sync_enabled'), isTrue);
+    });
+
+    testWidgets('given the settings screen is shown, '
+        'when looking at the top of the list, '
+        'then the upgrade card is present', (tester) async {
+      await _givenSettingsScreen(tester);
+
+      expect(find.byKey(const Key('settings-upgrade-card')), findsOneWidget);
     });
 
     testWidgets('given the settings screen pushed from home, '

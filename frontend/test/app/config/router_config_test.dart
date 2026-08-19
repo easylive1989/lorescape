@@ -57,4 +57,10 @@ void main() {
     expect(paths, isNot(contains('/daily-story/detail')));
     expect(paths, isNot(contains('/:locale/story/:date')));
   });
+
+  test('given the paywall is back, '
+      'when listing the router top-level routes, '
+      'then /subscription is registered', () {
+    expect(_routePaths(), contains('/subscription'));
+  });
 }

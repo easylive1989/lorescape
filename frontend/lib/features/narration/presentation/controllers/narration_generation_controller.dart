@@ -59,8 +59,8 @@ enum NarrationGenerationErrorType {
   insufficientSource,
 
   /// Backend returned 402 — the free daily quota is exhausted. The paywall
-  /// is temporarily removed (ADR 0006) and the backend no longer returns
-  /// 402, but this type is kept in case a future paywall reuses it.
+  /// is back (see the `/subscription` route), so this navigates the user
+  /// there instead of showing an error dialog.
   quotaExceeded,
   unknown;
 
