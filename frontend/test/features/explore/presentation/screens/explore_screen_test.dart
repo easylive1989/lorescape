@@ -1,4 +1,3 @@
-import 'package:context_app/features/daily_story/providers.dart';
 import 'package:context_app/features/explore/domain/errors/location_error.dart';
 import 'package:context_app/features/explore/domain/models/place.dart';
 import 'package:context_app/features/explore/domain/models/place_location.dart';
@@ -13,7 +12,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../fakes/fake_location_service.dart';
 import '../../../../fakes/fake_places_repository.dart';
-import '../../../../fakes/in_memory_daily_story_repository.dart';
 import '../../../../helpers/fake_map_style.dart';
 import '../../../../helpers/pump_app.dart';
 import '../../../../helpers/test_data.dart';
@@ -502,9 +500,6 @@ void main() {
                 ),
               ),
               placesRepositoryProvider.overrideWithValue(repo),
-              dailyStoryRepositoryProvider.overrideWithValue(
-                InMemoryDailyStoryRepository(),
-              ),
               ...fakeMapStyleOverrides(),
             ],
           );
@@ -571,9 +566,6 @@ Future<void> _givenExploreScreen(
       placesRepositoryProvider.overrideWithValue(
         repo ?? FakePlacesRepository(nearbyPlaces: places),
       ),
-      dailyStoryRepositoryProvider.overrideWithValue(
-        InMemoryDailyStoryRepository(),
-      ),
       ...fakeMapStyleOverrides(),
     ],
   );
@@ -609,9 +601,6 @@ Future<void> _givenExploreScreenWithRouter(
       locationServiceProvider.overrideWithValue(FakeLocationService()),
       placesRepositoryProvider.overrideWithValue(
         FakePlacesRepository(nearbyPlaces: places),
-      ),
-      dailyStoryRepositoryProvider.overrideWithValue(
-        InMemoryDailyStoryRepository(),
       ),
       ...fakeMapStyleOverrides(),
     ],

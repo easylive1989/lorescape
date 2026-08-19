@@ -17,9 +17,6 @@ import 'package:context_app/features/splash/presentation/splash_screen.dart';
 import 'package:context_app/features/trip/presentation/screens/trip_detail_screen.dart';
 import 'package:context_app/features/trip/presentation/screens/trip_edit_screen.dart';
 import 'package:context_app/features/trip/presentation/screens/trip_list_screen.dart';
-import 'package:context_app/features/daily_story/domain/models/daily_story.dart';
-import 'package:context_app/features/daily_story/presentation/screens/daily_story_detail_screen.dart';
-import 'package:context_app/features/daily_story/presentation/screens/story_deep_link_screen.dart';
 import 'package:context_app/shared/widgets/redirect_to_home.dart';
 
 class RouterConfig {
@@ -138,22 +135,6 @@ class RouterConfig {
               autoPlay: autoPlay,
             );
           },
-        ),
-        GoRoute(
-          path: '/daily-story/detail',
-          name: 'daily_story_detail',
-          builder: (context, state) {
-            final story = state.extra as DailyStory;
-            return DailyStoryDetailScreen(story: story);
-          },
-        ),
-        GoRoute(
-          path: '/:locale/story/:date',
-          name: 'story_deep_link',
-          builder: (context, state) => StoryDeepLinkScreen(
-            locale: state.pathParameters['locale']!,
-            date: state.pathParameters['date']!,
-          ),
         ),
         GoRoute(
           path: '/trips',

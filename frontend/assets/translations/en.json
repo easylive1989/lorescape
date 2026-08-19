@@ -16,12 +16,6 @@
   "gps_strong": "GPS Strong",
   "audio_ready": "Audio Ready",
   "current_location": "Current Location",
-  "daily_story": {
-    "detail_era_label": "Era",
-    "detail_location_label": "Location",
-    "more_eyebrow": "Want to know more?",
-    "explore_more": "Explore more stories"
-  },
   "explore_nearby": "Explore Nearby",
   "tap_to_start": "Tap to start AI audio guide",
   "gion_district": "Gion District",

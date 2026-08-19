@@ -7,7 +7,6 @@ void main() {
       test('should map each enum value to its snake_case wire id', () {
         expect(NarrationEventSource.explore.wireName, 'explore');
         expect(NarrationEventSource.journey.wireName, 'journey');
-        expect(NarrationEventSource.dailyStory.wireName, 'daily_story');
         expect(NarrationEventSource.onboarding.wireName, 'onboarding');
       });
 

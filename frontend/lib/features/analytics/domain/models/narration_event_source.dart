@@ -10,9 +10,6 @@ enum NarrationEventSource {
   /// Triggered from the Journey timeline (replaying a saved entry).
   journey,
 
-  /// Triggered from the Daily Story feature.
-  dailyStory,
-
   /// Triggered from the Onboarding welcome carousel demo.
   onboarding;
 
@@ -23,8 +20,6 @@ enum NarrationEventSource {
         return 'explore';
       case NarrationEventSource.journey:
         return 'journey';
-      case NarrationEventSource.dailyStory:
-        return 'daily_story';
       case NarrationEventSource.onboarding:
         return 'onboarding';
     }

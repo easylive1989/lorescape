@@ -3,14 +3,12 @@
 // untested. These tests pin the user-visible fallback for each entry
 // point so a regression doesn't ship the app stuck on a blank screen.
 
-import 'package:context_app/features/daily_story/providers.dart';
 import 'package:context_app/features/explore/presentation/screens/explore_screen.dart';
 import 'package:context_app/features/explore/providers.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../fakes/fake_location_service.dart';
 import '../fakes/fake_places_repository.dart';
-import '../fakes/in_memory_daily_story_repository.dart';
 import '../helpers/pump_app.dart';
 
 void main() {
@@ -35,9 +33,6 @@ void main() {
             ),
             placesRepositoryProvider.overrideWithValue(
               FakePlacesRepository(nearbyPlaces: const []),
-            ),
-            dailyStoryRepositoryProvider.overrideWithValue(
-              InMemoryDailyStoryRepository(),
             ),
           ],
         );

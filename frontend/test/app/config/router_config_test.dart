@@ -49,4 +49,12 @@ void main() {
       ]),
     );
   });
+
+  test('given the daily story feature is gone from the app, '
+      'when listing the router top-level routes, '
+      'then neither the detail route nor the story deep link is registered', () {
+    final paths = _routePaths();
+    expect(paths, isNot(contains('/daily-story/detail')));
+    expect(paths, isNot(contains('/:locale/story/:date')));
+  });
 }
