@@ -200,6 +200,43 @@ void main() {
       expect(pushed.single, equals('uncategorized'));
     });
 
+    testWidgets('given a 667pt tall screen, '
+        'when the shelf screen renders, '
+        'then the globe shrinks instead of painting over the shelf', (
+      tester,
+    ) async {
+      // iPhone SE / 8 的尺寸類別。設計稿的 128 ＋ 300 ＋ 322 需要 750pt，
+      // 這裡只有 667——地球儀必須跟著縮，不能照畫 300 直徑壓到書架上。
+      tester.view.physicalSize = const Size(375 * 3, 667 * 3);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+
+      await _givenJourneyScreen(
+        tester,
+        seededTrips: [buildTrip(id: 't1', name: '義大利')],
+        seededJourneys: [
+          journeyEntryWithCoords(tripId: 't1', lat: 40.7497, lng: 14.4869),
+        ],
+      );
+
+      final canvas = tester.getRect(find.byKey(GlobeView.canvasKey));
+      // 畫布被壓扁時圓不會跟著扁——GlobePainter 拿 `size.width / 2 - 3` 當
+      // 半徑、`size` 的正中心當圓心，所以半徑仍由「寬」決定，圓會畫到畫布
+      // 外面。這裡照它的公式算真正畫出來的下緣，而不是量畫布的邊界。
+      final paintedBottom = canvas.top + canvas.height / 2 + canvas.width / 2 - 3;
+
+      expect(
+        paintedBottom,
+        lessThanOrEqualTo(tester.getRect(find.byType(TripBookshelf)).top),
+        reason: '地球儀畫出來的下緣不能蓋到書架上',
+      );
+      expect(
+        canvas.width,
+        canvas.height,
+        reason: '地球是圓的，畫布被壓成長方形就代表圓已經溢出畫布',
+      );
+    });
+
     testWidgets('given a selected volume, when the shelf loads, '
         'then the hint below the shelf tells the user to tap again', (
       tester,

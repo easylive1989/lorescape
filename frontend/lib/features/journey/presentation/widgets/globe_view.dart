@@ -157,15 +157,26 @@ class _GlobeViewState extends State<GlobeView>
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // 螢幕比預設的 344pt 窄時（320pt 裝置、或開了「顯示縮放」的
-        // iPhone），外層給的是 loose constraints，SizedBox 會被壓小；如果
+        // 外層給的空間比 widget.size 小時（320pt 窄螢幕、開了「顯示縮放」的
+        // iPhone，或 667pt 矮螢幕上被書架擠掉高度），SizedBox 會被壓小；如果
         // 投影只用 widget.size 算 focus marker 的位置，就會跟畫布實際尺寸
         // 脫鉤——marker 用 344 的基準，painter 卻畫在更小的圓上，選中的
         // pin 會偏離陸地。這裡把投影、CustomPaint、SizedBox 都夾到同一個
         // 有效尺寸，確保三者永遠算的是同一顆球。
-        final effectiveSize = constraints.hasBoundedWidth
-            ? math.min(widget.size, constraints.maxWidth)
-            : widget.size;
+        //
+        // 寬與高都要夾。只夾寬的話，矮螢幕上畫布會被壓成長方形，而
+        // GlobePainter 的半徑是由**寬**算的（`size.width / 2 - 3`），圓就會
+        // 畫到畫布外面、蓋到底下的內容上——高度方向沒有任何東西會裁掉它。
+        var effectiveSize = widget.size;
+        if (constraints.hasBoundedWidth) {
+          effectiveSize = math.min(effectiveSize, constraints.maxWidth);
+        }
+        if (constraints.hasBoundedHeight) {
+          effectiveSize = math.min(effectiveSize, constraints.maxHeight);
+        }
+        // 空間被壓到 0 以下時（橫向、或極端的顯示縮放）畫不出球，但半徑不能
+        // 變成負數。
+        effectiveSize = math.max(0, effectiveSize);
 
         final projection = OrthographicProjection(
           rotation: _rotation,

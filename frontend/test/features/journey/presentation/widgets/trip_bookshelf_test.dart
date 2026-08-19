@@ -14,10 +14,17 @@ void main() {
       (tester) async {
         await _givenBookshelf(tester, bookCount: 9);
 
+        final rows = _thenBooksGroupedByRow(tester, bookCount: 9);
         expect(
-          _thenBooksGroupedByRow(tester, bookCount: 9),
+          rows,
           hasLength(1),
           reason: 'v3 的書架只有一層，放不下就橫捲，不再往下長第二層',
+        );
+        expect(
+          rows.values.single,
+          hasLength(9),
+          reason: '九本都要在那一層上——少了幾本同樣只會量到一個 dy，'
+              '不把本數釘住的話「只有一層」這個斷言就形同虛設',
         );
         expect(_horizontalScrollable(), findsOneWidget);
       },

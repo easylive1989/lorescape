@@ -102,7 +102,16 @@ class _ShelfHeader extends StatelessWidget {
     final tokens = context.tokens;
     return Row(
       children: [
-        Text(caption, style: TripBookshelf._captionStyle(context)),
+        // 可縮：窄螢幕配上長標（翻譯後字數多的語系）時，該讓路的是小標，
+        // 不是右邊那顆按鈕。沒有 Flexible 的話整條 Row 會直接爆版。
+        Flexible(
+          child: Text(
+            caption,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TripBookshelf._captionStyle(context),
+          ),
+        ),
         Expanded(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10),
