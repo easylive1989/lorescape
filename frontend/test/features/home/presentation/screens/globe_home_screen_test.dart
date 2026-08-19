@@ -235,9 +235,9 @@ void main() {
     expect(pushed, ['/map?q=']);
   });
 
-  testWidgets('given the bookshelf feature is hidden, '
-      'when the globe home renders its top bar, '
-      'then no shelf button is offered', (tester) async {
+  testWidgets('given the bookshelf is part of the product again, '
+      'when the globe home screen renders, '
+      'then the shelf button is offered', (tester) async {
     final pushed = <Object?>[];
     await _givenHome(tester, pushed: pushed);
 
