@@ -213,6 +213,9 @@ class _Shelf extends StatelessWidget {
                           height: TripBookshelf
                               ._heights[i % TripBookshelf._heights.length],
                           palette: _BookPalette.values[i % 4],
+                          // 只有一本書時不抽高：沒有對照組，抽高只會讓它
+                          // 看起來浮在層板上方。
+                          showLift: books[i].isSelected && books.length > 1,
                         ),
                       ],
                     ],
@@ -328,11 +331,19 @@ class _Book extends StatelessWidget {
     required this.book,
     required this.height,
     required this.palette,
+    required this.showLift,
   });
 
   final ShelfBook book;
   final double height;
   final _BookPalette palette;
+
+  /// 要不要畫「被選中而抽高」的效果。
+  ///
+  /// 跟 [ShelfBook.isSelected] 分開是因為書架只有一本書時，選中沒有對照組
+  /// ——抽高傳達不了「這本是選的」，只會讓唯一那本書看起來浮在層板上方。
+  /// 無障礙的選中狀態仍照 [ShelfBook.isSelected] 回報，不受這個影響。
+  final bool showLift;
 
   static const double _width = 54;
   static const Color _gilt = Color(0xFFF6E6C2);
@@ -359,13 +370,11 @@ class _Book extends StatelessWidget {
         // 抽高與傾斜都用 Transform 系的隱式動畫：它們不佔版面，同排其他書
         // 才不會被選中的那本推來推去。上方的空間由 _Shelf._liftHeadroom 留。
         child: AnimatedSlide(
-          offset: book.isSelected
-              ? Offset(0, -_liftDistance / height)
-              : Offset.zero,
+          offset: showLift ? Offset(0, -_liftDistance / height) : Offset.zero,
           duration: _liftDuration,
           curve: _liftCurve,
           child: AnimatedRotation(
-            turns: book.isSelected ? _liftTurns : 0,
+            turns: showLift ? _liftTurns : 0,
             duration: _liftDuration,
             curve: _liftCurve,
             child: Container(

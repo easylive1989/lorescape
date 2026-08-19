@@ -102,6 +102,20 @@ void main() {
     );
 
     testWidgets(
+      'given the shelf holds only one book, when it is the selected one, '
+      'then it still sits flat on the plank instead of being lifted',
+      (tester) async {
+        await _givenBookshelf(tester, bookCount: 1, selectedIndex: 0);
+        await tester.pumpAndSettle();
+
+        // 只有一本書時抽高傳達不了「這本是選的」，只會讓它浮在層板上方。
+        // 書是靠底部對齊的，所以沒抽高就等於書底貼齊捲動區底緣。
+        final shelfBottom = tester.getRect(_horizontalScrollable()).bottom;
+        expect(_spineRect(tester, '#0').bottom, closeTo(shelfBottom, 0.5));
+      },
+    );
+
+    testWidgets(
       'given the tallest book is the selected one, when it is lifted, '
       'then its head is not clipped by the scrolling shelf',
       (tester) async {
