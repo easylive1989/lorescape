@@ -72,7 +72,9 @@ class _UpgradeCard extends ConsumerWidget {
     final isPremium = ref.watch(isPremiumProvider);
     final tokens = context.tokens;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(22, 16, 22, 8),
+      // 左右不再自己加內距——外層 ListView 已經有 20，再疊上去會比下方各
+      // 區塊的卡片窄一圈。下方留 26，跟其他區塊之間的間距一致。
+      padding: const EdgeInsets.only(top: 16, bottom: 26),
       child: Material(
         key: const Key('settings-upgrade-card'),
         color: tokens.inkBg,

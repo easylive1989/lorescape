@@ -151,13 +151,15 @@ class _Shelf extends StatelessWidget {
 
   final List<ShelfBook> books;
 
-  /// 書排的最小高度（設計稿的 `min-height:172px`）：書都很矮或一本都沒有
-  /// 時，凹槽也不能塌下去。
+  /// 書排本身的最小高度：書都很矮或一本都沒有時，凹槽也不能塌下去。
   ///
-  /// 有書的時候實際高度是 `_liftHeadroom + 168 = 184`，比設計稿的 172 多 12。
-  /// 這是刻意的，別「修正」回 172：設計稿的 172 沒有替抽高的那本書留位置，
-  /// 見 [_liftHeadroom]。
-  static const double _rowMinHeight = 172;
+  /// 這個值套在 Row 上，**不含**上方的 [_liftHeadroom]，所以是設計稿的
+  /// `min-height:172px` 扣掉那段留白。連同留白算進去之後，一本矮書時整區
+  /// 仍是 172、有最高的書時是 `_liftHeadroom + 168 = 184`——跟設計稿一致。
+  ///
+  /// 別把它加回 172：那會讓整區多出 16，667pt 機型的地球儀就會壓到書架
+  /// （`journey_screen_test` 有一條測試釘住這件事）。
+  static const double _rowMinHeight = 172 - _liftHeadroom;
 
   /// 書排上方留給「選中的書被抽高」的空間。
   ///
@@ -183,17 +185,24 @@ class _Shelf extends StatelessWidget {
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            // stretch 讓捲動區撐滿整個書架寬度。用預設的 center 的話，
+            // ConstrainedBox 只給了 minHeight、寬度會 shrink-wrap 成書本身的
+            // 寬度，書少的時候整排就被推到正中央，而不是靠左立在架上。
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: _rowMinHeight),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.fromLTRB(
-                    TripBookshelf._rowPadding,
-                    _liftHeadroom,
-                    TripBookshelf._rowPadding,
-                    0,
-                  ),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.fromLTRB(
+                  TripBookshelf._rowPadding,
+                  _liftHeadroom,
+                  TripBookshelf._rowPadding,
+                  0,
+                ),
+                // minHeight 要套在 Row 上而不是捲動區外面：套在外面時，內容
+                // 不足 _rowMinHeight 的差額會補在下方，書就浮在層板上方；套在
+                // Row 上則由 CrossAxisAlignment.end 把書壓到底，貼著層板。
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: _rowMinHeight),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
