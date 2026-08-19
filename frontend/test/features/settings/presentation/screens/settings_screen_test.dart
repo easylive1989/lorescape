@@ -26,15 +26,13 @@ void main() {
 
   group('SettingsScreen', () {
     testWidgets('given the screen loads, '
-        'then preferences are visible and there is no upgrade banner or '
-        'daily-usage section', (tester) async {
+        'then preferences are visible and there is no daily-usage section', (
+      tester,
+    ) async {
       await _givenSettingsScreen(tester);
 
       _thenPreferencesSectionIsVisible();
       _thenUsageSectionIsHidden();
-      // 付費牆回來後改用升級卡（見另一個測試），不是這兩個舊 banner key。
-      expect(find.text('subscription.upgrade_banner_title'), findsNothing);
-      expect(find.text('subscription.premium_banner_title'), findsNothing);
     });
 
     testWidgets('given the settings screen, '

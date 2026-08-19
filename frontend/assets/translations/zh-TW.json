@@ -329,12 +329,9 @@
     "terms": "服務條款",
     "privacy": "隱私權政策",
     "upgrade_cta": "升級 Premium",
-    "upgrade_banner_title": "解鎖無盡旅程",
-    "upgrade_banner_subtitle": "升級高級會員 · 無限導覽與路線規劃",
     "upgrade_title": "解鎖無盡旅程",
     "upgrade_subtitle": "升級高級會員 · 無限導覽與路線規劃",
     "premium_active": "Premium 會員",
-    "premium_banner_title": "已解鎖無盡旅程",
     "expires": "到期日：{date}",
     "no_purchases_found": "找不到先前的購買紀錄",
     "login_required": "請先登入以訂閱"
