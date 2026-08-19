@@ -105,3 +105,28 @@ filter 與 iOS Share Extension 的啟用規則也都關著。所以這次刪除�
   響。
 - 相關 spec：`docs/superpowers/specs/2026-08-19-redesign-v3-design.md` 第
   一、二節。
+
+### GA4 screen name 的語意變動（發版日記得標註）
+
+上一節提到的導覽重構還有一個真正會影響數據、但兩份 ADR 都沒寫的變化：
+`app/config/router_config.dart` 的 `/` route。
+
+改版前，`/`（route name `home`）是地球儀首頁；探索地圖是獨立的 `/map`
+（name `map`）。改版後 `/` 直接就是探索地圖，`home/` 整包移除，`/map`
+這個路徑也不再存在——地球儀搬進 `features/journey/`（書架頁釘旅程停
+點），不再是可獨立導航到的畫面。
+
+`FirebaseAnalyticsObserver`（`routeObserversProvider`）用 route settings
+的 `name` 餵 `screen_view`，所以：
+
+- 發版日前後，GA4 上同一個 screen name `home` 代表兩個完全不同的畫面
+  （地球儀 → 探索地圖）。任何讀這個漏斗或序列的分析（含
+  `data/metrics` 累積的 CSV）跨過發版日會把兩者接在一起，等於憑空接
+  上一段不連續的資料。
+- `map` 這個 screen name 從發版日起不會再出現。不是流量掉到 0，是這個
+  名字本身消失了；解讀時不能誤判為「探索地圖沒人用了」。
+
+**這不是程式問題，純粹是數據解讀要注意**：拉跨越發版日的 `home` /
+`map` screen_view 序列時，先確認發版日期、把發版前後當成兩段不同定義
+的資料處理，必要時在 `data/metrics` 對應資料列旁加註記。不建議事後改
+route name 去「修正」歷史語意——那只會讓已經產生的 GA4 事件更難對齊。
