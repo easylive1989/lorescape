@@ -5,7 +5,6 @@ import 'package:context_app/features/explore/domain/models/place_location.dart';
 import 'package:context_app/features/explore/presentation/screens/explore_screen.dart';
 import 'package:context_app/features/explore/presentation/widgets/place_map_pin.dart';
 import 'package:context_app/features/explore/providers.dart';
-import 'package:context_app/features/saved_locations/providers.dart';
 import 'package:context_app/shared/widgets/journal/masthead.dart';
 import 'package:context_app/shared/widgets/journal/search_loader.dart';
 import 'package:flutter/material.dart';
@@ -15,7 +14,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../fakes/fake_location_service.dart';
 import '../../../../fakes/fake_places_repository.dart';
 import '../../../../fakes/in_memory_daily_story_repository.dart';
-import '../../../../fakes/in_memory_saved_locations_repository.dart';
 import '../../../../helpers/fake_map_style.dart';
 import '../../../../helpers/pump_app.dart';
 import '../../../../helpers/test_data.dart';
@@ -198,17 +196,13 @@ void main() {
     });
 
     testWidgets(
-      'given the top icon row, '
+      'given the explore screen, '
       'when the screen renders, '
-      'then saved locations sits there and the globe is the bottom-right FAB',
+      'then the globe is the bottom-right FAB',
       (tester) async {
         await _givenExploreScreen(tester);
 
-        // 儲存與地球對調：地球是這頁的主要出口，佔右下角 FAB；儲存收進頂部。
-        expect(
-          find.byKey(const Key('explore-saved-locations')),
-          findsOneWidget,
-        );
+        // 地球是這頁的主要出口，佔右下角 FAB。
         expect(find.byType(FloatingActionButton), findsOneWidget);
         expect(
           tester
@@ -247,28 +241,6 @@ void main() {
       expect(repo.nearbyCallCount, greaterThan(before));
       expect(repo.lastNearbyCenter, isNotNull);
     });
-
-    testWidgets(
-      'given an unsaved place card, when the user taps the bookmark icon, '
-      'then the card shows the filled bookmark and the repo records the save',
-      (tester) async {
-        final savedRepo = InMemorySavedLocationsRepository();
-
-        await _givenExploreScreen(
-          tester,
-          places: [buildPlace(id: 'p1', name: 'Senso-ji')],
-          savedRepo: savedRepo,
-        );
-
-        expect(find.byIcon(Icons.bookmark_border), findsOneWidget);
-
-        await tester.tap(find.byIcon(Icons.bookmark_border));
-        await tester.pumpAndSettle();
-
-        expect(find.byIcon(Icons.bookmark), findsAtLeastNWidgets(1));
-        expect(await savedRepo.isSaved('p1'), isTrue);
-      },
-    );
 
     testWidgets(
       'given a place card under a router, when the go button is tapped, '
@@ -537,9 +509,6 @@ void main() {
                 ),
               ),
               placesRepositoryProvider.overrideWithValue(repo),
-              savedLocationsRepositoryProvider.overrideWithValue(
-                InMemorySavedLocationsRepository(),
-              ),
               dailyStoryRepositoryProvider.overrideWithValue(
                 InMemoryDailyStoryRepository(),
               ),
@@ -626,7 +595,6 @@ Future<void> _givenExploreScreen(
   WidgetTester tester, {
   List<Place> places = const [],
   FakePlacesRepository? repo,
-  InMemorySavedLocationsRepository? savedRepo,
   PlaceLocation? userLocation,
   FakeLocationService? locationService,
   String? initialQuery,
@@ -645,9 +613,6 @@ Future<void> _givenExploreScreen(
       locationServiceProvider.overrideWithValue(fakeLocation),
       placesRepositoryProvider.overrideWithValue(
         repo ?? FakePlacesRepository(nearbyPlaces: places),
-      ),
-      savedLocationsRepositoryProvider.overrideWithValue(
-        savedRepo ?? InMemorySavedLocationsRepository(),
       ),
       dailyStoryRepositoryProvider.overrideWithValue(
         InMemoryDailyStoryRepository(),
@@ -688,9 +653,6 @@ Future<void> _givenExploreScreenWithRouter(
       placesRepositoryProvider.overrideWithValue(
         FakePlacesRepository(nearbyPlaces: places),
       ),
-      savedLocationsRepositoryProvider.overrideWithValue(
-        InMemorySavedLocationsRepository(),
-      ),
       dailyStoryRepositoryProvider.overrideWithValue(
         InMemoryDailyStoryRepository(),
       ),
@@ -718,9 +680,6 @@ Future<void> _givenExploreScreenPushedOnMap(WidgetTester tester) async {
     overrides: [
       locationServiceProvider.overrideWithValue(FakeLocationService()),
       placesRepositoryProvider.overrideWithValue(FakePlacesRepository()),
-      savedLocationsRepositoryProvider.overrideWithValue(
-        InMemorySavedLocationsRepository(),
-      ),
       dailyStoryRepositoryProvider.overrideWithValue(
         InMemoryDailyStoryRepository(),
       ),
@@ -751,9 +710,6 @@ Future<void> _givenExploreScreenReplacedHomeWithMap(WidgetTester tester) async {
     overrides: [
       locationServiceProvider.overrideWithValue(FakeLocationService()),
       placesRepositoryProvider.overrideWithValue(FakePlacesRepository()),
-      savedLocationsRepositoryProvider.overrideWithValue(
-        InMemorySavedLocationsRepository(),
-      ),
       dailyStoryRepositoryProvider.overrideWithValue(
         InMemoryDailyStoryRepository(),
       ),

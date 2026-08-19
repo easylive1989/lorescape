@@ -8,10 +8,6 @@ void main() {
         expect(NarrationEventSource.explore.wireName, 'explore');
         expect(NarrationEventSource.journey.wireName, 'journey');
         expect(NarrationEventSource.dailyStory.wireName, 'daily_story');
-        expect(
-          NarrationEventSource.savedLocations.wireName,
-          'saved_locations',
-        );
         expect(NarrationEventSource.onboarding.wireName, 'onboarding');
       });
 

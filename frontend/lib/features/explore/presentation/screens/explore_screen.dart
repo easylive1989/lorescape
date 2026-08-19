@@ -8,7 +8,6 @@ import 'package:context_app/features/explore/domain/models/place_location.dart';
 import 'package:context_app/features/explore/presentation/widgets/lorescape_map.dart';
 import 'package:context_app/features/explore/presentation/widgets/place_map_pin.dart';
 import 'package:context_app/features/explore/providers.dart';
-import 'package:context_app/features/saved_locations/providers.dart';
 import 'package:context_app/features/settings/providers.dart';
 import 'package:context_app/shared/widgets/journal/category_tag.dart';
 import 'package:context_app/shared/widgets/journal/glyph_thumb.dart';
@@ -457,38 +456,6 @@ class _PlaceThumb extends StatelessWidget {
   );
 }
 
-class _BookmarkButton extends StatelessWidget {
-  final bool isSaved;
-  final VoidCallback onTap;
-
-  const _BookmarkButton({required this.isSaved, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final tokens = Theme.of(context).extension<LorescapeTokens>();
-    final restColor = tokens?.ink3 ?? colorScheme.onSurfaceVariant;
-
-    return PressScale(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.all(6),
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          transitionBuilder: (child, animation) =>
-              ScaleTransition(scale: animation, child: child),
-          child: Icon(
-            isSaved ? Icons.bookmark : Icons.bookmark_border,
-            key: ValueKey(isSaved),
-            color: isSaved ? colorScheme.primary : restColor,
-            size: 24,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// 浮在地圖上方的標題區，對應設計稿的 `.map-top`：紙色漸層讓底下的地圖不會
 /// 干擾文字，但只有實際控制項吃得到觸控（`pointer-events` 的等價作法）。
 class _MapTopOverlay extends StatelessWidget {
@@ -554,14 +521,7 @@ class _MapTopOverlay extends StatelessWidget {
                   title: 'explore.title'.tr(),
                   // 地圖上不畫分隔線，靠漸層與底圖分隔。
                   showRule: false,
-                  actions: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const SavedLocationsButton(),
-                      const SizedBox(width: 8),
-                      _RefreshButton(onPressed: onRefresh),
-                    ],
-                  ),
+                  actions: _RefreshButton(onPressed: onRefresh),
                 ),
                 const SizedBox(height: 12),
                 Padding(
@@ -755,7 +715,7 @@ class _LocationGateCard extends ConsumerWidget {
 }
 
 /// 單張地點卡（`.map-card`）：252px 寬、紙色浮起、縮圖＋名稱＋分類標籤＋前往鈕。
-class _MapCard extends ConsumerWidget {
+class _MapCard extends StatelessWidget {
   const _MapCard({required this.place, required this.onTap});
 
   final Place place;
@@ -764,13 +724,10 @@ class _MapCard extends ConsumerWidget {
   static const double _width = 252;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final tokens = Theme.of(context).extension<LorescapeTokens>();
     final colorScheme = Theme.of(context).colorScheme;
     final radius = context.tokens.rLg;
-    final savedLocations = ref.watch(savedLocationsProvider);
-    final isSaved =
-        savedLocations.valueOrNull?.any((e) => e.placeId == place.id) ?? false;
 
     return PressScale(
       onTap: onTap,
@@ -785,31 +742,7 @@ class _MapCard extends ConsumerWidget {
         ),
         child: Row(
           children: [
-            // 書籤疊在縮圖角落。設計稿的 map-card 沒有書籤，但這是全 App 唯一
-            // 能收藏地點的入口，照抄會把功能弄丟；壓在縮圖上才不會擠掉名稱。
-            Stack(
-              children: [
-                _PlaceThumb(place: place),
-                Positioned(
-                  top: -8,
-                  right: -8,
-                  // 紙色底盤：書籤壓在照片上時，深色圖示在深色照片上幾乎看不見。
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: context.tokens.paperRaised.withValues(alpha: 0.92),
-                      shape: BoxShape.circle,
-                      boxShadow: context.tokens.e1,
-                    ),
-                    child: _BookmarkButton(
-                      isSaved: isSaved,
-                      onTap: () => ref
-                          .read(savedLocationsProvider.notifier)
-                          .togglePlace(place),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            _PlaceThumb(place: place),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

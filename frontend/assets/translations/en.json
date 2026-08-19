@@ -343,18 +343,8 @@
   },
   "shared_place": {
     "loading": "Loading shared place...",
-    "saved": "\"{}\" saved to your locations",
     "error": "Could not load the shared place. Please try again.",
     "not_found": "Shared place not found"
-  },
-  "saved_locations": {
-    "title": "Saved Locations",
-    "empty": "No saved locations yet",
-    "empty_hint": "Tap the bookmark icon on a place card to save it",
-    "delete_title": "Remove Location",
-    "delete_message": "Are you sure you want to remove this saved location?",
-    "delete_confirm": "Remove",
-    "cancel": "Cancel"
   },
   "share_card": {
     "share": "Share",
