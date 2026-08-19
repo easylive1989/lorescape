@@ -24,9 +24,12 @@ App 端整包移除：
   的直接目標，但同一批 commit 處理。
 - `app/config/router_config.dart` 的 `/daily-story/detail` 與
   `/:locale/story/:date` 兩條 route。
-- `NarrationEventSource.dailyStory`：這個 enum 以 `name` 持久化到 GA4，成員
-  移除後 GA4 就不會再收到 `daily_story` 這個來源值，但這只影響未來事件，
-  歷史事件不受影響、不需要回填或遷移。
+- `NarrationEventSource.dailyStory`：這個 enum member 移除是死碼清理，不是
+  分析事件變動——`lib/` 裡唯一建構 `NarrationEventSource` 的地方
+  （`features/analytics/presentation/narration_analytics_observer.dart:121`）
+  一直是寫死 `NarrationEventSource.explore`，`dailyStory` 這個成員從沒被
+  用來建構過任何事件，GA4 本來就沒收過 `daily_story` 這個來源值，移除它
+  對線上格式沒有任何影響。
 - i18n 的 `daily_story.*` 相關 key（兩個語系檔）。
 
 deep link 攔截一併撤掉：
@@ -57,8 +60,9 @@ deep link 攔截一併撤掉：
   Hive box 開啟與註冊。
 - 探索頁的 `SavedLocationsButton` 與景點卡上的收藏按鈕。
 - 對應測試（包含 fakes）。
-- `NarrationEventSource.savedLocations`：理由同 `dailyStory`，GA4 停止產生
-  這個來源值，歷史事件不受影響。
+- `NarrationEventSource.savedLocations`：理由同 `dailyStory`——同一個死碼
+  清理，唯一的建構點寫死 `explore`，這個成員從沒上過線，移除不影響 GA4
+  收到的資料。
 
 **刻意保留**：Supabase `saved_locations` 表與其 RLS policy——使用者既有資
 料不刪，表的最終處置（保留供未來復用、或另案清空）留給以後決定，不在本次
@@ -108,8 +112,12 @@ filter 與 iOS Share Extension 的啟用規則也都關著。所以這次刪除�
 
 ### GA4 screen name 的語意變動（發版日記得標註）
 
-上一節提到的導覽重構還有一個真正會影響數據、但兩份 ADR 都沒寫的變化：
-`app/config/router_config.dart` 的 `/` route。
+這份 ADR 對分析事件的說法有兩處要對照著看：上面把
+`NarrationEventSource.dailyStory` / `.savedLocations` 的移除說成會讓 GA4
+「不再收到」這兩個來源值——查過 `lib/` 裡唯一建構 `NarrationEventSource`
+的地方後已訂正：那兩個成員從沒被用來建構過任何事件，移除的是死碼，GA4
+收到的資料本來就不受影響。真正會動到 GA4 資料、卻在原本兩份 ADR 都沒提
+到的變化，是下面這個：`app/config/router_config.dart` 的 `/` route。
 
 改版前，`/`（route name `home`）是地球儀首頁；探索地圖是獨立的 `/map`
 （name `map`）。改版後 `/` 直接就是探索地圖，`home/` 整包移除，`/map`
