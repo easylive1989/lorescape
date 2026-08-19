@@ -3,6 +3,7 @@ import 'package:context_app/features/auth/providers.dart';
 import 'package:context_app/features/onboarding/providers.dart';
 import 'package:context_app/features/settings/presentation/screens/settings_screen.dart';
 import 'package:context_app/features/settings/providers.dart';
+import 'package:context_app/features/subscription/providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -139,6 +140,41 @@ void main() {
       expect(find.byKey(const Key('settings-upgrade-card')), findsOneWidget);
     });
 
+    testWidgets('given a non-subscribed user, when the settings screen loads, '
+        'then the upgrade card pitches going premium and can be tapped', (
+      tester,
+    ) async {
+      await _givenSettingsScreen(tester);
+
+      expect(find.text('subscription.upgrade_title'), findsOneWidget);
+      expect(find.text('subscription.premium_active'), findsNothing);
+      final card = tester.widget<InkWell>(
+        find.descendant(
+          of: find.byKey(const Key('settings-upgrade-card')),
+          matching: find.byType(InkWell),
+        ),
+      );
+      expect(card.onTap, isNotNull);
+    });
+
+    testWidgets('given an already-subscribed user, '
+        'when the settings screen loads, '
+        'then the upgrade card shows the member state instead of the pitch, '
+        'and cannot be tapped back into the paywall', (tester) async {
+      await _givenSettingsScreen(tester, premium: true);
+
+      expect(find.text('subscription.premium_active'), findsOneWidget);
+      expect(find.text('subscription.upgrade_title'), findsNothing);
+      expect(find.text('subscription.upgrade_subtitle'), findsNothing);
+      final card = tester.widget<InkWell>(
+        find.descendant(
+          of: find.byKey(const Key('settings-upgrade-card')),
+          matching: find.byType(InkWell),
+        ),
+      );
+      expect(card.onTap, isNull);
+    });
+
     testWidgets('given the settings screen pushed from home, '
         'when the user taps the back button, '
         'then it returns to the previous screen', (tester) async {
@@ -175,7 +211,10 @@ void main() {
   });
 }
 
-List<Override> _settingsOverrides({FakeAuthService? authService}) {
+List<Override> _settingsOverrides({
+  FakeAuthService? authService,
+  bool premium = false,
+}) {
   final auth = authService ?? FakeAuthService();
 
   return [
@@ -184,12 +223,17 @@ List<Override> _settingsOverrides({FakeAuthService? authService}) {
     onboardingRepositoryProvider.overrideWithValue(
       InMemoryOnboardingRepository(welcomeDone: true),
     ),
+    // 一律 override：不然升級卡的 isPremiumProvider 會沿著
+    // subscriptionStatusProvider 摸到真的 RevenueCat SDK，測試環境沒有平台
+    // 通道，直接炸。
+    isPremiumProvider.overrideWithValue(premium),
   ];
 }
 
 Future<void> _givenSettingsScreen(
   WidgetTester tester, {
   FakeAuthService? authService,
+  bool premium = false,
 }) async {
   await tester.binding.setSurfaceSize(const Size(800, 2000));
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -197,8 +241,9 @@ Future<void> _givenSettingsScreen(
   await pumpScreen(
     tester,
     child: const SettingsScreen(),
-    overrides: _settingsOverrides(authService: authService),
+    overrides: _settingsOverrides(authService: authService, premium: premium),
   );
+  await tester.pump(const Duration(milliseconds: 20));
   await tester.pump(const Duration(milliseconds: 20));
 }
 
