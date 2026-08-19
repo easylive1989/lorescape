@@ -150,7 +150,8 @@
   },
   "explore": {
     "title": "Explore",
-    "back_to_globe": "Back to globe",
+    "open_shelf": "Bookshelf",
+    "open_settings": "Settings",
     "refresh": "Refresh",
     "search_hint": "Search for places, cities, or landmarks…",
     "searching": "Searching places",

@@ -200,6 +200,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             placeCount: places.length,
             searchController: _searchController,
             onRefresh: _searchVisibleArea,
+            onOpenShelf: () => context.push('/journey'),
+            onOpenSettings: () => context.push('/settings'),
             onSearchChanged: (_) => setState(() {}),
             onSearchSubmitted: (value) {
               ref.read(searchQueryProvider.notifier).state = value;
@@ -234,23 +236,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                 ),
               ),
             ),
-          // FAB 疊在卡片列上方。設計稿把 FAB 放在 bottom:96，但那個位置正好
-          // 被卡片列蓋住（實機上直接壓在卡片上），所以改成貼著卡片列往上放。
-          //
-          // 回地球儀是這一頁最主要的出口，所以佔這個最順手的位置；儲存清單
-          // 改收進頂部 icon 列。
-          Positioned(
-            right: 18,
-            bottom:
-                MediaQuery.paddingOf(context).bottom +
-                _MapCardsRail.railBottomGap +
-                _MapCardsRail.railHeight +
-                12,
-            child: _GlobeFab(
-              onPressed: () =>
-                  context.canPop() ? context.pop() : context.go('/'),
-            ),
-          ),
           // 設計稿的 `.search-loader`：搜尋／定位進行中蓋住整頁的置中載入
           // 卡。放在 Stack 最上層（z-index 120 的等價位置），連 FAB 一起蓋。
           if (placesState.isLoading)
@@ -267,6 +252,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
 }
 
 /// Circular 40×40 clay action button, matching the design's clay `.iconbtn`.
+///
+/// `_CircleButton` 沒有 `tooltip` 參數，所以用 `Semantics` 包一層來承載無障礙
+/// 標籤——順便把 [Key] 放在這層，測試才點得到。
 class _RefreshButton extends StatelessWidget {
   final VoidCallback onPressed;
 
@@ -275,38 +263,62 @@ class _RefreshButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return _CircleButton(
-      icon: Icons.refresh,
-      iconColor: colorScheme.onPrimary,
-      background: colorScheme.primary,
-      iconSize: 20,
-      onPressed: onPressed,
+    return Semantics(
+      key: const Key('explore-refresh'),
+      button: true,
+      label: 'explore.refresh'.tr(),
+      child: _CircleButton(
+        icon: Icons.refresh,
+        iconColor: colorScheme.onPrimary,
+        background: colorScheme.primary,
+        iconSize: 20,
+        onPressed: onPressed,
+      ),
     );
   }
 }
 
-/// 從首頁搜尋建議 zoom 進地圖後，用來退回地球儀首頁的返回鈕。
-///
-/// `_CircleButton` 沒有 `tooltip` 參數，所以用 `Semantics` 包一層來承載無障礙
-/// 標籤——順便把 [Key] 放在這層，測試才點得到。
-class _GlobeFab extends StatelessWidget {
-  const _GlobeFab({required this.onPressed});
+class _ShelfButton extends StatelessWidget {
+  const _ShelfButton({required this.onPressed});
 
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return Semantics(
-      key: const Key('explore-globe-back'),
+      key: const Key('explore-open-shelf'),
       button: true,
-      label: 'explore.back_to_globe'.tr(),
-      child: FloatingActionButton(
-        shape: const CircleBorder(),
+      label: 'explore.open_shelf'.tr(),
+      child: _CircleButton(
+        icon: Icons.menu_book_outlined,
+        iconColor: tokens.ink,
+        background: tokens.paperRaised,
+        iconSize: 20,
         onPressed: onPressed,
-        child: Icon(
-          Icons.public,
-          color: Theme.of(context).colorScheme.onPrimary,
-        ),
+      ),
+    );
+  }
+}
+
+class _SettingsButton extends StatelessWidget {
+  const _SettingsButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    return Semantics(
+      key: const Key('explore-open-settings'),
+      button: true,
+      label: 'explore.open_settings'.tr(),
+      child: _CircleButton(
+        icon: Icons.settings_outlined,
+        iconColor: tokens.ink,
+        background: tokens.paperRaised,
+        iconSize: 20,
+        onPressed: onPressed,
       ),
     );
   }
@@ -463,6 +475,8 @@ class _MapTopOverlay extends StatelessWidget {
     required this.placeCount,
     required this.searchController,
     required this.onRefresh,
+    required this.onOpenShelf,
+    required this.onOpenSettings,
     required this.onSearchChanged,
     required this.onSearchSubmitted,
     required this.onSearchClear,
@@ -471,6 +485,8 @@ class _MapTopOverlay extends StatelessWidget {
   final int placeCount;
   final TextEditingController searchController;
   final VoidCallback onRefresh;
+  final VoidCallback onOpenShelf;
+  final VoidCallback onOpenSettings;
   final ValueChanged<String> onSearchChanged;
   final ValueChanged<String> onSearchSubmitted;
   final VoidCallback? onSearchClear;
@@ -521,7 +537,16 @@ class _MapTopOverlay extends StatelessWidget {
                   title: 'explore.title'.tr(),
                   // 地圖上不畫分隔線，靠漸層與底圖分隔。
                   showRule: false,
-                  actions: _RefreshButton(onPressed: onRefresh),
+                  actions: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _ShelfButton(onPressed: onOpenShelf),
+                      const SizedBox(width: 8),
+                      _SettingsButton(onPressed: onOpenSettings),
+                      const SizedBox(width: 8),
+                      _RefreshButton(onPressed: onRefresh),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Padding(

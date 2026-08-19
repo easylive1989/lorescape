@@ -195,23 +195,16 @@ void main() {
       );
     });
 
-    testWidgets(
-      'given the explore screen, '
-      'when the screen renders, '
-      'then the globe is the bottom-right FAB',
-      (tester) async {
-        await _givenExploreScreen(tester);
+    testWidgets('given the explore screen is shown, '
+        'when looking at the top bar, '
+        'then the shelf, settings and refresh buttons are all present',
+        (tester) async {
+      await _givenExploreScreen(tester);
 
-        // 地球是這頁的主要出口，佔右下角 FAB。
-        expect(find.byType(FloatingActionButton), findsOneWidget);
-        expect(
-          tester
-              .widget<FloatingActionButton>(find.byType(FloatingActionButton))
-              .child,
-          isA<Icon>().having((i) => i.icon, 'icon', Icons.public),
-        );
-      },
-    );
+      expect(find.byKey(const Key('explore-open-shelf')), findsOneWidget);
+      expect(find.byKey(const Key('explore-open-settings')), findsOneWidget);
+      expect(find.byKey(const Key('explore-refresh')), findsOneWidget);
+    });
 
     testWidgets('given location permission is denied, '
         'when the user taps refresh, '
@@ -552,42 +545,6 @@ void main() {
       );
     });
 
-    group('globe back button', () {
-      testWidgets('given the explore screen pushed on top of home, '
-          'when the user taps the globe button, '
-          'then it pops back to the globe home', (tester) async {
-        await _givenExploreScreenPushedOnMap(tester);
-
-        // 點擊前先確認探索頁真的在畫面上——首頁的 Scaffold 從頭到尾都
-        // 沒被卸載，光看它還在無法證明 pop 真的發生，必須看探索頁消失。
-        expect(find.byType(ExploreScreen), findsOneWidget);
-
-        await tester.tap(find.byKey(const Key('explore-globe-back')));
-        await tester.pumpAndSettle();
-
-        expect(find.byType(ExploreScreen), findsNothing);
-        expect(find.byKey(const Key('home-screen')), findsOneWidget);
-      });
-
-      testWidgets('given the explore screen reached via go (no back stack), '
-          'when the user taps the globe button, '
-          'then it navigates to the globe home instead of throwing', (
-        tester,
-      ) async {
-        // trip_empty_state 的「去探索」CTA 用 context.go('/map')，把整個
-        // 路由堆疊換成只剩 /map 一頁——這裡重現那個狀態，canPop() 必須是
-        // false，跟 _givenExploreScreenPushedOnMap 的 push 情境不同。
-        await _givenExploreScreenReplacedHomeWithMap(tester);
-
-        expect(find.byType(ExploreScreen), findsOneWidget);
-
-        await tester.tap(find.byKey(const Key('explore-globe-back')));
-        await tester.pumpAndSettle();
-
-        expect(find.byType(ExploreScreen), findsNothing);
-        expect(find.byKey(const Key('home-screen')), findsOneWidget);
-      });
-    });
   });
 }
 
@@ -659,66 +616,6 @@ Future<void> _givenExploreScreenWithRouter(
       ...fakeMapStyleOverrides(),
     ],
   );
-  await tester.pump(const Duration(milliseconds: 20));
-  await tester.pump(const Duration(milliseconds: 20));
-  await tester.pump(const Duration(milliseconds: 20));
-  await settleMapTimers(tester);
-}
-
-/// 從首頁 push 到 `/map` 上的探索頁——地球儀返回鈕測試要有東西可以 pop
-/// 回去，不能像其他測試一樣把 [ExploreScreen] 直接當成初始路由。
-Future<void> _givenExploreScreenPushedOnMap(WidgetTester tester) async {
-  await pumpRouterApp(
-    tester,
-    routes: [
-      GoRoute(
-        path: '/',
-        builder: (_, __) => const Scaffold(key: Key('home-screen')),
-      ),
-      GoRoute(path: '/map', builder: (_, __) => const ExploreScreen()),
-    ],
-    overrides: [
-      locationServiceProvider.overrideWithValue(FakeLocationService()),
-      placesRepositoryProvider.overrideWithValue(FakePlacesRepository()),
-      dailyStoryRepositoryProvider.overrideWithValue(
-        InMemoryDailyStoryRepository(),
-      ),
-      ...fakeMapStyleOverrides(),
-    ],
-  );
-
-  final context = tester.element(find.byKey(const Key('home-screen')));
-  GoRouter.of(context).push('/map');
-  await tester.pump(const Duration(milliseconds: 20));
-  await tester.pump(const Duration(milliseconds: 20));
-  await tester.pump(const Duration(milliseconds: 20));
-  await settleMapTimers(tester);
-}
-
-/// 用 `go('/map')` 把首頁換掉，模擬 `trip_empty_state` 的「去探索」CTA——
-/// 換完之後路由堆疊只剩 `/map`，沒有東西可以 pop 回去。
-Future<void> _givenExploreScreenReplacedHomeWithMap(WidgetTester tester) async {
-  await pumpRouterApp(
-    tester,
-    routes: [
-      GoRoute(
-        path: '/',
-        builder: (_, __) => const Scaffold(key: Key('home-screen')),
-      ),
-      GoRoute(path: '/map', builder: (_, __) => const ExploreScreen()),
-    ],
-    overrides: [
-      locationServiceProvider.overrideWithValue(FakeLocationService()),
-      placesRepositoryProvider.overrideWithValue(FakePlacesRepository()),
-      dailyStoryRepositoryProvider.overrideWithValue(
-        InMemoryDailyStoryRepository(),
-      ),
-      ...fakeMapStyleOverrides(),
-    ],
-  );
-
-  final context = tester.element(find.byKey(const Key('home-screen')));
-  GoRouter.of(context).go('/map');
   await tester.pump(const Duration(milliseconds: 20));
   await tester.pump(const Duration(milliseconds: 20));
   await tester.pump(const Duration(milliseconds: 20));

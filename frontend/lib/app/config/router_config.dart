@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import 'package:context_app/features/analytics/providers.dart';
 import 'package:context_app/features/explore/domain/models/place.dart';
 import 'package:context_app/features/explore/presentation/screens/explore_screen.dart';
-import 'package:context_app/features/home/presentation/screens/globe_home_screen.dart';
 import 'package:context_app/features/journey/presentation/screens/journey_screen.dart';
 import 'package:context_app/features/narration/presentation/screens/select_story_hook_screen.dart';
 import 'package:context_app/features/narration/presentation/screens/narration_screen.dart';
@@ -66,31 +65,11 @@ class RouterConfig {
         GoRoute(
           path: '/',
           name: 'home',
-          // 用 pageBuilder + NoTransitionPage 而不是預設的 builder:——預設
-          // builder: 會產生 MaterialPage（掛 MaterialRouteTransitionMixin），
-          // 而它的 canTransitionTo 只有在下一頁「也是 MaterialPage」或「有
-          // delegatedTransition」時才會接上 secondaryAnimation。/map 是
-          // CustomTransitionPage，兩者都不是，會被直接擋下，secondaryAnimation
-          // 永遠停在 0，地球儀縮放淡出的轉場等於沒接上。NoTransitionPage 本身
-          // 也是 CustomTransitionPage 家族，不會被這個檢查擋掉；首頁幾乎只會
-          // 是初始路徑或 redirect 目的地，本來就不需要自己的進場轉場。
+          // 首頁就是探索地圖。用 NoTransitionPage：首頁幾乎只會是初始路徑
+          // 或 redirect 目的地，不需要自己的進場轉場。
           pageBuilder: (context, state) => NoTransitionPage<void>(
             key: state.pageKey,
-            child: const GlobeHomeScreen(),
-          ),
-        ),
-        GoRoute(
-          path: '/map',
-          name: 'map',
-          // 自訂轉場：首頁那一頁會讀 secondaryAnimation 把地球儀放大淡出，
-          // 這裡只負責讓地圖淡入，兩段動畫共用同一個 640ms 時長才接得起來。
-          pageBuilder: (context, state) => CustomTransitionPage<void>(
-            key: state.pageKey,
-            transitionDuration: const Duration(milliseconds: 640),
-            reverseTransitionDuration: const Duration(milliseconds: 640),
             child: ExploreScreen(initialQuery: state.uri.queryParameters['q']),
-            transitionsBuilder: (context, animation, _, child) =>
-                FadeTransition(opacity: animation, child: child),
           ),
         ),
         GoRoute(

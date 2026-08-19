@@ -151,7 +151,8 @@
   },
   "explore": {
     "title": "探索",
-    "back_to_globe": "回到地球儀",
+    "open_shelf": "旅程書架",
+    "open_settings": "設定",
     "refresh": "重新整理",
     "search_hint": "搜尋地點、城市或地標……",
     "searching": "搜尋地點中",

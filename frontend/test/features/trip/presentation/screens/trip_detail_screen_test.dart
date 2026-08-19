@@ -165,10 +165,15 @@ void main() {
           visitedLocations: visitedLocations,
         );
 
+        final before = visitedLocations.length;
+
         await tester.tap(find.text('trip.empty_cta'));
         await tester.pumpAndSettle();
 
-        expect(visitedLocations, contains('/map'));
+        // 落點是首頁（探索地圖）：初始渲染已經記過一次 '/'，這裡確認 CTA
+        // 之後又重新落在 '/' 一次，不是原本那次殘留的記錄。
+        expect(visitedLocations.length, greaterThan(before));
+        expect(visitedLocations.last, '/');
         // 用 go 而非 push：確認旅程路由被取代，返回堆疊裡沒留下它——若退回
         // push，這裡會變成能 pop。
         final homeContext = tester.element(
@@ -544,15 +549,6 @@ Future<void> _givenTripDetailScreenWithRouter(
               ),
             ),
           );
-        },
-      ),
-      GoRoute(
-        path: '/map',
-        // 探索頁的 stand-in：只需要證明「go 到 /map」真的落點在此，並且
-        // 沒有把旅程頁留在 back stack 上，不需要真正的 ExploreScreen。
-        builder: (_, state) {
-          visitedLocations?.add(state.uri.toString());
-          return const Scaffold(key: ValueKey('home-screen'));
         },
       ),
       GoRoute(
