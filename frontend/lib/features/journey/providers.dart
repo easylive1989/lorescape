@@ -1,10 +1,12 @@
 import 'package:context_app/features/journey/domain/globe/world_outline.dart';
+import 'package:context_app/features/journey/domain/models/globe_pin.dart';
 import 'package:context_app/features/journey/domain/models/journey_entry.dart';
 import 'package:context_app/features/journey/domain/models/journey_item.dart';
 import 'package:context_app/features/journey/domain/repositories/journey_repository.dart';
 import 'package:context_app/features/sync/providers.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:latlong2/latlong.dart';
 
 // Feature 公開介面：trip 詳情頁重用的時間軸元件與手記分享。
 export 'presentation/services/journey_sharing_service.dart';
@@ -34,3 +36,25 @@ final allJourneyItemsProvider = FutureProvider.autoDispose<List<JourneyItem>>((
 final worldOutlineProvider = FutureProvider<WorldOutline>(
   (ref) => WorldOutline.load(rootBundle),
 );
+
+/// 某本旅程的停點，只取有座標的記錄。`tripId` 為 `null` 代表未分類那本。
+///
+/// 舊記錄沒存座標（見 20260819000000 migration），那些就不釘——補 (0,0)
+/// 會在幾內亞灣外海長出一排根本沒去過的點。
+final tripGlobePinsProvider = Provider.family<List<GlobePin>, String?>((
+  ref,
+  tripId,
+) {
+  final entries = ref.watch(myJourneyProvider).valueOrNull ?? const [];
+  return [
+    for (final entry in entries)
+      if (entry.tripId == tripId)
+        if (entry.place.latitude case final lat?)
+          if (entry.place.longitude case final lng?)
+            GlobePin(
+              id: entry.id,
+              coordinate: LatLng(lat, lng),
+              label: entry.place.name,
+            ),
+  ];
+});

@@ -29,7 +29,8 @@ class GlobeView extends StatefulWidget {
   /// 選中那本旅程的停點。
   final List<GlobePin> pins;
 
-  /// 目前對焦的停點。可能不在 [pins] 內（捲到更舊的卡片時）。
+  /// 目前對焦的停點。可能是 null（選中的旅程一個有座標的停點都沒有），也
+  /// 允許不在 [pins] 內——地球儀只負責轉過去，不檢查它屬於哪一本旅程。
   final GlobePin? focus;
 
   /// 點到非選中的釘點時回呼，用來把該釘點切成對焦（地球飛過去）。

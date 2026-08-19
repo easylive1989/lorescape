@@ -91,7 +91,9 @@
       "entry_no": "Note · No.{}",
       "no_photo": "No photo"
     },
-    "bookshelf": "Bookshelf · {} volumes"
+    "shelf_hint": "{} — tap again to open",
+    "shelf_count": "{} journeys",
+    "shelf_new": "New journey"
   },
   "trip": {
     "list_title": "My Trips",

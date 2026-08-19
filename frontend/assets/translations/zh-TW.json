@@ -92,7 +92,9 @@
       "entry_no": "手記 · No.{}",
       "no_photo": "無照片"
     },
-    "bookshelf": "旅程書架 · {} 本"
+    "shelf_hint": "{} — 再點一下打開手記",
+    "shelf_count": "{} 本旅程",
+    "shelf_new": "新旅程"
   },
   "trip": {
     "list_title": "我的旅程",
