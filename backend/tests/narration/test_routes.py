@@ -16,6 +16,10 @@ from lorescape_backend.narration.dependencies import (
     get_narration_cache_repository,
 )
 from lorescape_backend.narration.routes import get_config, router
+from lorescape_backend.subscriptions.dependencies import (
+    get_subscription_repository,
+)
+from lorescape_backend.usage.dependencies import get_usage_repository
 
 
 def _fake_config() -> Config:
@@ -68,9 +72,37 @@ class _FakeNarrationCache:
         self.store[(place_key, language, hook_id)] = result
 
 
+class _FakeSubscriptions:
+    """In-memory stand-in for SubscriptionRepository."""
+
+    def __init__(self, premium: bool = False) -> None:
+        self.premium = premium
+
+    def is_subscribed(self, user_id: str) -> bool:
+        return self.premium
+
+
+class _FakeUsage:
+    """In-memory stand-in for UsageRepository."""
+
+    def __init__(self, used: int = 0) -> None:
+        self.used = used
+        self.consumed = 0
+
+    def used_today(self, user_id: str) -> int:
+        return self.used
+
+    def consume(self, user_id: str) -> int:
+        self.consumed += 1
+        self.used += 1
+        return self.used
+
+
 def _make_app(
     hooks_cache: _FakeHooksCache | None = None,
     narration_cache: _FakeNarrationCache | None = None,
+    subscriptions: _FakeSubscriptions | None = None,
+    usage: _FakeUsage | None = None,
 ) -> FastAPI:
     app = FastAPI()
     app.include_router(router)
@@ -85,6 +117,14 @@ def _make_app(
         lambda: narration_cache
         if narration_cache is not None
         else _FakeNarrationCache()
+    )
+    app.dependency_overrides[get_subscription_repository] = (
+        lambda: subscriptions
+        if subscriptions is not None
+        else _FakeSubscriptions()
+    )
+    app.dependency_overrides[get_usage_repository] = (
+        lambda: usage if usage is not None else _FakeUsage()
     )
     return app
 
@@ -299,6 +339,110 @@ def test_hooks_stay_free_for_unsubscribed_users(gen_hooks):
     )
 
     assert res.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# Daily free quota gate
+# ---------------------------------------------------------------------------
+
+_NARRATION_BODY = {
+    "place_name": "Arles",
+    "location": "Provence",
+    "wikipedia_title": "Arles",
+    "language": "zh-TW",
+    "hook": {"id": "h", "title": "梵谷", "teaser": "444 天"},
+}
+
+
+def _narration_result() -> NarrationResponse:
+    return NarrationResponse(
+        place_name="亞爾",
+        location="法國普羅旺斯",
+        era="十九世紀末",
+        paragraphs=["一", "二", "三"],
+        pull_quote="",
+        insufficient_source=False,
+    )
+
+
+@patch("lorescape_backend.narration.routes.service.generate_narration")
+def test_free_user_first_narration_of_the_day_succeeds_and_consumes(gen):
+    gen.return_value = _narration_result()
+    usage = _FakeUsage(used=0)
+    client = TestClient(_make_app(usage=usage))
+
+    response = client.post("/narration", json=_NARRATION_BODY)
+
+    assert response.status_code == 200
+    assert usage.consumed == 1
+
+
+@patch("lorescape_backend.narration.routes.service.generate_narration")
+def test_free_user_second_narration_of_the_day_is_paywalled(gen):
+    gen.return_value = _narration_result()
+    usage = _FakeUsage(used=1)
+    client = TestClient(_make_app(usage=usage))
+
+    response = client.post("/narration", json=_NARRATION_BODY)
+
+    assert response.status_code == 402
+    assert response.json()["detail"] == "Daily free quota exhausted"
+    # The gate must run before generation — a paywalled call costs nothing.
+    gen.assert_not_called()
+    assert usage.consumed == 0
+
+
+@patch("lorescape_backend.narration.routes.service.generate_narration")
+def test_premium_user_is_never_gated_and_never_counted(gen):
+    gen.return_value = _narration_result()
+    usage = _FakeUsage(used=99)
+    client = TestClient(
+        _make_app(subscriptions=_FakeSubscriptions(premium=True), usage=usage)
+    )
+
+    response = client.post("/narration", json=_NARRATION_BODY)
+
+    assert response.status_code == 200
+    assert usage.consumed == 0
+
+
+@patch("lorescape_backend.narration.routes.service.generate_narration")
+def test_cache_hit_is_still_paywalled_for_an_exhausted_free_user(gen):
+    # Warm the cache with a first call, then a second call by a user who
+    # has already used today's quota must still be paywalled.
+    gen.return_value = _narration_result()
+    cache = _FakeNarrationCache()
+    first = TestClient(_make_app(narration_cache=cache, usage=_FakeUsage(used=0)))
+    assert first.post("/narration", json=_NARRATION_BODY).status_code == 200
+
+    gen.reset_mock()
+    exhausted = _FakeUsage(used=1)
+    second = TestClient(
+        _make_app(narration_cache=cache, usage=exhausted)
+    )
+    response = second.post("/narration", json=_NARRATION_BODY)
+
+    assert response.status_code == 402
+    gen.assert_not_called()
+    assert exhausted.consumed == 0
+
+
+@patch("lorescape_backend.narration.routes.service.generate_narration")
+def test_cache_hit_consumes_quota_for_a_free_user_with_quota_left(gen):
+    gen.return_value = _narration_result()
+    cache = _FakeNarrationCache()
+    first = TestClient(_make_app(narration_cache=cache, usage=_FakeUsage(used=0)))
+    assert first.post("/narration", json=_NARRATION_BODY).status_code == 200
+
+    gen.reset_mock()
+    fresh = _FakeUsage(used=0)
+    second = TestClient(_make_app(narration_cache=cache, usage=fresh))
+    response = second.post("/narration", json=_NARRATION_BODY)
+
+    assert response.status_code == 200
+    # Served from cache — no generation — but the quota is still spent.
+    gen.assert_not_called()
+    assert fresh.consumed == 1
 
 
 # ---------------------------------------------------------------------------
