@@ -46,7 +46,8 @@ class _JourneyScreenState extends ConsumerState<JourneyScreen> {
     final counts =
         ref.watch(tripItemCountsProvider).asData?.value ??
         const <String?, int>{};
-    final volumes = _volumes(asyncTrips.asData?.value ?? const [], counts);
+    final trips = asyncTrips.asData?.value ?? const [];
+    final volumes = _volumes(trips, counts);
     final selectedTripId = _selectedTripIdOf(volumes);
 
     return Scaffold(
@@ -101,7 +102,8 @@ class _JourneyScreenState extends ConsumerState<JourneyScreen> {
                     ),
                   ),
                 ),
-                data: (_) => _buildShelf(context, volumes, selectedTripId),
+                data: (_) =>
+                    _buildShelf(context, volumes, trips.length, selectedTripId),
               ),
             ),
           ),
@@ -114,6 +116,7 @@ class _JourneyScreenState extends ConsumerState<JourneyScreen> {
   Widget _buildShelf(
     BuildContext context,
     List<_Volume> volumes,
+    int tripCount,
     String? selectedTripId,
   ) {
     final matches = volumes.where((volume) => volume.tripId == selectedTripId);
@@ -122,7 +125,9 @@ class _JourneyScreenState extends ConsumerState<JourneyScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         TripBookshelf(
-          caption: 'journey.shelf_count'.tr(args: ['${volumes.length}']),
+          // 架上那本「未分類」不是使用者建的旅程，不算進這個數字；沒有任何
+          // 旅程時要顯示 0，而不是把那本合成書算成 1。
+          caption: 'journey.shelf_count'.plural(tripCount),
           books: [
             for (final volume in volumes)
               ShelfBook(

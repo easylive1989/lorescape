@@ -93,7 +93,11 @@
       "no_photo": "無照片"
     },
     "shelf_hint": "{} — 再點一下打開手記",
-    "shelf_count": "{} 本旅程",
+    "shelf_count": {
+      "zero": "{} 本旅程",
+      "one": "{} 本旅程",
+      "other": "{} 本旅程"
+    },
     "shelf_new": "新旅程"
   },
   "trip": {

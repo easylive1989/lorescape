@@ -9,6 +9,7 @@ import 'package:context_app/features/settings/domain/models/language.dart';
 import 'package:context_app/features/trip/domain/models/trip.dart';
 import 'package:context_app/features/trip/presentation/controllers/current_trip_notifier.dart';
 import 'package:context_app/features/trip/providers.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -250,6 +251,52 @@ void main() {
     });
 
     testWidgets(
+      'given no real trips and only loose entries, when the shelf loads, '
+      'then the shelf count excludes the synthetic uncategorized book',
+      (tester) async {
+        await _givenJourneyScreenWithRealShelfCount(
+          tester,
+          seededJourneys: [journeyEntryWithoutCoords(tripId: null)],
+        );
+
+        // 架上有一本書（未分類），但那不是使用者建的旅程——標題不能算 1。
+        expect(_bookFinder(), findsOneWidget);
+        expect(find.text('0 journeys'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'given two real trips plus loose entries, when the shelf loads, '
+      'then the shelf count is the trip count, not the book count', (
+      tester,
+    ) async {
+      await _givenJourneyScreenWithRealShelfCount(
+        tester,
+        seededTrips: [
+          buildTrip(id: 't1', name: '京都'),
+          buildTrip(id: 't2', name: '大阪'),
+        ],
+        seededJourneys: [journeyEntryWithoutCoords(tripId: null)],
+      );
+
+      // 架上有三本書（兩個旅程 + 未分類），但旅程只有兩個。
+      expect(_bookFinder(), findsNWidgets(3));
+      expect(find.text('2 journeys'), findsOneWidget);
+    });
+
+    testWidgets(
+      'given exactly one real trip, when the shelf loads, '
+      'then the shelf count uses the singular form', (tester) async {
+        await _givenJourneyScreenWithRealShelfCount(
+          tester,
+          seededTrips: [buildTrip(id: 't1', name: '京都')],
+        );
+
+        expect(find.text('1 journey'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
       'given the by-trip shelf under a router, when the user taps the '
       'new-journey pill, then the trip-edit route is pushed',
       (tester) async {
@@ -329,6 +376,66 @@ Future<void> _givenJourneyScreen(
   );
 
   await pumpScreen(tester, child: const JourneyScreen(), overrides: overrides);
+  await tester.pump(const Duration(milliseconds: 20));
+  await tester.pump(const Duration(milliseconds: 20));
+}
+
+/// 供應真正 `journey.shelf_count` 複數規則的 asset loader。
+///
+/// 別的測試都用 `pump_app.dart` 的空 loader，斷言原始 key——但這裡要驗證
+/// `.plural()` 真的照旅程數挑對單複數，得讓 easy_localization 真的解得到
+/// 這個 key。其他 key 沒供應時仍會 fallback 回原始字串，不影響其他斷言。
+class _ShelfCountTranslationsLoader extends AssetLoader {
+  const _ShelfCountTranslationsLoader();
+
+  @override
+  Future<Map<String, dynamic>?> load(String path, Locale locale) async =>
+      const <String, dynamic>{
+        'journey': {
+          'shelf_count': {
+            'zero': '{} journeys',
+            'one': '{} journey',
+            'other': '{} journeys',
+          },
+        },
+      };
+}
+
+/// 跟 [_givenJourneyScreen] 一樣，但用英文 locale ＋真正的
+/// `journey.shelf_count` 複數規則，讓書架標題的斷言能看到真正插值後的數字
+/// 與正確單複數，而不是沒被翻譯的 key 原文。
+Future<void> _givenJourneyScreenWithRealShelfCount(
+  WidgetTester tester, {
+  List<JourneyEntry> seededJourneys = const [],
+  List<Trip> seededTrips = const [],
+}) async {
+  final overrides = await _buildJourneyOverrides(
+    seededJourneys: seededJourneys,
+    seededTrips: seededTrips,
+  );
+
+  await tester.pumpWidget(
+    EasyLocalization(
+      supportedLocales: const [Locale('zh', 'TW'), Locale('en')],
+      path: 'assets/translations',
+      fallbackLocale: const Locale('en'),
+      startLocale: const Locale('en'),
+      assetLoader: const _ShelfCountTranslationsLoader(),
+      useOnlyLangCode: false,
+      child: ProviderScope(
+        overrides: overrides,
+        child: Builder(
+          builder: (context) => MaterialApp(
+            locale: context.locale,
+            supportedLocales: context.supportedLocales,
+            localizationsDelegates: context.localizationDelegates,
+            home: const JourneyScreen(),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pump(const Duration(milliseconds: 20));
   await tester.pump(const Duration(milliseconds: 20));
   await tester.pump(const Duration(milliseconds: 20));
 }

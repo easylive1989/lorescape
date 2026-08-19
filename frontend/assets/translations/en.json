@@ -92,7 +92,11 @@
       "no_photo": "No photo"
     },
     "shelf_hint": "{} — tap again to open",
-    "shelf_count": "{} journeys",
+    "shelf_count": {
+      "zero": "{} journeys",
+      "one": "{} journey",
+      "other": "{} journeys"
+    },
     "shelf_new": "New journey"
   },
   "trip": {
