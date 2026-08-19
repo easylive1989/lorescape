@@ -16,6 +16,7 @@ from lorescape_backend.narration.dependencies import (
     get_narration_cache_repository,
 )
 from lorescape_backend.narration.routes import get_config, router
+from lorescape_backend.narration.service import UnsupportedLanguageError
 from lorescape_backend.subscriptions.dependencies import (
     get_subscription_checker,
 )
@@ -443,6 +444,20 @@ def test_cache_hit_consumes_quota_for_a_free_user_with_quota_left(gen):
     # Served from cache — no generation — but the quota is still spent.
     gen.assert_not_called()
     assert fresh.consumed == 1
+
+
+@patch("lorescape_backend.narration.routes.service.generate_narration")
+def test_generation_failure_does_not_consume_quota(gen):
+    """ADR 0009 明講生成失敗不消耗額度；目前只是 post_narration 敘述順序
+    自然成立，沒有測試釘住——有人把 usage.consume() 往上搬會靜默破壞。"""
+    gen.side_effect = UnsupportedLanguageError("unsupported")
+    usage = _FakeUsage(used=0)
+    client = TestClient(_make_app(usage=usage))
+
+    response = client.post("/narration", json=_NARRATION_BODY)
+
+    assert response.status_code != 200
+    assert usage.consumed == 0
 
 
 # ---------------------------------------------------------------------------
