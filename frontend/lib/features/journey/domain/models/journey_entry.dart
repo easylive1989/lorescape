@@ -49,6 +49,8 @@ class JourneyEntry {
       name: place.name,
       address: place.address,
       imageUrl: imageUrl,
+      latitude: place.location.latitude,
+      longitude: place.location.longitude,
     );
 
     final now = DateTime.now();
@@ -82,6 +84,8 @@ class JourneyEntry {
     'place_name': place.name,
     'place_address': place.address,
     'place_image_url': place.imageUrl,
+    'place_lat': place.latitude,
+    'place_lng': place.longitude,
     'narration_text': narrationContent.text,
     if (storyHook != null) 'story_hook': storyHook!.toJson(),
     'created_at': createdAt.toIso8601String(),
@@ -99,6 +103,8 @@ class JourneyEntry {
       name: json['place_name'] as String,
       address: json['place_address'] as String,
       imageUrl: json['place_image_url'] as String?,
+      latitude: (json['place_lat'] as num?)?.toDouble(),
+      longitude: (json['place_lng'] as num?)?.toDouble(),
     );
 
     final narrationContent = NarrationContent.create(
