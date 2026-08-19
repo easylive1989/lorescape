@@ -69,30 +69,14 @@ void main() {
     );
 
     testWidgets(
-      'given any shelf, when it is rendered, then an empty placeholder book '
-      'sits after the real books',
+      'given any shelf, when it is rendered, then the only way to add a trip '
+      'is the header pill',
       (tester) async {
         await _givenBookshelf(tester, bookCount: 3);
 
-        expect(find.byIcon(Icons.add), findsOneWidget);
-        // 佔位書排在最後一本真書的右邊，而不是插在書堆前面。
-        expect(
-          tester.getTopLeft(find.byIcon(Icons.add)).dx,
-          greaterThan(tester.getTopLeft(find.text('#2')).dx),
-        );
-      },
-    );
-
-    testWidgets(
-      'given the placeholder book, when the user taps it, '
-      'then the shelf reports the request to add a trip',
-      (tester) async {
-        var addTaps = 0;
-
-        await _givenBookshelf(tester, bookCount: 3, onAddTrip: () => addTaps++);
-        await tester.tap(find.byIcon(Icons.add));
-
-        expect(addTaps, 1);
+        expect(find.text('＋ journey.shelf_new'), findsOneWidget);
+        // v3 拿掉了書架末端那本虛線佔位書：同一個動作不留兩個入口。
+        expect(find.byIcon(Icons.add), findsNothing);
       },
     );
 
@@ -126,11 +110,15 @@ void main() {
 
     testWidgets(
       'given no books at all, when the shelf is rendered, '
-      'then only the placeholder stands on it',
+      'then it stands empty without collapsing',
       (tester) async {
         await _givenBookshelf(tester, bookCount: 0);
 
-        expect(find.byIcon(Icons.add), findsOneWidget);
+        // 一本書都沒有時凹槽仍撐在最小高度上，而不是塌成一條線。
+        expect(
+          tester.getRect(_horizontalScrollable()).height,
+          greaterThanOrEqualTo(172),
+        );
         expect(tester.takeException(), isNull);
       },
     );

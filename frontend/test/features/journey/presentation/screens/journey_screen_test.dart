@@ -213,22 +213,21 @@ void main() {
     });
 
     testWidgets(
-      'given the by-trip shelf under a router, when the user taps the empty '
-      'placeholder book, then the trip-edit route is pushed',
+      'given the by-trip shelf under a router, when the user taps the '
+      'new-journey pill, then the trip-edit route is pushed',
       (tester) async {
         await _givenJourneyScreenWithRouter(tester);
 
-        // 建立旅程的入口只有書架上那本佔位書，頁首不再有 +。
-        expect(
-          find.descendant(
-            of: find.byType(TripBookshelf),
-            matching: find.byIcon(Icons.add),
-          ),
-          findsOneWidget,
+        // 建立旅程只有書架標頭列那顆 pill 一個入口：頁首沒有 +，架上也不再
+        // 有那本虛線佔位書。
+        final pill = find.descendant(
+          of: find.byType(TripBookshelf),
+          matching: find.text('＋ journey.shelf_new'),
         );
-        expect(find.byIcon(Icons.add), findsOneWidget);
+        expect(pill, findsOneWidget);
+        expect(find.byIcon(Icons.add), findsNothing);
 
-        await tester.tap(find.byIcon(Icons.add));
+        await tester.tap(pill);
         await tester.pumpAndSettle();
 
         expect(find.byKey(const ValueKey('edit-screen')), findsOneWidget);

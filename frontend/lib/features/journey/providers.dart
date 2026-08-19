@@ -41,20 +41,22 @@ final worldOutlineProvider = FutureProvider<WorldOutline>(
 ///
 /// 舊記錄沒存座標（見 20260819000000 migration），那些就不釘——補 (0,0)
 /// 會在幾內亞灣外海長出一排根本沒去過的點。
-final tripGlobePinsProvider = Provider.family<List<GlobePin>, String?>((
-  ref,
-  tripId,
-) {
-  final entries = ref.watch(myJourneyProvider).valueOrNull ?? const [];
-  return [
-    for (final entry in entries)
-      if (entry.tripId == tripId)
-        if (entry.place.latitude case final lat?)
-          if (entry.place.longitude case final lng?)
-            GlobePin(
-              id: entry.id,
-              coordinate: LatLng(lat, lng),
-              label: entry.place.name,
-            ),
-  ];
-});
+///
+/// 跟著 [myJourneyProvider] 一起 autoDispose：非 autoDispose 的 provider 會把
+/// 它 watch 的 autoDispose provider 一路釘活，等於讓記錄快取在整個 App 生命
+/// 週期裡再也不會失效、sync 完也不重取。
+final tripGlobePinsProvider = Provider.autoDispose
+    .family<List<GlobePin>, String?>((ref, tripId) {
+      final entries = ref.watch(myJourneyProvider).valueOrNull ?? const [];
+      return [
+        for (final entry in entries)
+          if (entry.tripId == tripId)
+            if (entry.place.latitude case final lat?)
+              if (entry.place.longitude case final lng?)
+                GlobePin(
+                  id: entry.id,
+                  coordinate: LatLng(lat, lng),
+                  label: entry.place.name,
+                ),
+      ];
+    });
