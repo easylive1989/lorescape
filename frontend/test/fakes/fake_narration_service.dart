@@ -8,7 +8,9 @@ import 'package:context_app/features/settings/domain/models/language.dart';
 /// Fake [NarrationService] that returns a seeded text result.
 class FakeNarrationService implements NarrationService {
   final String text;
-  final Exception? error;
+
+  /// 可在建構後改變，讓測試模擬「付費牆回來後這次不再擋」的續作情境。
+  Exception? error;
 
   /// 設定後 [generateNarration] 會停在 pending 直到 gate 完成——用來在
   /// 測試裡觀察「生成中」的畫面。

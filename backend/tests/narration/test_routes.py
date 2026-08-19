@@ -17,7 +17,7 @@ from lorescape_backend.narration.dependencies import (
 )
 from lorescape_backend.narration.routes import get_config, router
 from lorescape_backend.subscriptions.dependencies import (
-    get_subscription_repository,
+    get_subscription_checker,
 )
 from lorescape_backend.usage.dependencies import get_usage_repository
 
@@ -73,7 +73,7 @@ class _FakeNarrationCache:
 
 
 class _FakeSubscriptions:
-    """In-memory stand-in for SubscriptionRepository."""
+    """In-memory stand-in for SubscriptionChecker (same `is_subscribed` shape)."""
 
     def __init__(self, premium: bool = False) -> None:
         self.premium = premium
@@ -118,7 +118,7 @@ def _make_app(
         if narration_cache is not None
         else _FakeNarrationCache()
     )
-    app.dependency_overrides[get_subscription_repository] = (
+    app.dependency_overrides[get_subscription_checker] = (
         lambda: subscriptions
         if subscriptions is not None
         else _FakeSubscriptions()

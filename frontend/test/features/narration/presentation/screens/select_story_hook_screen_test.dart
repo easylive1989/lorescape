@@ -379,6 +379,65 @@ void main() {
     );
 
     testWidgets(
+      'given the user completes a purchase from the quota paywall, '
+      'when they return, then the same hook regenerates automatically '
+      'and the player opens without a second tap',
+      (tester) async {
+        final narrationService = FakeNarrationService(
+          error: const AppError(type: NarrationError.freeQuotaExceeded),
+        );
+
+        await pumpRouterApp(
+          tester,
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (_, __) => SelectStoryHookScreen(place: buildPlace()),
+            ),
+            GoRoute(
+              path: '/subscription',
+              builder: (context, __) => Scaffold(
+                key: const Key('subscription-screen'),
+                body: ElevatedButton(
+                  key: const Key('fake-purchase-button'),
+                  onPressed: () => context.pop(true),
+                  child: const Text('buy'),
+                ),
+              ),
+            ),
+            GoRoute(
+              name: 'player',
+              path: '/player',
+              builder: (_, __) => const Scaffold(
+                key: Key('player-screen'),
+                body: SizedBox.shrink(),
+              ),
+            ),
+          ],
+          overrides: _overrides(
+            hookService: _FakeStoryHookService(hooks: const [_hook1]),
+            narrationService: narrationService,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text(_hook1.title));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('subscription-screen')), findsOneWidget);
+
+        // 模擬購買成功——webhook／live check 已經補上權益，這次不再擋。
+        narrationService.error = null;
+        await tester.tap(find.byKey(const Key('fake-purchase-button')));
+        await tester.pumpAndSettle();
+
+        // 沒有停在角度列表要求再點一次，而是直接進了播放器——同一個 hook
+        // 自動續作。
+        expect(find.byKey(const Key('player-screen')), findsOneWidget);
+        expect(narrationService.lastHook, equals(_hook1));
+      },
+    );
+
+    testWidgets(
       'given capturedImageBytes are provided, when the screen renders, '
       'then the background uses an Image.memory with those bytes',
       (tester) async {

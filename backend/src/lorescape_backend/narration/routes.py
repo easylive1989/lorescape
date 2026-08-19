@@ -26,9 +26,9 @@ from lorescape_backend.narration.models import (
     NarrationResponse,
 )
 from lorescape_backend.subscriptions.dependencies import (
-    get_subscription_repository,
+    get_subscription_checker,
 )
-from lorescape_backend.subscriptions.repository import SubscriptionRepository
+from lorescape_backend.subscriptions.service import SubscriptionChecker
 from lorescape_backend.usage.dependencies import get_usage_repository
 from lorescape_backend.usage.policy import has_free_quota
 from lorescape_backend.usage.repository import UsageRepository
@@ -76,7 +76,7 @@ def post_narration(
     config: Config = Depends(get_config),
     user: AuthedUser = Depends(require_user),
     cache: NarrationCacheRepository = Depends(get_narration_cache_repository),
-    subscriptions: SubscriptionRepository = Depends(get_subscription_repository),
+    subscriptions: SubscriptionChecker = Depends(get_subscription_checker),
     usage: UsageRepository = Depends(get_usage_repository),
 ) -> NarrationResponse:
     """Return the long-form 3-paragraph story for the given place.
@@ -92,6 +92,11 @@ def post_narration(
 
     Generation failures do not consume quota — consumption happens only
     after a result is in hand.
+
+    ``subscriptions`` is the healing gate (see ``SubscriptionChecker``), not
+    the raw table repository: a purchase that hasn't landed a webhook row
+    yet still verifies live against RevenueCat instead of paywalling a user
+    who just paid.
     """
     is_premium = subscriptions.is_subscribed(user.user_id)
     if not is_premium and not has_free_quota(usage.used_today(user.user_id)):
