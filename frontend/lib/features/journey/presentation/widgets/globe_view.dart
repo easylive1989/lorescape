@@ -3,13 +3,13 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import 'package:context_app/app/config/lorescape_tokens.dart';
-import 'package:context_app/features/home/domain/globe/globe_rotation.dart';
-import 'package:context_app/features/home/domain/globe/orthographic_projection.dart';
-import 'package:context_app/features/home/domain/globe/world_outline.dart';
-import 'package:context_app/features/home/domain/models/globe_pin.dart';
-import 'package:context_app/features/home/presentation/widgets/globe_painter.dart';
+import 'package:context_app/features/journey/domain/globe/globe_rotation.dart';
+import 'package:context_app/features/journey/domain/globe/orthographic_projection.dart';
+import 'package:context_app/features/journey/domain/globe/world_outline.dart';
+import 'package:context_app/features/journey/domain/models/globe_pin.dart';
+import 'package:context_app/features/journey/presentation/widgets/globe_painter.dart';
 
-/// 首頁那顆可拖曳的地球儀。
+/// 書架頁那顆可拖曳的地球儀。
 ///
 /// [focus] 換人時會用 950ms 的 easeOutCubic 轉過去；使用者拖曳期間動畫讓位
 /// 給手指，放開後停在使用者轉到的角度，直到下一次 [focus] 變動。
@@ -26,16 +26,16 @@ class GlobeView extends StatefulWidget {
 
   final WorldOutline outline;
 
-  /// 帶地名標籤的釘點（最近 7 篇）。
+  /// 選中那本旅程的停點。
   final List<GlobePin> pins;
 
-  /// 目前選中的故事地點。可能不在 [pins] 內（捲到更舊的卡片時）。
+  /// 目前對焦的停點。可能不在 [pins] 內（捲到更舊的卡片時）。
   final GlobePin? focus;
 
-  /// 點到非選中的釘點時回呼，首頁拿它把該篇故事切成選中（地球飛過去）。
+  /// 點到非選中的釘點時回呼，用來把該釘點切成對焦（地球飛過去）。
   final ValueChanged<GlobePin>? onPinTap;
 
-  /// 點選中地點的紙卡 chip（地名）時回呼，首頁拿它開那篇每日故事。
+  /// 點選中地點的紙卡 chip（地名）時回呼。
   final VoidCallback? onFocusTap;
 
   final double size;

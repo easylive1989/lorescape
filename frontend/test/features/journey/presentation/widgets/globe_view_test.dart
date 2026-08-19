@@ -1,9 +1,9 @@
-import 'package:context_app/features/home/domain/globe/globe_rotation.dart';
-import 'package:context_app/features/home/domain/globe/orthographic_projection.dart';
-import 'package:context_app/features/home/domain/globe/world_outline.dart';
-import 'package:context_app/features/home/domain/models/globe_pin.dart';
-import 'package:context_app/features/home/presentation/widgets/globe_painter.dart';
-import 'package:context_app/features/home/presentation/widgets/globe_view.dart';
+import 'package:context_app/features/journey/domain/globe/globe_rotation.dart';
+import 'package:context_app/features/journey/domain/globe/orthographic_projection.dart';
+import 'package:context_app/features/journey/domain/globe/world_outline.dart';
+import 'package:context_app/features/journey/domain/models/globe_pin.dart';
+import 'package:context_app/features/journey/presentation/widgets/globe_painter.dart';
+import 'package:context_app/features/journey/presentation/widgets/globe_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';

@@ -5,13 +5,13 @@ import 'package:flutter/material.dart';
 // 這裡只需要經緯度型別，把它的 Path 隱藏掉。
 import 'package:latlong2/latlong.dart' hide Path;
 
-import 'package:context_app/features/home/domain/globe/globe_rotation.dart';
-import 'package:context_app/features/home/domain/globe/orthographic_projection.dart';
-import 'package:context_app/features/home/domain/globe/world_outline.dart';
-import 'package:context_app/features/home/domain/models/globe_pin.dart';
-import 'package:context_app/features/home/presentation/widgets/globe_palette.dart';
+import 'package:context_app/features/journey/domain/globe/globe_rotation.dart';
+import 'package:context_app/features/journey/domain/globe/orthographic_projection.dart';
+import 'package:context_app/features/journey/domain/globe/world_outline.dart';
+import 'package:context_app/features/journey/domain/models/globe_pin.dart';
+import 'package:context_app/features/journey/presentation/widgets/globe_palette.dart';
 
-/// 畫那顆手繪風地球：海、經緯網格、陸地、打光，最後是故事釘點。
+/// 畫那顆手繪風地球：海、經緯網格、陸地、打光，最後是旅程停點的釘點。
 ///
 /// 被選中的那個點不畫在這裡——它是疊在上層的 Flutter widget（水滴 pin 與
 /// 紙卡 chip），這樣才能用 App 的字體與陰影，不必在 canvas 裡重刻一份。

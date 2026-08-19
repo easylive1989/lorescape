@@ -3,7 +3,7 @@ import 'dart:ui';
 
 import 'package:latlong2/latlong.dart';
 
-import 'package:context_app/features/home/domain/globe/globe_rotation.dart';
+import 'package:context_app/features/journey/domain/globe/globe_rotation.dart';
 
 /// 正射投影：把球面上的經緯度投到畫布座標，看起來就是從遠處看一顆球。
 ///

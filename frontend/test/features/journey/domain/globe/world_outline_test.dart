@@ -1,4 +1,4 @@
-import 'package:context_app/features/home/domain/globe/world_outline.dart';
+import 'package:context_app/features/journey/domain/globe/world_outline.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 

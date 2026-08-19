@@ -1,5 +1,5 @@
-import 'package:context_app/features/home/domain/globe/globe_rotation.dart';
-import 'package:context_app/features/home/domain/globe/orthographic_projection.dart';
+import 'package:context_app/features/journey/domain/globe/globe_rotation.dart';
+import 'package:context_app/features/journey/domain/globe/orthographic_projection.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 
