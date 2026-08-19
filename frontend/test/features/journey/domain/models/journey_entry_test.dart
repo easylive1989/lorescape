@@ -64,6 +64,8 @@ void main() {
               id: 'place-1',
               name: 'Test Place',
               address: 'Test Address',
+              latitude: 25.0,
+              longitude: 121.0,
             ),
           ),
         );
@@ -113,6 +115,8 @@ void main() {
               name: 'Place With Photo',
               address: 'Address 2',
               imageUrl: 'https://example.com/photo.jpg',
+              latitude: 25.0,
+              longitude: 121.0,
             ),
           ),
         );
@@ -185,5 +189,53 @@ void main() {
         expect(restored.tripId, isNull);
       },
     );
+
+    test('given a journey entry with place coordinates, '
+        'when round-tripping through JSON, '
+        'then the coordinates survive', () {
+      const place = SavedPlace(
+        id: 'wikidata:Q1',
+        name: '龐貝',
+        address: '義大利',
+        latitude: 40.7497,
+        longitude: 14.4869,
+      );
+      final entry = JourneyEntry(
+        id: 'e1',
+        place: place,
+        narrationContent: NarrationContent.create(
+          '一段關於龐貝古城的精彩故事',
+          language: const Language('zh-TW'),
+        ),
+        createdAt: DateTime.utc(2026, 8, 19),
+        updatedAt: DateTime.utc(2026, 8, 19),
+        language: const Language('zh-TW'),
+      );
+
+      final restored = JourneyEntry.fromJson(entry.toJson());
+
+      expect(restored.place.latitude, 40.7497);
+      expect(restored.place.longitude, 14.4869);
+    });
+
+    test('given legacy JSON without coordinates, '
+        'when parsing it, '
+        'then the coordinates are null rather than an error', () {
+      final restored = JourneyEntry.fromJson({
+        'id': 'e1',
+        'place_id': 'wikidata:Q1',
+        'place_name': '龐貝',
+        'place_address': '義大利',
+        'place_image_url': null,
+        'narration_text': '一段關於龐貝古城的精彩故事',
+        'created_at': '2026-08-19T00:00:00.000Z',
+        'updated_at': '2026-08-19T00:00:00.000Z',
+        'language': 'zh-TW',
+        'trip_id': null,
+      });
+
+      expect(restored.place.latitude, isNull);
+      expect(restored.place.longitude, isNull);
+    });
   });
 }

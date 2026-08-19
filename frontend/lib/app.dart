@@ -4,9 +4,7 @@ import 'package:context_app/app/config/theme_config.dart';
 import 'package:context_app/features/analytics/providers.dart';
 import 'package:context_app/features/auth/domain/models/auth_user.dart';
 import 'package:context_app/features/auth/providers.dart';
-import 'package:context_app/features/explore/domain/models/place.dart';
 import 'package:context_app/features/onboarding/providers.dart';
-import 'package:context_app/features/saved_locations/providers.dart';
 import 'package:context_app/features/settings/domain/models/appearance_state.dart';
 import 'package:context_app/features/settings/providers.dart';
 import 'package:context_app/features/share/providers.dart';
@@ -17,7 +15,6 @@ import 'package:context_app/shared/widgets/adaptive/adaptive_widgets.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 /// Builds the Field Journal [ThemeData] for the given appearance [state].
 ThemeData lorescapeThemeFor(AppearanceState state) {
@@ -31,8 +28,6 @@ ThemeData lorescapeThemeFor(AppearanceState state) {
 /// Main application widget using go_router for navigation.
 ///
 /// This widget sets up the app theme, routing, and global configuration.
-/// Also initialises share intent listeners so the app can receive
-/// places shared from Google Maps and save them directly.
 class LorescapeApp extends ConsumerWidget {
   const LorescapeApp({super.key});
 
@@ -77,45 +72,9 @@ class LorescapeApp extends ConsumerWidget {
       }
     });
 
-    // Listen for resolved shared places and save directly.
-    ref.listen<AsyncValue<Place>?>(shareIntentControllerProvider, (prev, next) {
-      if (next == null) return;
-
-      next.when(
-        data: (place) {
-          ref.read(shareIntentControllerProvider.notifier).clear();
-          // Save the place directly to saved locations.
-          ref.read(savedLocationsProvider.notifier).savePlace(place);
-          _showSnackBar(
-            router,
-            context,
-            SnackBar(
-              content: Text('shared_place.saved'.tr(args: [place.name])),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        },
-        loading: () {},
-        error: (error, _) {
-          ref.read(shareIntentControllerProvider.notifier).clear();
-          // ShareIntentController emits the literal key
-          // `'shared_place.not_found'` when the share was parsed but
-          // no matching place was found — show a more specific message
-          // in that case.
-          final messageKey = error == 'shared_place.not_found'
-              ? 'shared_place.not_found'
-              : 'shared_place.error';
-          _showSnackBar(
-            router,
-            context,
-            SnackBar(
-              content: Text(messageKey.tr()),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        },
-      );
-    });
+    // 從 Google Maps 分享地點的 listener 已移除：該入口依 ADR 0001 停用，
+    // 而它唯一的去處（收藏景點）已在 v3 改版中整組移除。features/share/
+    // 的解析程式碼保留，日後要復活需先決定新的落點。
 
     final pendingShare = ref.watch(shareIntentControllerProvider);
     final appearance = ref.watch(appearanceProvider);
@@ -140,15 +99,6 @@ class LorescapeApp extends ConsumerWidget {
         );
       },
     );
-  }
-
-  void _showSnackBar(
-    GoRouter router,
-    BuildContext fallback,
-    SnackBar snackBar,
-  ) {
-    final ctx = router.routerDelegate.navigatorKey.currentContext ?? fallback;
-    ScaffoldMessenger.of(ctx).showSnackBar(snackBar);
   }
 }
 

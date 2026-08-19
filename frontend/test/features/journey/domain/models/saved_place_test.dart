@@ -39,5 +39,37 @@ void main() {
         expect(place.primaryPhoto, isNull);
       },
     );
+
+    test('given a saved place with coordinates, '
+        'when converting it back to a Place, '
+        'then the real coordinates are used', () {
+      const place = SavedPlace(
+        id: 'wikidata:Q1',
+        name: '龐貝',
+        address: '義大利',
+        latitude: 40.7497,
+        longitude: 14.4869,
+      );
+
+      final result = place.toPlace();
+
+      expect(result.location.latitude, 40.7497);
+      expect(result.location.longitude, 14.4869);
+    });
+
+    test('given a saved place without coordinates, '
+        'when converting it back to a Place, '
+        'then it falls back to zero', () {
+      const place = SavedPlace(
+        id: 'wikidata:Q1',
+        name: '龐貝',
+        address: '義大利',
+      );
+
+      final result = place.toPlace();
+
+      expect(result.location.latitude, 0);
+      expect(result.location.longitude, 0);
+    });
   });
 }

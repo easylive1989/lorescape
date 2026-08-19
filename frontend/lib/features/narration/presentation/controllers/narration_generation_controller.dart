@@ -9,8 +9,6 @@ import 'package:context_app/features/narration/domain/models/story_hook.dart';
 import 'package:context_app/features/narration/providers.dart';
 import 'package:context_app/features/settings/domain/models/language.dart';
 import 'package:context_app/features/trip/providers.dart';
-import 'package:context_app/features/usage/domain/errors/usage_error.dart';
-import 'package:context_app/features/usage/providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
@@ -61,8 +59,8 @@ enum NarrationGenerationErrorType {
   insufficientSource,
 
   /// Backend returned 402 — the free daily quota is exhausted. The paywall
-  /// is temporarily removed (ADR 0006) and the backend no longer returns
-  /// 402, but this type is kept in case a future paywall reuses it.
+  /// is back (see the `/subscription` route), so this navigates the user
+  /// there instead of showing an error dialog.
   quotaExceeded,
   unknown;
 
@@ -98,7 +96,6 @@ class NarrationGenerationController
           .read(startNarrationUseCaseProvider)
           .execute(place: place, language: language, hook: hook);
 
-      ref.invalidate(usageStatusProvider);
       await _autoSaveToJourney(place, hook, content, language);
 
       state = NarrationGenerationState(
@@ -132,10 +129,6 @@ class NarrationGenerationController
           NarrationGenerationErrorType.quotaExceeded,
         _ => NarrationGenerationErrorType.unknown,
       };
-    }
-
-    if (type is UsageError) {
-      return NarrationGenerationErrorType.quotaExceeded;
     }
 
     return NarrationGenerationErrorType.unknown;

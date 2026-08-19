@@ -44,6 +44,8 @@ class SupabaseJourneyRemoteDataSource
     'place_name': entry.place.name,
     'place_address': entry.place.address,
     'place_image_url': entry.place.imageUrl,
+    'place_lat': entry.place.latitude,
+    'place_lng': entry.place.longitude,
     'narration_text': entry.narrationContent.text,
     'story_hook': entry.storyHook?.toJson(),
     'language': entry.language.code,
@@ -73,6 +75,8 @@ class SupabaseJourneyRemoteDataSource
         name: row['place_name'] as String,
         address: row['place_address'] as String,
         imageUrl: row['place_image_url'] as String?,
+        latitude: (row['place_lat'] as num?)?.toDouble(),
+        longitude: (row['place_lng'] as num?)?.toDouble(),
       ),
       narrationContent: NarrationContent.create(
         row['narration_text'] as String,

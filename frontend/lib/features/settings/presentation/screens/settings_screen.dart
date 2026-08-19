@@ -3,6 +3,7 @@ import 'package:context_app/features/auth/domain/services/auth_service.dart';
 import 'package:context_app/features/auth/providers.dart';
 import 'package:context_app/features/onboarding/providers.dart';
 import 'package:context_app/features/settings/providers.dart';
+import 'package:context_app/features/subscription/providers.dart';
 import 'package:context_app/features/sync/providers.dart';
 import 'package:context_app/shared/widgets/adaptive/adaptive_widgets.dart';
 import 'package:context_app/shared/widgets/journal/floating_back_button.dart';
@@ -33,6 +34,7 @@ class SettingsScreen extends ConsumerWidget {
                     style: Theme.of(context).textTheme.displayLarge,
                   ),
                 ),
+                const _UpgradeCard(),
                 const _PreferencesGroup(),
                 const SizedBox(height: 26),
                 const _AccountGroup(),
@@ -57,6 +59,73 @@ class SettingsScreen extends ConsumerWidget {
 // ============================================================================
 // Setting groups
 // ============================================================================
+
+/// 深色升級卡：設定清單最上方的付費牆入口（設計稿 `.upgrade`）。
+///
+/// 訂閱中的使用者不該再看到升級推銷、也不該點得進付費牆重複購買，所以先看
+/// [isPremiumProvider]：訂閱中就換成唯讀的「已是會員」狀態，不可點按。
+class _UpgradeCard extends ConsumerWidget {
+  const _UpgradeCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isPremium = ref.watch(isPremiumProvider);
+    final tokens = context.tokens;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(22, 16, 22, 8),
+      child: Material(
+        key: const Key('settings-upgrade-card'),
+        color: tokens.inkBg,
+        borderRadius: BorderRadius.circular(18),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: isPremium ? null : () => context.push('/subscription'),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            child: Row(
+              children: [
+                Icon(
+                  isPremium ? Icons.diamond : Icons.diamond_outlined,
+                  size: 30,
+                  color: tokens.claySoft,
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        isPremium
+                            ? 'subscription.premium_active'.tr()
+                            : 'subscription.upgrade_title'.tr(),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: tokens.onDark,
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                      if (!isPremium) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'subscription.upgrade_subtitle'.tr(),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: tokens.onDark2),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                if (!isPremium)
+                  Icon(Icons.chevron_right, size: 22, color: tokens.onDark2),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _PreferencesGroup extends ConsumerWidget {
   const _PreferencesGroup();

@@ -14,7 +14,6 @@ import 'package:context_app/features/narration/presentation/screens/select_story
 import 'package:context_app/features/narration/presentation/widgets/story_generating.dart';
 import 'package:context_app/features/narration/providers.dart';
 import 'package:context_app/features/settings/domain/models/language.dart';
-import 'package:context_app/features/usage/providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -22,7 +21,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../fakes/fake_narration_service.dart';
 import '../../../../fakes/in_memory_journey_repository.dart';
-import '../../../../fakes/in_memory_usage_repository.dart';
 import '../../../../fakes/recording_analytics_service.dart';
 import '../../../../helpers/pump_app.dart';
 import '../../../../helpers/test_data.dart';
@@ -343,7 +341,7 @@ void main() {
 
     testWidgets(
       'given the backend reports quota exhausted, when a hook is tapped, '
-      'then the generic error dialog is shown',
+      'then the paywall opens instead of an error dialog',
       (tester) async {
         await pumpRouterApp(
           tester,
@@ -351,6 +349,13 @@ void main() {
             GoRoute(
               path: '/',
               builder: (_, __) => SelectStoryHookScreen(place: buildPlace()),
+            ),
+            GoRoute(
+              path: '/subscription',
+              builder: (_, __) => const Scaffold(
+                key: Key('subscription-screen'),
+                body: SizedBox.shrink(),
+              ),
             ),
           ],
           overrides: _overrides(
@@ -365,10 +370,70 @@ void main() {
         await tester.tap(find.text(_hook1.title));
         await tester.pumpAndSettle();
 
+        expect(find.byKey(const Key('subscription-screen')), findsOneWidget);
         expect(
           find.text('config_screen.generation_error_title'),
-          findsOneWidget,
+          findsNothing,
         );
+      },
+    );
+
+    testWidgets(
+      'given the user completes a purchase from the quota paywall, '
+      'when they return, then the same hook regenerates automatically '
+      'and the player opens without a second tap',
+      (tester) async {
+        final narrationService = FakeNarrationService(
+          error: const AppError(type: NarrationError.freeQuotaExceeded),
+        );
+
+        await pumpRouterApp(
+          tester,
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (_, __) => SelectStoryHookScreen(place: buildPlace()),
+            ),
+            GoRoute(
+              path: '/subscription',
+              builder: (context, __) => Scaffold(
+                key: const Key('subscription-screen'),
+                body: ElevatedButton(
+                  key: const Key('fake-purchase-button'),
+                  onPressed: () => context.pop(true),
+                  child: const Text('buy'),
+                ),
+              ),
+            ),
+            GoRoute(
+              name: 'player',
+              path: '/player',
+              builder: (_, __) => const Scaffold(
+                key: Key('player-screen'),
+                body: SizedBox.shrink(),
+              ),
+            ),
+          ],
+          overrides: _overrides(
+            hookService: _FakeStoryHookService(hooks: const [_hook1]),
+            narrationService: narrationService,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text(_hook1.title));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('subscription-screen')), findsOneWidget);
+
+        // 模擬購買成功——webhook／live check 已經補上權益，這次不再擋。
+        narrationService.error = null;
+        await tester.tap(find.byKey(const Key('fake-purchase-button')));
+        await tester.pumpAndSettle();
+
+        // 沒有停在角度列表要求再點一次，而是直接進了播放器——同一個 hook
+        // 自動續作。
+        expect(find.byKey(const Key('player-screen')), findsOneWidget);
+        expect(narrationService.lastHook, equals(_hook1));
       },
     );
 
@@ -424,7 +489,6 @@ void main() {
               _FakeStoryHookService(hooks: const [_hook1]),
             ),
             journeyRepositoryProvider.overrideWithValue(journeyRepo),
-            usageRepositoryProvider.overrideWithValue(InMemoryUsageRepository()),
           ],
         );
         await tester.pumpAndSettle();
@@ -452,7 +516,6 @@ Future<void> _pumpScreen(
   Place? place,
   _FakeStoryHookService? hookService,
   FakeNarrationService? narrationService,
-  InMemoryUsageRepository? usageRepo,
   Uint8List? capturedImageBytes,
   bool settle = true,
   RecordingAnalyticsService? analytics,
@@ -466,7 +529,6 @@ Future<void> _pumpScreen(
     overrides: _overrides(
       hookService: hookService,
       narrationService: narrationService,
-      usageRepo: usageRepo,
       analytics: analytics,
     ),
   );
@@ -482,7 +544,6 @@ Future<void> _pumpScreenWithRouter(
   Place? place,
   _FakeStoryHookService? hookService,
   FakeNarrationService? narrationService,
-  InMemoryUsageRepository? usageRepo,
   RecordingAnalyticsService? analytics,
 }) async {
   await pumpRouterApp(
@@ -505,7 +566,6 @@ Future<void> _pumpScreenWithRouter(
     overrides: _overrides(
       hookService: hookService,
       narrationService: narrationService,
-      usageRepo: usageRepo,
       analytics: analytics,
     ),
   );
@@ -515,7 +575,6 @@ Future<void> _pumpScreenWithRouter(
 List<Override> _overrides({
   _FakeStoryHookService? hookService,
   FakeNarrationService? narrationService,
-  InMemoryUsageRepository? usageRepo,
   RecordingAnalyticsService? analytics,
 }) {
   return [
@@ -531,9 +590,6 @@ List<Override> _overrides({
       hookService ?? _FakeStoryHookService(hooks: const [_hook1]),
     ),
     journeyRepositoryProvider.overrideWithValue(InMemoryJourneyRepository()),
-    usageRepositoryProvider.overrideWithValue(
-      usageRepo ?? InMemoryUsageRepository(),
-    ),
   ];
 }
 

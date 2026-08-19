@@ -1,6 +1,5 @@
 import 'package:context_app/core/errors/app_error.dart';
 import 'package:context_app/features/narration/domain/errors/narration_error.dart';
-import 'package:context_app/features/usage/domain/repositories/usage_repository.dart';
 import 'package:context_app/features/explore/domain/models/place.dart';
 import 'package:context_app/features/explore/domain/models/place_category.dart';
 import 'package:context_app/features/explore/domain/models/place_location.dart';
@@ -13,8 +12,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockNarrationService extends Mock implements NarrationService {}
-
-class MockUsageRepository extends Mock implements UsageRepository {}
 
 class FakePlace extends Fake implements Place {}
 
@@ -31,7 +28,6 @@ const _hook = StoryHook(
 void main() {
   late CreateNarrationUseCase useCase;
   late MockNarrationService mockNarrationService;
-  late MockUsageRepository mockUsageRepository;
 
   setUpAll(() {
     registerFallbackValue(FakePlace());
@@ -41,10 +37,7 @@ void main() {
 
   setUp(() {
     mockNarrationService = MockNarrationService();
-    mockUsageRepository = MockUsageRepository();
-    useCase = CreateNarrationUseCase(mockNarrationService, mockUsageRepository);
-
-    when(() => mockUsageRepository.consumeUsage()).thenAnswer((_) async {});
+    useCase = CreateNarrationUseCase(mockNarrationService);
   });
 
   const testPlace = Place(
@@ -103,28 +96,9 @@ void main() {
     );
 
     expect(narrationContent, isNotNull);
-    verify(() => mockUsageRepository.consumeUsage()).called(1);
   });
 
-  test('有剩餘次數時消耗額度', () async {
-    when(
-      () => mockNarrationService.generateNarration(
-        place: testPlace,
-        language: any(named: 'language'),
-        hook: any(named: 'hook'),
-      ),
-    ).thenAnswer((_) async => (text: testGeneratedText, grounding: null));
-
-    await useCase.execute(
-      place: testPlace,
-      language: Language.traditionalChinese,
-      hook: _hook,
-    );
-
-    verify(() => mockUsageRepository.consumeUsage()).called(1);
-  });
-
-  test('生成失敗時不消耗額度', () async {
+  test('生成失敗時拋出 AppError', () async {
     when(
       () => mockNarrationService.generateNarration(
         place: any(named: 'place'),
@@ -141,7 +115,5 @@ void main() {
       ),
       throwsA(isA<AppError>()),
     );
-
-    verifyNever(() => mockUsageRepository.consumeUsage());
   });
 }

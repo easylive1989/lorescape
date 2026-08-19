@@ -15,7 +15,6 @@ import 'package:context_app/features/narration/domain/services/narration_service
 import 'package:context_app/features/narration/providers.dart';
 import 'package:context_app/features/settings/domain/models/language.dart';
 import 'package:context_app/features/trip/providers.dart';
-import 'package:context_app/features/usage/providers.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -23,7 +22,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../fakes/in_memory_journey_repository.dart';
 import '../../../fakes/in_memory_trip_repository.dart';
-import '../../../fakes/in_memory_usage_repository.dart';
 
 const _place = Place(
   id: 'p',
@@ -138,9 +136,6 @@ ProviderContainer _buildContainer({
       narrationServiceProvider.overrideWithValue(narration),
       journeyRepositoryProvider.overrideWithValue(
         journey ?? InMemoryJourneyRepository(),
-      ),
-      usageRepositoryProvider.overrideWithValue(
-        InMemoryUsageRepository(dailyFreeLimit: 10),
       ),
       tripRepositoryProvider.overrideWithValue(InMemoryTripRepository()),
     ],

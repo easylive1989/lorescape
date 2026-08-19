@@ -14,7 +14,7 @@ void main() {
         'then it renders a price skeleton and no subscribe-ready text', (
       tester,
     ) async {
-      await _pumpCard(tester, const SubscriptionPlanCardState.loading());
+      await _pumpCard(tester, state: const SubscriptionPlanCardState.loading());
 
       expect(
         find.byKey(const ValueKey('planCard.priceSkeleton')),
@@ -29,7 +29,7 @@ void main() {
     ) async {
       await _pumpCard(
         tester,
-        const SubscriptionPlanCardState.ready(
+        state: const SubscriptionPlanCardState.ready(
           planLabel: 'MONTHLY PLAN',
           priceString: 'NT\$90',
           periodLabel: '/ month',
@@ -58,7 +58,7 @@ void main() {
         'then every provided bullet appears', (tester) async {
       await _pumpCard(
         tester,
-        const SubscriptionPlanCardState.ready(
+        state: const SubscriptionPlanCardState.ready(
           planLabel: 'MONTHLY PLAN',
           priceString: 'NT\$90',
           periodLabel: '/ month',
@@ -78,7 +78,7 @@ void main() {
       var retryCount = 0;
       await _pumpCard(
         tester,
-        const SubscriptionPlanCardState.error(message: 'oops'),
+        state: const SubscriptionPlanCardState.error(message: 'oops'),
         onRetry: () => retryCount++,
       );
 
@@ -95,7 +95,7 @@ void main() {
       (tester) async {
         await _pumpCard(
           tester,
-          const SubscriptionPlanCardState.ready(
+          state: const SubscriptionPlanCardState.ready(
             planLabel: 'YEARLY PLAN',
             priceString: 'NT\$900',
             periodLabel: '/ year',
@@ -115,7 +115,7 @@ void main() {
       (tester) async {
         await _pumpCard(
           tester,
-          const SubscriptionPlanCardState.ready(
+          state: const SubscriptionPlanCardState.ready(
             planLabel: 'MONTHLY PLAN',
             priceString: 'NT\$90',
             periodLabel: '/ month',
@@ -133,7 +133,7 @@ void main() {
         'then bullets are not rendered', (tester) async {
       await _pumpCard(
         tester,
-        const SubscriptionPlanCardState.ready(
+        state: const SubscriptionPlanCardState.ready(
           planLabel: 'WEEKLY PLAN',
           priceString: 'NT\$30',
           periodLabel: '/ week',
@@ -153,7 +153,7 @@ void main() {
       (tester) async {
         await _pumpCard(
           tester,
-          const SubscriptionPlanCardState.ready(
+          state: const SubscriptionPlanCardState.ready(
             planLabel: 'MONTHLY PLAN',
             priceString: 'NT\$150',
             periodLabel: '/ month',
@@ -174,7 +174,7 @@ void main() {
       (tester) async {
         await _pumpCard(
           tester,
-          const SubscriptionPlanCardState.ready(
+          state: const SubscriptionPlanCardState.ready(
             planLabel: 'WEEKLY PLAN',
             priceString: 'NT\$33',
             periodLabel: '/ week',
@@ -193,7 +193,7 @@ void main() {
       var taps = 0;
       await _pumpCard(
         tester,
-        SubscriptionPlanCardState.ready(
+        state: SubscriptionPlanCardState.ready(
           planLabel: 'WEEKLY PLAN',
           priceString: 'NT\$30',
           periodLabel: '/ week',
@@ -208,6 +208,22 @@ void main() {
 
       expect(taps, 1);
     });
+
+    testWidgets('given a plan card that is not selected, '
+        'when it renders, '
+        'then its feature list stays collapsed', (tester) async {
+      await _pumpCard(tester, isSelected: false);
+
+      expect(find.byKey(const Key('plan-features')), findsNothing);
+    });
+
+    testWidgets('given a plan card that is selected, '
+        'when it renders, '
+        'then its feature list is shown', (tester) async {
+      await _pumpCard(tester, isSelected: true);
+
+      expect(find.byKey(const Key('plan-features')), findsOneWidget);
+    });
   });
 }
 
@@ -218,17 +234,31 @@ double _fontSize(WidgetTester tester, String text) {
   return size!;
 }
 
+/// Defaults to a ready state (driven by [isSelected]) when [state] is
+/// omitted, so callers only asserting on the selected/unselected feature
+/// list don't need to spell out a full fake plan.
 Future<void> _pumpCard(
-  WidgetTester tester,
-  SubscriptionPlanCardState state, {
+  WidgetTester tester, {
+  SubscriptionPlanCardState? state,
+  bool isSelected = false,
   VoidCallback? onRetry,
 }) async {
+  final resolvedState =
+      state ??
+      SubscriptionPlanCardState.ready(
+        planLabel: 'MONTHLY PLAN',
+        priceString: 'NT\$90',
+        periodLabel: '/ month',
+        bullets: const ['Unlimited'],
+        autoRenewNotice: 'auto',
+        selected: isSelected,
+      );
   await pumpScreen(
     tester,
     child: Scaffold(
       backgroundColor: const Color(0xFF101922),
       body: Center(
-        child: SubscriptionPlanCard(state: state, onRetry: onRetry),
+        child: SubscriptionPlanCard(state: resolvedState, onRetry: onRetry),
       ),
     ),
   );

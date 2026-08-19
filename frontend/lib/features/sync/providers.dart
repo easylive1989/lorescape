@@ -1,16 +1,11 @@
 import 'package:context_app/features/auth/providers.dart';
 import 'package:context_app/features/journey/domain/models/journey_entry.dart';
 import 'package:context_app/features/journey/domain/repositories/journey_repository.dart';
-import 'package:context_app/features/saved_locations/domain/models/saved_location_entry.dart';
-import 'package:context_app/features/saved_locations/domain/repositories/saved_locations_repository.dart';
 import 'package:context_app/features/sync/data/hive_journey_repository.dart';
-import 'package:context_app/features/sync/data/hive_saved_locations_repository.dart';
 import 'package:context_app/features/sync/data/hive_trip_repository.dart';
 import 'package:context_app/features/sync/data/supabase_journey_remote_data_source.dart';
-import 'package:context_app/features/sync/data/supabase_saved_locations_remote_data_source.dart';
 import 'package:context_app/features/sync/data/supabase_trip_remote_data_source.dart';
 import 'package:context_app/features/sync/data/syncing_journey_repository.dart';
-import 'package:context_app/features/sync/data/syncing_saved_locations_repository.dart';
 import 'package:context_app/features/sync/data/syncing_trip_repository.dart';
 import 'package:context_app/features/sync/domain/services/remote_sync_data_source.dart';
 import 'package:context_app/features/sync/domain/services/sync_coordinator.dart';
@@ -51,11 +46,6 @@ final localTripRepositoryProvider = Provider<TripRepository>((ref) {
   return HiveTripRepository();
 });
 
-final localSavedLocationsRepositoryProvider =
-    Provider<SavedLocationsRepository>((ref) {
-      return HiveSavedLocationsRepository();
-    });
-
 // ---------------------------------------------------------------------------
 // Remote data sources (Supabase).
 // ---------------------------------------------------------------------------
@@ -74,13 +64,6 @@ final tripRemoteDataSourceProvider = Provider<RemoteSyncDataSource<Trip>>((
 ) {
   return SupabaseTripRemoteDataSource(ref.watch(supabaseClientProvider));
 });
-
-final savedLocationsRemoteDataSourceProvider =
-    Provider<RemoteSyncDataSource<SavedLocationEntry>>((ref) {
-      return SupabaseSavedLocationsRemoteDataSource(
-        ref.watch(supabaseClientProvider),
-      );
-    });
 
 // ---------------------------------------------------------------------------
 // Sync engines.
@@ -114,21 +97,6 @@ final tripSyncEngineProvider = Provider<SyncEngine<Trip>>((ref) {
   );
 });
 
-final savedLocationsSyncEngineProvider =
-    Provider<SyncEngine<SavedLocationEntry>>((ref) {
-      final local = ref.watch(localSavedLocationsRepositoryProvider);
-      return SyncEngine<SavedLocationEntry>(
-        descriptor: SyncEntityDescriptor<SavedLocationEntry>(
-          name: 'saved_location',
-          idOf: (s) => s.placeId,
-          updatedAtOf: (s) => s.updatedAt,
-        ),
-        remote: ref.watch(savedLocationsRemoteDataSourceProvider),
-        loadLocal: local.getAll,
-        saveLocal: local.save,
-      );
-    });
-
 // ---------------------------------------------------------------------------
 // Public repositories — wrapped versions used by feature providers.
 // ---------------------------------------------------------------------------
@@ -149,15 +117,6 @@ final syncingTripRepositoryProvider = Provider<TripRepository>((ref) {
   );
 });
 
-final syncingSavedLocationsRepositoryProvider =
-    Provider<SavedLocationsRepository>((ref) {
-      return SyncingSavedLocationsRepository(
-        local: ref.watch(localSavedLocationsRepositoryProvider),
-        engine: ref.watch(savedLocationsSyncEngineProvider),
-        session: () => ref.read(syncSessionProvider),
-      );
-    });
-
 // ---------------------------------------------------------------------------
 // Coordinator (used to trigger initial full sync).
 // ---------------------------------------------------------------------------
@@ -166,6 +125,5 @@ final syncCoordinatorProvider = Provider<SyncCoordinator>((ref) {
   return SyncCoordinator(
     journey: ref.watch(journeySyncEngineProvider),
     trip: ref.watch(tripSyncEngineProvider),
-    savedLocations: ref.watch(savedLocationsSyncEngineProvider),
   );
 });

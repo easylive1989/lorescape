@@ -14,7 +14,6 @@ import 'package:context_app/features/narration/presentation/controllers/narratio
 import 'package:context_app/features/narration/presentation/controllers/player_controller.dart';
 import 'package:context_app/features/narration/presentation/controllers/story_hook_controller.dart';
 import 'package:context_app/features/settings/domain/models/language.dart';
-import 'package:context_app/features/usage/providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -55,8 +54,7 @@ final ttsServiceProvider = Provider<TtsService>((ref) {
 /// StartNarrationUseCase Provider
 final startNarrationUseCaseProvider = Provider<CreateNarrationUseCase>((ref) {
   final narrationService = ref.watch(narrationServiceProvider);
-  final usageRepository = ref.watch(usageRepositoryProvider);
-  return CreateNarrationUseCase(narrationService, usageRepository);
+  return CreateNarrationUseCase(narrationService);
 });
 
 /// NarrationGenerationController Provider — 管理導覽生成的狀態。

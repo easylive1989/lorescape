@@ -215,8 +215,7 @@ class PlacesController extends AsyncNotifier<List<Place>> {
 /// 畫面後自動清掉——建議清單沒有跨畫面重用的價值。
 ///
 /// 語言由呼叫端傳入，不讀 `currentLanguageProvider`——後者的初始值是作業
-/// 系統語言，在使用者第一次進到 `/map` 之前都不會跟 EasyLocalization 同步
-/// （見 `HomeTopBar` 呼叫端的說明）。
+/// 系統語言，不會自動跟 EasyLocalization 實際顯示的語言同步。
 final placeSuggestionsProvider = FutureProvider.autoDispose
     .family<List<String>, ({String query, Language language})>((
       ref,

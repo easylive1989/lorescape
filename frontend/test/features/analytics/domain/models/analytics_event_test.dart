@@ -58,7 +58,7 @@ void main() {
           eventId: 'fixed-id',
           narrationId: 'n1',
           placeId: 'p1',
-          source: NarrationEventSource.dailyStory,
+          source: NarrationEventSource.journey,
           isFirstLifetimeNarration: true,
           occurredAt: DateTime.utc(2026, 1, 1),
         );
@@ -69,7 +69,7 @@ void main() {
           'narration_id': 'n1',
           'occurred_at': '2026-01-01T00:00:00.000Z',
           'place_id': 'p1',
-          'source': 'daily_story',
+          'source': 'journey',
           'is_first_lifetime_narration': true,
         });
       });

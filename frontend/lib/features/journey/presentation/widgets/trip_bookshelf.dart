@@ -1,5 +1,4 @@
-import 'dart:math' as math;
-
+import 'package:context_app/app/config/lorescape_tokens.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
@@ -10,6 +9,7 @@ class ShelfBook {
     required this.title,
     required this.subtitle,
     required this.hasEntries,
+    required this.isSelected,
     required this.onTap,
   });
 
@@ -18,16 +18,20 @@ class ShelfBook {
 
   /// 有沒有內容，決定書背上的小圖示（有內容＝書，空的＝無影像）。
   final bool hasEntries;
+
+  /// 是不是目前選中的那本（會被抽出來一截、微微傾斜）。
+  final bool isSelected;
+
   final VoidCallback onTap;
 }
 
 /// 旅程書架，對應設計稿的 `.bookshelf`：凹槽背板 ＋ 一排立著的書 ＋ 木層板。
 ///
-/// 書本高度刻意不齊（190 / 204 / 218 循環），跟設計稿一樣，避免看起來像
+/// 書本高度刻意不齊（148 / 158 / 168 循環），跟設計稿一樣，避免看起來像
 /// 一排等高的色塊。
 ///
-/// 書放不下時不橫向捲動，而是往下長出新的一層書架——書櫃本來就是這樣長的，
-/// 而且整頁本來就能上下捲，使用者不必為了看見第 8 本書去發現一個橫滑手勢。
+/// v3 把書架收成單層橫向捲動：地球儀佔了畫面上半，書架只剩螢幕底部一條，
+/// 沒有空間再往下長第二層。
 class TripBookshelf extends StatelessWidget {
   const TripBookshelf({
     super.key,
@@ -38,25 +42,34 @@ class TripBookshelf extends StatelessWidget {
 
   final List<ShelfBook> books;
 
-  /// 書架上方的小標，例如「旅程書架 · 3 本」。
+  /// 標頭列左側的小標，例如「3 本旅程」。
   final String caption;
 
-  /// 按下書架末端那本虛線佔位書：建立新旅程。
+  /// 按下標頭列右側的「＋ 新旅程」pill：建立新旅程。
   ///
-  /// 這顆入口原本是頁首右上的 `+`，移到書架上是因為「新增一本書」的位置就
-  /// 該在書架上——空位長什麼樣，使用者一眼就知道那裡可以放一本新的。
+  /// v2 曾把這顆入口做成書架末端一本虛線佔位書，v3 收回標頭列——同一個動作
+  /// 不留兩個入口。
   final VoidCallback onAddTrip;
 
-  static const List<double> _heights = [190, 204, 218];
+  /// 書背高度的循環，對應設計稿的 `148 + (index % 3) * 10`。
+  static const List<double> _heights = [148, 158, 168];
 
-  /// 書與書之間的間距，也用來算一層放得下幾本。
-  static const double _gap = 11;
+  /// 書與書之間的間距。
+  static const double _gap = 10;
 
   /// 凹槽背板到書之間的內距（左右各一）。
   static const double _shelfPadding = 14;
 
-  /// 書排相對於背板再內縮的距離（左右各一）。
-  static const double _rowPadding = 12;
+  /// 書排相對於背板再內縮的距離（左右各一），跟著內容一起橫捲。
+  static const double _rowPadding = 10;
+
+  /// 標頭列的小標樣式（設計稿：10.5px、700、字距 0.2em、clay）。
+  static TextStyle _captionStyle(BuildContext context) => TextStyle(
+    fontSize: 10.5,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 10.5 * 0.2,
+    color: context.tokens.clay,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -67,75 +80,90 @@ class TripBookshelf extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-            child: Text(
-              caption,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.76,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
+            padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
+            child: _ShelfHeader(caption: caption, onAddTrip: onAddTrip),
           ),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final perShelf = _booksPerShelf(constraints.maxWidth);
-              // 佔位書也佔一個位子，否則末層剛好排滿時它會擠爆該層。
-              final slots = books.length + 1;
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (var start = 0; start < slots; start += perShelf)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 32),
-                      child: _Shelf(
-                        books: books.sublist(
-                          math.min(start, books.length),
-                          math.min(start + perShelf, books.length),
-                        ),
-                        // 高度與配色沿用全域序號，換層時花色才會繼續變化。
-                        firstIndex: start,
-                        // 佔位書永遠掛在最後一層的尾巴。
-                        showAddSlot: start + perShelf >= slots,
-                        onAddTrip: onAddTrip,
-                      ),
-                    ),
-                ],
-              );
-            },
-          ),
+          _Shelf(books: books),
         ],
       ),
     );
   }
+}
 
-  /// 一層書架放得下幾本；至少放 1 本，免得寬度極窄時除出 0。
-  static int _booksPerShelf(double maxWidth) {
-    final available = maxWidth - (_shelfPadding + _rowPadding) * 2 + _gap;
-    return math.max(1, available ~/ (_Book._width + _gap));
+/// 標頭列：左「N 本旅程」、中間一條 1px 分隔線、右「＋ 新旅程」pill。
+class _ShelfHeader extends StatelessWidget {
+  const _ShelfHeader({required this.caption, required this.onAddTrip});
+
+  final String caption;
+  final VoidCallback onAddTrip;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    return Row(
+      children: [
+        // 可縮：窄螢幕配上長標（翻譯後字數多的語系）時，該讓路的是小標，
+        // 不是右邊那顆按鈕。沒有 Flexible 的話整條 Row 會直接爆版。
+        Flexible(
+          child: Text(
+            caption,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TripBookshelf._captionStyle(context),
+          ),
+        ),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Container(height: 1, color: tokens.line),
+          ),
+        ),
+        Semantics(
+          button: true,
+          label: 'journey.shelf_new'.tr(),
+          child: GestureDetector(
+            onTap: onAddTrip,
+            behavior: HitTestBehavior.opaque,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: tokens.paperRaised,
+                border: Border.all(color: tokens.line),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              // 加號用全形文字而不是 Icons.add：設計稿的「＋ 新旅程」是同一
+              // 行 10.5px 的字，換成 icon 會是另一個字重與視覺大小。
+              child: Text(
+                '＋ ${'journey.shelf_new'.tr()}',
+                style: TripBookshelf._captionStyle(context),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 
-/// 一層書架：凹槽背板 ＋ 一排書 ＋ 木層板。
+/// 書架本體：凹槽背板 ＋ 一排可橫捲的書 ＋ 木層板。
 class _Shelf extends StatelessWidget {
-  const _Shelf({
-    required this.books,
-    required this.firstIndex,
-    required this.showAddSlot,
-    required this.onAddTrip,
-  });
+  const _Shelf({required this.books});
 
   final List<ShelfBook> books;
 
-  /// 這層第一本書在整個書架裡的序號，用來延續高度與配色的循環。
-  final int firstIndex;
+  /// 書排的最小高度（設計稿的 `min-height:172px`）：書都很矮或一本都沒有
+  /// 時，凹槽也不能塌下去。
+  ///
+  /// 有書的時候實際高度是 `_liftHeadroom + 168 = 184`，比設計稿的 172 多 12。
+  /// 這是刻意的，別「修正」回 172：設計稿的 172 沒有替抽高的那本書留位置，
+  /// 見 [_liftHeadroom]。
+  static const double _rowMinHeight = 172;
 
-  /// 這層尾端要不要放那本虛線佔位書。
-  final bool showAddSlot;
-  final VoidCallback onAddTrip;
-
-  static const double _rowMinHeight = 214;
+  /// 書排上方留給「選中的書被抽高」的空間。
+  ///
+  /// 抽高是 Transform 畫的、不佔版面，而橫捲區會裁掉超出的部分；不留這段
+  /// 空間的話最高的那本書一被選中，書頭就會被切掉。
+  static const double _liftHeadroom = _Book._liftDistance + 2;
 
   @override
   Widget build(BuildContext context) {
@@ -158,9 +186,13 @@ class _Shelf extends StatelessWidget {
             children: [
               ConstrainedBox(
                 constraints: const BoxConstraints(minHeight: _rowMinHeight),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: TripBookshelf._rowPadding,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.fromLTRB(
+                    TripBookshelf._rowPadding,
+                    _liftHeadroom,
+                    TripBookshelf._rowPadding,
+                    0,
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -169,26 +201,9 @@ class _Shelf extends StatelessWidget {
                         if (i > 0) const SizedBox(width: TripBookshelf._gap),
                         _Book(
                           book: books[i],
-                          height:
-                              TripBookshelf._heights[(firstIndex + i) %
-                                  TripBookshelf._heights.length],
-                          palette: _BookPalette.values[(firstIndex + i) % 4],
-                        ),
-                      ],
-                      if (showAddSlot) ...[
-                        if (books.isNotEmpty)
-                          const SizedBox(width: TripBookshelf._gap),
-                        _AddBook(
-                          // 跟同排最後一本書等高：空位要看起來是「這排少了
-                          // 一本」，高度自己跳一級反而像另外擺上去的東西。
-                          height: books.isEmpty
-                              ? TripBookshelf._heights[firstIndex %
-                                    TripBookshelf._heights.length]
-                              : TripBookshelf._heights[(firstIndex +
-                                        books.length -
-                                        1) %
-                                    TripBookshelf._heights.length],
-                          onTap: onAddTrip,
+                          height: TripBookshelf
+                              ._heights[i % TripBookshelf._heights.length],
+                          palette: _BookPalette.values[i % 4],
                         ),
                       ],
                     ],
@@ -310,79 +325,106 @@ class _Book extends StatelessWidget {
   final double height;
   final _BookPalette palette;
 
-  static const double _width = 60;
+  static const double _width = 54;
   static const Color _gilt = Color(0xFFF6E6C2);
+
+  /// 選中的書從架上被抽出來的距離與傾角（設計稿的
+  /// `translateY(-14px) rotate(-1.4deg)`）。
+  static const double _liftDistance = 14;
+  static const double _liftTurns = -1.4 / 360;
+
+  /// 抽書的動畫，設計稿的 `.3s cubic-bezier(.2,.9,.3,1.25)`——結尾略為
+  /// 過衝，抽出來的那一下才有手感。
+  static const Duration _liftDuration = Duration(milliseconds: 300);
+  static const Curve _liftCurve = Cubic(0.2, 0.9, 0.3, 1.25);
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
+      selected: book.isSelected,
       label: '${book.title}｜${book.subtitle}',
       child: GestureDetector(
         onTap: book.onTap,
         behavior: HitTestBehavior.opaque,
-        child: Container(
-          width: _width,
-          height: height,
-          decoration: const BoxDecoration(
-            borderRadius: BorderRadius.horizontal(
-              left: Radius.circular(2),
-              right: Radius.circular(7),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Color(0x6B1C140A),
-                offset: Offset(-5, 9),
-                blurRadius: 17,
+        // 抽高與傾斜都用 Transform 系的隱式動畫：它們不佔版面，同排其他書
+        // 才不會被選中的那本推來推去。上方的空間由 _Shelf._liftHeadroom 留。
+        child: AnimatedSlide(
+          offset: book.isSelected
+              ? Offset(0, -_liftDistance / height)
+              : Offset.zero,
+          duration: _liftDuration,
+          curve: _liftCurve,
+          child: AnimatedRotation(
+            turns: book.isSelected ? _liftTurns : 0,
+            duration: _liftDuration,
+            curve: _liftCurve,
+            child: Container(
+              width: _width,
+              height: height,
+              decoration: const BoxDecoration(
+                borderRadius: BorderRadius.horizontal(
+                  left: Radius.circular(2),
+                  right: Radius.circular(7),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0x6B1C140A),
+                    offset: Offset(-5, 9),
+                    blurRadius: 17,
+                  ),
+                ],
               ),
-            ],
-          ),
-          // 書皮、書口、脊上的光影與裝訂棱全部畫在這層，文字與 icon 疊上去。
-          child: CustomPaint(
-            painter: _BookSpinePainter(palette),
-            child: Stack(
-              children: [
-                Positioned(
-                  top: 17,
-                  left: 0,
-                  right: 0,
-                  child: Icon(
-                    book.hasEntries
-                        ? Icons.menu_book_outlined
-                        : Icons.image_not_supported_outlined,
-                    size: 13,
-                    color: const Color(0xEBFFEECE),
-                  ),
-                ),
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 12,
+              // 書皮、書口、脊上的光影與裝訂棱都畫在這層，文字與 icon 疊上去。
+              child: CustomPaint(
+                painter: _BookSpinePainter(palette),
+                child: Stack(
+                  children: [
+                    Positioned(
+                      top: 14,
+                      left: 0,
+                      right: 0,
+                      child: Icon(
+                        book.hasEntries
+                            ? Icons.menu_book_outlined
+                            : Icons.image_not_supported_outlined,
+                        size: 13,
+                        color: const Color(0xEBFFEECE),
+                      ),
                     ),
-                    // 設計稿的 `.book__label` 只有 padding，沒有框線。
-                    // 這層 clip 留著：實機 iOS 上曾出現字影跑到版面外、落在
-                    // 書脊左緣的鬼影字，是最後一道保險。
-                    child: ClipRect(child: _VerticalTitle(text: book.title)),
-                  ),
-                ),
-                Positioned(
-                  bottom: 16,
-                  left: 0,
-                  right: 0,
-                  child: Text(
-                    book.subtitle,
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      letterSpacing: 0.6,
-                      color: Color(0xB8FFEBC8),
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 12,
+                        ),
+                        // 設計稿的 `.book__label` 只有 padding，沒有框線。
+                        // 這層 clip 留著：實機 iOS 上曾出現字影跑到版面外、
+                        // 落在書脊左緣的鬼影字，是最後一道保險。
+                        child: ClipRect(
+                          child: _VerticalTitle(text: book.title),
+                        ),
+                      ),
                     ),
-                  ),
+                    Positioned(
+                      bottom: 12,
+                      left: 0,
+                      right: 0,
+                      child: Text(
+                        book.subtitle,
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 9,
+                          letterSpacing: 0.4,
+                          color: Color(0xB8FFEBC8),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -548,85 +590,6 @@ class _BookSpinePainter extends CustomPainter {
       oldDelegate.palette != palette;
 }
 
-/// 書架末端的佔位書：一個虛線圍出來的空書位，中間一個 `+`。
-///
-/// 尺寸與真書一致（同寬、同一組高度循環），才像書架上「還空著的一格」，而
-/// 不是一顆貼在書旁邊的按鈕。
-class _AddBook extends StatelessWidget {
-  const _AddBook({required this.height, required this.onTap});
-
-  final double height;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: 'trip.create_action'.tr(),
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: CustomPaint(
-          painter: const _DashedBookPainter(),
-          child: SizedBox(
-            width: _Book._width,
-            height: height,
-            child: Center(
-              child: Icon(
-                Icons.add,
-                size: 22,
-                color: const Color(0xFF6B5334).withValues(alpha: 0.55),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// 佔位書的虛線外框，圓角與真書的書脊一致（左 2、右 7）。
-///
-/// Flutter 沒有內建虛線邊框，用 `PathMetric` 沿著圓角路徑切段落畫。
-class _DashedBookPainter extends CustomPainter {
-  const _DashedBookPainter();
-
-  static const double _dash = 5;
-  static const double _gap = 4;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final path = Path()
-      ..addRRect(
-        RRect.fromRectAndCorners(
-          Offset.zero & size,
-          topLeft: const Radius.circular(2),
-          bottomLeft: const Radius.circular(2),
-          topRight: const Radius.circular(7),
-          bottomRight: const Radius.circular(7),
-        ),
-      );
-
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.4
-      ..strokeCap = StrokeCap.round
-      ..color = const Color(0xFF8A6C43).withValues(alpha: 0.6);
-
-    for (final metric in path.computeMetrics()) {
-      var distance = 0.0;
-      while (distance < metric.length) {
-        final next = math.min(distance + _dash, metric.length);
-        canvas.drawPath(metric.extractPath(distance, next), paint);
-        distance = next + _gap;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DashedBookPainter oldDelegate) => false;
-}
-
 /// 直排書名。
 ///
 /// CJK 的 `writing-mode: vertical-rl` 是「字元直立堆疊」而不是把整行轉 90°，
@@ -640,12 +603,19 @@ class _VerticalTitle extends StatelessWidget {
 
   final String text;
 
-  /// 對應設計稿 `max-height:132px`：超出的字捨去，避免長名字把書撐爛。
-  static const int _maxCharacters = 7;
+  /// 超出的字捨去，避免長名字把書撐爛。
+  ///
+  /// 最矮的書 148 高，扣掉上方的 icon、底部的篇數與內距後只剩約 95；一個字
+  /// 佔 18（見 [_style] 的 `height`），所以最多 5 個字。
+  static const int _maxCharacters = 5;
 
+  /// 設計稿的書名是 `writing-mode: vertical-rl` ＋ `font-size:16px`、
+  /// `letter-spacing:2px`。直排時 CSS 的 letter-spacing 走的是**上下**方向，
+  /// 對應到這裡逐字堆疊的版面就是行距，所以寫成 `height: 18/16`——寫在
+  /// `letterSpacing` 反而會把字往左右推，方向完全相反。
   static const TextStyle _style = TextStyle(
-    fontSize: 15,
-    height: 1.15,
+    fontSize: 16,
+    height: 18 / 16,
     fontWeight: FontWeight.w700,
     letterSpacing: 0,
     color: _Book._gilt,
@@ -678,8 +648,8 @@ class _VerticalTitle extends StatelessWidget {
 class _ShelfPlank extends StatelessWidget {
   const _ShelfPlank();
 
-  /// 板面厚度，對應設計稿的 `height:20px`。
-  static const double _height = 20;
+  /// 板面厚度，對應設計稿的 `height:16px`。
+  static const double _height = 16;
 
   /// 前緣（`::after`）高度與左右內縮（設計稿為 1.5%，此處以固定值近似）。
   static const double _lipHeight = 7;

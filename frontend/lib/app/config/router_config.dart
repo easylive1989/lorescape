@@ -3,11 +3,9 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:context_app/app/config/feature_flags.dart';
 import 'package:context_app/features/analytics/providers.dart';
 import 'package:context_app/features/explore/domain/models/place.dart';
 import 'package:context_app/features/explore/presentation/screens/explore_screen.dart';
-import 'package:context_app/features/home/presentation/screens/globe_home_screen.dart';
 import 'package:context_app/features/journey/presentation/screens/journey_screen.dart';
 import 'package:context_app/features/narration/presentation/screens/select_story_hook_screen.dart';
 import 'package:context_app/features/narration/presentation/screens/narration_screen.dart';
@@ -16,12 +14,10 @@ import 'package:context_app/features/onboarding/presentation/controllers/onboard
 import 'package:context_app/features/onboarding/presentation/screens/onboarding_welcome_screen.dart';
 import 'package:context_app/features/settings/presentation/screens/settings_screen.dart';
 import 'package:context_app/features/splash/presentation/splash_screen.dart';
+import 'package:context_app/features/subscription/presentation/screens/subscription_screen.dart';
 import 'package:context_app/features/trip/presentation/screens/trip_detail_screen.dart';
 import 'package:context_app/features/trip/presentation/screens/trip_edit_screen.dart';
 import 'package:context_app/features/trip/presentation/screens/trip_list_screen.dart';
-import 'package:context_app/features/daily_story/domain/models/daily_story.dart';
-import 'package:context_app/features/daily_story/presentation/screens/daily_story_detail_screen.dart';
-import 'package:context_app/features/daily_story/presentation/screens/story_deep_link_screen.dart';
 import 'package:context_app/shared/widgets/redirect_to_home.dart';
 
 class RouterConfig {
@@ -67,41 +63,18 @@ class RouterConfig {
         GoRoute(
           path: '/',
           name: 'home',
-          // 用 pageBuilder + NoTransitionPage 而不是預設的 builder:——預設
-          // builder: 會產生 MaterialPage（掛 MaterialRouteTransitionMixin），
-          // 而它的 canTransitionTo 只有在下一頁「也是 MaterialPage」或「有
-          // delegatedTransition」時才會接上 secondaryAnimation。/map 是
-          // CustomTransitionPage，兩者都不是，會被直接擋下，secondaryAnimation
-          // 永遠停在 0，地球儀縮放淡出的轉場等於沒接上。NoTransitionPage 本身
-          // 也是 CustomTransitionPage 家族，不會被這個檢查擋掉；首頁幾乎只會
-          // 是初始路徑或 redirect 目的地，本來就不需要自己的進場轉場。
+          // 首頁就是探索地圖。用 NoTransitionPage：首頁幾乎只會是初始路徑
+          // 或 redirect 目的地，不需要自己的進場轉場。
           pageBuilder: (context, state) => NoTransitionPage<void>(
             key: state.pageKey,
-            child: const GlobeHomeScreen(),
+            child: ExploreScreen(initialQuery: state.uri.queryParameters['q']),
           ),
         ),
         GoRoute(
-          path: '/map',
-          name: 'map',
-          // 自訂轉場：首頁那一頁會讀 secondaryAnimation 把地球儀放大淡出，
-          // 這裡只負責讓地圖淡入，兩段動畫共用同一個 640ms 時長才接得起來。
-          pageBuilder: (context, state) => CustomTransitionPage<void>(
-            key: state.pageKey,
-            transitionDuration: const Duration(milliseconds: 640),
-            reverseTransitionDuration: const Duration(milliseconds: 640),
-            child: ExploreScreen(initialQuery: state.uri.queryParameters['q']),
-            transitionsBuilder: (context, animation, _, child) =>
-                FadeTransition(opacity: animation, child: child),
-          ),
+          path: '/journey',
+          name: 'journey',
+          builder: (context, state) => const JourneyScreen(),
         ),
-        // 書架整組暫時隱藏；未註冊的 path 會落到下方的 errorBuilder
-        // → RedirectToHome，殘留的 deep link 自動回首頁。
-        if (kBookshelfEnabled)
-          GoRoute(
-            path: '/journey',
-            name: 'journey',
-            builder: (context, state) => const JourneyScreen(),
-          ),
         GoRoute(
           path: '/settings',
           name: 'settings',
@@ -165,54 +138,41 @@ class RouterConfig {
           },
         ),
         GoRoute(
-          path: '/daily-story/detail',
-          name: 'daily_story_detail',
+          path: '/subscription',
+          name: 'subscription',
+          builder: (context, state) => const SubscriptionScreen(),
+        ),
+        GoRoute(
+          path: '/trips',
+          name: 'trips',
+          builder: (context, state) => const TripListScreen(),
+        ),
+        GoRoute(
+          path: '/trip/edit',
+          name: 'trip_create',
+          builder: (context, state) => const TripEditScreen(),
+        ),
+        GoRoute(
+          path: '/trip/edit/:id',
+          name: 'trip_edit',
           builder: (context, state) {
-            final story = state.extra as DailyStory;
-            return DailyStoryDetailScreen(story: story);
+            final id = state.pathParameters['id']!;
+            return TripEditScreen(tripId: id);
           },
         ),
         GoRoute(
-          path: '/:locale/story/:date',
-          name: 'story_deep_link',
-          builder: (context, state) => StoryDeepLinkScreen(
-            locale: state.pathParameters['locale']!,
-            date: state.pathParameters['date']!,
-          ),
+          path: '/trip/uncategorized',
+          name: 'trip_uncategorized',
+          builder: (context, state) => const TripDetailScreen(),
         ),
-        if (kBookshelfEnabled) ...[
-          GoRoute(
-            path: '/trips',
-            name: 'trips',
-            builder: (context, state) => const TripListScreen(),
-          ),
-          GoRoute(
-            path: '/trip/edit',
-            name: 'trip_create',
-            builder: (context, state) => const TripEditScreen(),
-          ),
-          GoRoute(
-            path: '/trip/edit/:id',
-            name: 'trip_edit',
-            builder: (context, state) {
-              final id = state.pathParameters['id']!;
-              return TripEditScreen(tripId: id);
-            },
-          ),
-          GoRoute(
-            path: '/trip/uncategorized',
-            name: 'trip_uncategorized',
-            builder: (context, state) => const TripDetailScreen(),
-          ),
-          GoRoute(
-            path: '/trip/:id',
-            name: 'trip_detail',
-            builder: (context, state) {
-              final id = state.pathParameters['id']!;
-              return TripDetailScreen(tripId: id);
-            },
-          ),
-        ],
+        GoRoute(
+          path: '/trip/:id',
+          name: 'trip_detail',
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            return TripDetailScreen(tripId: id);
+          },
+        ),
       ],
       // A URL that matches no route (e.g. a malformed deep link like
       // `/zh/storybook`) redirects home instead of an error page.

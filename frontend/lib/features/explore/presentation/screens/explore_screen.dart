@@ -8,7 +8,6 @@ import 'package:context_app/features/explore/domain/models/place_location.dart';
 import 'package:context_app/features/explore/presentation/widgets/lorescape_map.dart';
 import 'package:context_app/features/explore/presentation/widgets/place_map_pin.dart';
 import 'package:context_app/features/explore/providers.dart';
-import 'package:context_app/features/saved_locations/providers.dart';
 import 'package:context_app/features/settings/providers.dart';
 import 'package:context_app/shared/widgets/journal/category_tag.dart';
 import 'package:context_app/shared/widgets/journal/glyph_thumb.dart';
@@ -198,9 +197,10 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             ],
           ),
           _MapTopOverlay(
-            placeCount: places.length,
             searchController: _searchController,
             onRefresh: _searchVisibleArea,
+            onOpenShelf: () => context.push('/journey'),
+            onOpenSettings: () => context.push('/settings'),
             onSearchChanged: (_) => setState(() {}),
             onSearchSubmitted: (value) {
               ref.read(searchQueryProvider.notifier).state = value;
@@ -235,23 +235,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                 ),
               ),
             ),
-          // FAB 疊在卡片列上方。設計稿把 FAB 放在 bottom:96，但那個位置正好
-          // 被卡片列蓋住（實機上直接壓在卡片上），所以改成貼著卡片列往上放。
-          //
-          // 回地球儀是這一頁最主要的出口，所以佔這個最順手的位置；儲存清單
-          // 改收進頂部 icon 列。
-          Positioned(
-            right: 18,
-            bottom:
-                MediaQuery.paddingOf(context).bottom +
-                _MapCardsRail.railBottomGap +
-                _MapCardsRail.railHeight +
-                12,
-            child: _GlobeFab(
-              onPressed: () =>
-                  context.canPop() ? context.pop() : context.go('/'),
-            ),
-          ),
           // 設計稿的 `.search-loader`：搜尋／定位進行中蓋住整頁的置中載入
           // 卡。放在 Stack 最上層（z-index 120 的等價位置），連 FAB 一起蓋。
           if (placesState.isLoading)
@@ -268,6 +251,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
 }
 
 /// Circular 40×40 clay action button, matching the design's clay `.iconbtn`.
+///
+/// `_CircleButton` 沒有 `tooltip` 參數，所以用 `Semantics` 包一層來承載無障礙
+/// 標籤——順便把 [Key] 放在這層，測試才點得到。
 class _RefreshButton extends StatelessWidget {
   final VoidCallback onPressed;
 
@@ -276,38 +262,62 @@ class _RefreshButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return _CircleButton(
-      icon: Icons.refresh,
-      iconColor: colorScheme.onPrimary,
-      background: colorScheme.primary,
-      iconSize: 20,
-      onPressed: onPressed,
+    return Semantics(
+      key: const Key('explore-refresh'),
+      button: true,
+      label: 'explore.refresh'.tr(),
+      child: _CircleButton(
+        icon: Icons.refresh,
+        iconColor: colorScheme.onPrimary,
+        background: colorScheme.primary,
+        iconSize: 20,
+        onPressed: onPressed,
+      ),
     );
   }
 }
 
-/// 從首頁搜尋建議 zoom 進地圖後，用來退回地球儀首頁的返回鈕。
-///
-/// `_CircleButton` 沒有 `tooltip` 參數，所以用 `Semantics` 包一層來承載無障礙
-/// 標籤——順便把 [Key] 放在這層，測試才點得到。
-class _GlobeFab extends StatelessWidget {
-  const _GlobeFab({required this.onPressed});
+class _ShelfButton extends StatelessWidget {
+  const _ShelfButton({required this.onPressed});
 
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return Semantics(
-      key: const Key('explore-globe-back'),
+      key: const Key('explore-open-shelf'),
       button: true,
-      label: 'explore.back_to_globe'.tr(),
-      child: FloatingActionButton(
-        shape: const CircleBorder(),
+      label: 'explore.open_shelf'.tr(),
+      child: _CircleButton(
+        icon: Icons.menu_book_outlined,
+        iconColor: tokens.ink,
+        background: tokens.paperRaised,
+        iconSize: 20,
         onPressed: onPressed,
-        child: Icon(
-          Icons.public,
-          color: Theme.of(context).colorScheme.onPrimary,
-        ),
+      ),
+    );
+  }
+}
+
+class _SettingsButton extends StatelessWidget {
+  const _SettingsButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    return Semantics(
+      key: const Key('explore-open-settings'),
+      button: true,
+      label: 'explore.open_settings'.tr(),
+      child: _CircleButton(
+        icon: Icons.settings_outlined,
+        iconColor: tokens.ink,
+        background: tokens.paperRaised,
+        iconSize: 20,
+        onPressed: onPressed,
       ),
     );
   }
@@ -457,53 +467,23 @@ class _PlaceThumb extends StatelessWidget {
   );
 }
 
-class _BookmarkButton extends StatelessWidget {
-  final bool isSaved;
-  final VoidCallback onTap;
-
-  const _BookmarkButton({required this.isSaved, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final tokens = Theme.of(context).extension<LorescapeTokens>();
-    final restColor = tokens?.ink3 ?? colorScheme.onSurfaceVariant;
-
-    return PressScale(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.all(6),
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          transitionBuilder: (child, animation) =>
-              ScaleTransition(scale: animation, child: child),
-          child: Icon(
-            isSaved ? Icons.bookmark : Icons.bookmark_border,
-            key: ValueKey(isSaved),
-            color: isSaved ? colorScheme.primary : restColor,
-            size: 24,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// 浮在地圖上方的標題區，對應設計稿的 `.map-top`：紙色漸層讓底下的地圖不會
 /// 干擾文字，但只有實際控制項吃得到觸控（`pointer-events` 的等價作法）。
 class _MapTopOverlay extends StatelessWidget {
   const _MapTopOverlay({
-    required this.placeCount,
     required this.searchController,
     required this.onRefresh,
+    required this.onOpenShelf,
+    required this.onOpenSettings,
     required this.onSearchChanged,
     required this.onSearchSubmitted,
     required this.onSearchClear,
   });
 
-  final int placeCount;
   final TextEditingController searchController;
   final VoidCallback onRefresh;
+  final VoidCallback onOpenShelf;
+  final VoidCallback onOpenSettings;
   final ValueChanged<String> onSearchChanged;
   final ValueChanged<String> onSearchSubmitted;
   final VoidCallback? onSearchClear;
@@ -550,14 +530,15 @@ class _MapTopOverlay extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Masthead(
-                  eyebrow: 'explore.atlas_eyebrow'.tr(args: ['$placeCount']),
                   title: 'explore.title'.tr(),
                   // 地圖上不畫分隔線，靠漸層與底圖分隔。
                   showRule: false,
                   actions: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const SavedLocationsButton(),
+                      _ShelfButton(onPressed: onOpenShelf),
+                      const SizedBox(width: 8),
+                      _SettingsButton(onPressed: onOpenSettings),
                       const SizedBox(width: 8),
                       _RefreshButton(onPressed: onRefresh),
                     ],
@@ -755,7 +736,7 @@ class _LocationGateCard extends ConsumerWidget {
 }
 
 /// 單張地點卡（`.map-card`）：252px 寬、紙色浮起、縮圖＋名稱＋分類標籤＋前往鈕。
-class _MapCard extends ConsumerWidget {
+class _MapCard extends StatelessWidget {
   const _MapCard({required this.place, required this.onTap});
 
   final Place place;
@@ -764,13 +745,10 @@ class _MapCard extends ConsumerWidget {
   static const double _width = 252;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final tokens = Theme.of(context).extension<LorescapeTokens>();
     final colorScheme = Theme.of(context).colorScheme;
     final radius = context.tokens.rLg;
-    final savedLocations = ref.watch(savedLocationsProvider);
-    final isSaved =
-        savedLocations.valueOrNull?.any((e) => e.placeId == place.id) ?? false;
 
     return PressScale(
       onTap: onTap,
@@ -785,31 +763,7 @@ class _MapCard extends ConsumerWidget {
         ),
         child: Row(
           children: [
-            // 書籤疊在縮圖角落。設計稿的 map-card 沒有書籤，但這是全 App 唯一
-            // 能收藏地點的入口，照抄會把功能弄丟；壓在縮圖上才不會擠掉名稱。
-            Stack(
-              children: [
-                _PlaceThumb(place: place),
-                Positioned(
-                  top: -8,
-                  right: -8,
-                  // 紙色底盤：書籤壓在照片上時，深色圖示在深色照片上幾乎看不見。
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: context.tokens.paperRaised.withValues(alpha: 0.92),
-                      shape: BoxShape.circle,
-                      boxShadow: context.tokens.e1,
-                    ),
-                    child: _BookmarkButton(
-                      isSaved: isSaved,
-                      onTap: () => ref
-                          .read(savedLocationsProvider.notifier)
-                          .togglePlace(place),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            _PlaceThumb(place: place),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

@@ -1,21 +1,19 @@
 import 'package:context_app/app/config/lorescape_tokens.dart';
 import 'package:flutter/material.dart';
 
-/// 頁面主標，對應設計稿的 `.masthead`：一段短橫線＋全大寫眼眉字，
-/// 底下壓襯線大標，最後一條細分隔線（左端有一小段 clay 色）。
+/// 頁面主標，對應設計稿的 `.masthead`：襯線大標，最後一條細分隔線
+/// （左端有一小段 clay 色）。
 ///
 /// 三個分頁（故事／歷程／探索）都用這個元件，標題的位置與字級才會一致——
 /// 探索頁曾經自己複製一份 `.map-hd`，兩份實作就各自漂移出 6px 的左緣差。
 class Masthead extends StatelessWidget {
   const Masthead({
     super.key,
-    required this.eyebrow,
     required this.title,
     this.actions,
     this.showRule = true,
   });
 
-  final String eyebrow;
   final String title;
   final Widget? actions;
 
@@ -52,49 +50,16 @@ class Masthead extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 16,
-                          height: 1.5,
-                          decoration: BoxDecoration(
-                            color: clay,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Flexible(
-                          child: Text(
-                            eyebrow,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 2.3,
-                              color: clay,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 7),
-                    Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                        fontSize: 37,
-                        height: 0.98,
-                        letterSpacing: 1,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                    fontSize: 37,
+                    height: 0.98,
+                    letterSpacing: 1,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               if (actions != null)

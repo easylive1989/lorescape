@@ -46,6 +46,10 @@ class SelectStoryHookScreen extends ConsumerStatefulWidget {
 class _SelectStoryHookScreenState extends ConsumerState<SelectStoryHookScreen> {
   String? _selectedStoryTitle;
 
+  /// 最後一次送出生成請求的 hook（`null` 代表「直接聽故事」）。付費牆回來
+  /// 後自動續作要重打同一個 hook，靠這個記住它。
+  StoryHook? _lastHook;
+
   Language _currentLanguage() {
     final locale = EasyLocalization.of(context)?.locale.toLanguageTag();
     return Language(locale ?? 'zh-TW');
@@ -53,7 +57,15 @@ class _SelectStoryHookScreenState extends ConsumerState<SelectStoryHookScreen> {
 
   void _onHookSelected(StoryHook? hook) {
     _selectedStoryTitle = hook?.title;
+    _lastHook = hook;
     _emitHookSelected(hook);
+    _generate(hook);
+  }
+
+  /// 實際送出生成請求。使用者挑角度會經過這裡，付費牆回來後的自動續作也
+  /// 是——後者不重挑一次，直接重打 [_lastHook]，也不重送 [_emitHookSelected]
+  /// 分析事件（那是「使用者挑了哪個角度」，不是「續作」）。
+  void _generate(StoryHook? hook) {
     // The backend is the source of truth for generation errors; failures
     // surface via the generation-state listener below.
     ref
@@ -106,8 +118,20 @@ class _SelectStoryHookScreenState extends ConsumerState<SelectStoryHookScreen> {
     );
   }
 
-  void _showErrorDialog(NarrationGenerationState genState) {
+  Future<void> _showErrorDialog(NarrationGenerationState genState) async {
     ref.read(narrationGenerationControllerProvider.notifier).reset();
+    if (genState.errorType == NarrationGenerationErrorType.quotaExceeded) {
+      // 今日免費額度用盡（backend 回 402）。不顯示錯誤，直接把使用者
+      // 帶到付費牆；買完直接回來重打剛剛那個 hook，使用者不必再點一次、
+      // 也不會立刻又吃一次還沒 healed 的 402（見 subscriptions 的
+      // SubscriptionChecker：本地表落後時會即時問 RevenueCat）。
+      if (!context.mounted) return;
+      final purchased = await context.push<bool>('/subscription');
+      if (purchased == true && mounted) {
+        _generate(_lastHook);
+      }
+      return;
+    }
     final isInsufficient =
         genState.errorType == NarrationGenerationErrorType.insufficientSource;
     final title = isInsufficient

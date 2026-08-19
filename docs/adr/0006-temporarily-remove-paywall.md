@@ -1,6 +1,6 @@
 # ADR 0006：暫時移除付費牆，App 全面免費
 
-- 狀態：Accepted
+- 狀態：Superseded by ADR 0009
 - 日期：2026-08-05
 - 影響範圍：backend `narration` route、frontend settings + narration + router、
   landing 首頁

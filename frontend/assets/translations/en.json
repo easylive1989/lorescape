@@ -16,12 +16,6 @@
   "gps_strong": "GPS Strong",
   "audio_ready": "Audio Ready",
   "current_location": "Current Location",
-  "daily_story": {
-    "detail_era_label": "Era",
-    "detail_location_label": "Location",
-    "more_eyebrow": "Want to know more?",
-    "explore_more": "Explore more stories"
-  },
   "explore_nearby": "Explore Nearby",
   "tap_to_start": "Tap to start AI audio guide",
   "gion_district": "Gion District",
@@ -97,8 +91,13 @@
       "entry_no": "Note · No.{}",
       "no_photo": "No photo"
     },
-    "bookshelf": "Bookshelf · {} volumes",
-    "eyebrow": "Chronicle"
+    "shelf_hint": "{} — tap again to open",
+    "shelf_count": {
+      "zero": "{} journeys",
+      "one": "{} journey",
+      "other": "{} journeys"
+    },
+    "shelf_new": "New journey"
   },
   "trip": {
     "list_title": "My Trips",
@@ -118,7 +117,7 @@
     "start_date": "Start date",
     "end_date": "End date",
     "date_not_set": "Not set",
-    "uncategorized": "Uncategorized",
+    "uncategorized": "Other",
     "empty": "No trips yet",
     "no_items": "No entries in this trip",
     "empty_hint": "Find a place in front of you on Explore, listen to its story, and it lands in this journal",
@@ -150,7 +149,8 @@
   },
   "explore": {
     "title": "Explore",
-    "back_to_globe": "Back to globe",
+    "open_shelf": "Bookshelf",
+    "open_settings": "Settings",
     "refresh": "Refresh",
     "search_hint": "Search for places, cities, or landmarks…",
     "searching": "Searching places",
@@ -182,7 +182,6 @@
         "action": "Open settings"
       }
     },
-    "atlas_eyebrow": "{} places · Atlas",
     "view_place": "View place"
   },
   "date_picker": {
@@ -314,9 +313,8 @@
     "benefit_unlimited": "Unlimited narration usage",
     "benefit_route": "Route planning feature",
     "restore": "Restore Purchases",
-    "category_label": "PREMIUM · MEMBERSHIP",
-    "headline": "Unlock unlimited journeys",
-    "subheadline": "AI guides that never stop at every corner",
+    "hero_title": "Unlock endless journeys",
+    "hero_subtitle": "An AI companion around every corner",
     "plan_weekly": "WEEKLY PLAN",
     "plan_monthly": "MONTHLY PLAN",
     "plan_yearly": "YEARLY PLAN",
@@ -332,29 +330,17 @@
     "plan_load_failed": "Could not load the subscription plan. Please try again.",
     "terms": "Terms of Service",
     "privacy": "Privacy Policy",
-    "upgrade_cta": "Upgrade to Premium",
-    "upgrade_banner_title": "Unlock Endless Journeys",
-    "upgrade_banner_subtitle": "Go Premium · Unlimited tours & route planning",
+    "upgrade_title": "Unlock endless journeys",
+    "upgrade_subtitle": "Go premium · unlimited stories and route planning",
     "premium_active": "Premium Member",
-    "premium_banner_title": "Endless Journeys Unlocked",
     "expires": "Expires: {date}",
     "no_purchases_found": "No previous purchases found",
     "login_required": "Please sign in to subscribe"
   },
   "shared_place": {
     "loading": "Loading shared place...",
-    "saved": "\"{}\" saved to your locations",
     "error": "Could not load the shared place. Please try again.",
     "not_found": "Shared place not found"
-  },
-  "saved_locations": {
-    "title": "Saved Locations",
-    "empty": "No saved locations yet",
-    "empty_hint": "Tap the bookmark icon on a place card to save it",
-    "delete_title": "Remove Location",
-    "delete_message": "Are you sure you want to remove this saved location?",
-    "delete_confirm": "Remove",
-    "cancel": "Cancel"
   },
   "share_card": {
     "share": "Share",
