@@ -6,6 +6,38 @@
 
 ---
 
+## ISSUE-007 — wander 圖組模板兩處字級／字型缺陷（同日各撞一次）
+
+- **發生日**：2026-08-19（伽倻古墳群那天的 carousel）
+- **影響**：`publisher/.../wander/template`（wander 圖組）；當日出貨前已用
+  改文案繞過，兩處根因都沒修
+
+### 現象
+
+1. cover 標題「池山洞四十四號墳」（8 字）最後一個「墳」字被右緣裁掉。
+2. beat 內文的「百濟」渲染成日文字形「百済」。
+
+### 原因
+
+1. cover 標題是 `white-space: nowrap`，renderer 的寬度 pass 會把
+   `--title-fit` 一路縮到 `titleFloor: 0.5`（150px → 75px）。8 個中文字
+   ×75px＋`letter-spacing: 0.05em` 仍超過 600px 的 plate 寬，**縮到 floor
+   之後沒有任何安全網**，就直接被 overflow 裁掉——不會噴錯，只在目視時
+   才看得出來。
+2. `fonts.css` 裡 Noto Serif TC 的 subset-97 unicode-range 有涵蓋 U+6FDF
+   （濟），對應的 woff2 也在，但 Playwright 仍 fallback 到系統日文字型。
+   實際載入為什麼失敗沒有查到底。
+
+### 當下怎麼處理
+
+1. 標題改短為「大伽倻王陵」（5 字），英文副標保留完整的 Jisan-dong Tomb
+   No. 44，重渲染後重跑 `send_carousel_for_review`。
+2. 該句改寫成「還有從海外運來的銅器」，整組圖避開「濟」字。
+
+韓國題材很常撞到這個字（百濟、濟州島），若之後再出現就值得回頭修字型載入。
+
+---
+
 ## ISSUE-006 — App Store 商店頁報表整整一個月靜靜記 0
 
 - **發生日**：2026-08-18 發現（資料自 2026-07-19 起就沒進來）
