@@ -1,4 +1,3 @@
-import 'package:context_app/app/config/feature_flags.dart';
 import 'package:context_app/app/config/router_config.dart';
 import 'package:context_app/features/analytics/providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -33,18 +32,19 @@ void main() {
     expect(_routePaths(), containsAll(['/', '/map', '/settings']));
   });
 
-  test('given the bookshelf feature is hidden, '
+  test('given the bookshelf is part of the product again, '
       'when listing the router top-level routes, '
-      'then no journey or trip route is registered', () {
-    expect(kBookshelfEnabled, isFalse);
-
+      'then journey and all five trip routes are registered', () {
     expect(
       _routePaths(),
-      isNot(
-        anyElement(
-          anyOf(equals('/journey'), startsWith('/trip')),
-        ),
-      ),
+      containsAll([
+        '/journey',
+        '/trips',
+        '/trip/edit',
+        '/trip/edit/:id',
+        '/trip/uncategorized',
+        '/trip/:id',
+      ]),
     );
   });
 }

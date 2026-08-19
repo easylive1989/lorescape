@@ -25,7 +25,7 @@ class HomeTopBar extends ConsumerWidget {
   final ValueChanged<String> onQueryChanged;
   final ValueChanged<String> onSuggestionTap;
 
-  /// 書架入口。傳 `null` 代表這顆按鈕整個不出現（見 [kBookshelfEnabled]）。
+  /// 書架入口。傳 `null` 代表這顆按鈕整個不出現。
   final VoidCallback? onOpenJourney;
   final VoidCallback onOpenSettings;
 
