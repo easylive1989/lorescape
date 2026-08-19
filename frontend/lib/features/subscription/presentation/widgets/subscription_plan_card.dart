@@ -318,17 +318,23 @@ class _Ready extends StatelessWidget {
           const SizedBox(height: 16),
           _Divider(palette: palette),
           const SizedBox(height: 16),
-          ...bullets.map((b) => _bulletRow(b, palette)),
-          const SizedBox(height: 16),
-          _Divider(palette: palette),
-          const SizedBox(height: 12),
-          Text(
-            autoRenewNotice,
-            style: TextStyle(
-              fontSize: SubscriptionPlanCard._noticeFontSize,
-              color: palette.onDark3,
-              height: 1.4,
-            ),
+          Column(
+            key: const Key('plan-features'),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ...bullets.map((b) => _bulletRow(b, palette)),
+              const SizedBox(height: 16),
+              _Divider(palette: palette),
+              const SizedBox(height: 12),
+              Text(
+                autoRenewNotice,
+                style: TextStyle(
+                  fontSize: SubscriptionPlanCard._noticeFontSize,
+                  color: palette.onDark3,
+                  height: 1.4,
+                ),
+              ),
+            ],
           ),
         ],
       ],

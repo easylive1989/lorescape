@@ -329,21 +329,10 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                       const SizedBox(height: 8),
                       _PremiumIcon(color: palette.clay),
                       const SizedBox(height: 20),
-                      Text(
-                        'subscription.category_label'.tr(),
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 2,
-                          color: palette.clay,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 12),
                       _entry(
                         visible: _showHeadline,
                         child: Text(
-                          'subscription.headline'.tr(),
+                          'subscription.hero_title'.tr(),
                           style: GoogleFonts.notoSerifTc(
                             fontSize: 32,
                             fontWeight: FontWeight.w700,
@@ -358,7 +347,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                       _entry(
                         visible: _showSubheadline,
                         child: Text(
-                          'subscription.subheadline'.tr(),
+                          'subscription.hero_subtitle'.tr(),
                           style: TextStyle(
                             fontSize: 15,
                             height: 1.55,
@@ -415,7 +404,7 @@ class _PremiumIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Icon(Icons.diamond_outlined, size: 96, color: color);
+    return Icon(Icons.diamond_outlined, size: 92, color: color);
   }
 }
 
