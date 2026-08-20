@@ -34,7 +34,7 @@ export default function PrivacyPage() {
               Privacy Policy
             </h1>
             <p className="text-sm uppercase tracking-widest text-ink-3">
-              Last Updated: 2026-04-23
+              Last Updated: 2026-08-20
             </p>
           </header>
 
@@ -66,9 +66,12 @@ export default function PrivacyPage() {
                 <li>
                   <strong>Storage</strong>: Location data is processed locally
                   or sent to the server for real-time queries only while the
-                  App is in use. We <strong>do not</strong> store your
-                  historical movement history on our servers, nor do we track
-                  your location in the background.
+                  App is in use. We <strong>do not</strong> keep a log of your
+                  device&apos;s GPS positions, nor do we track your location in
+                  the background. Note that a landmark you save to your Journey
+                  is stored together with{" "}
+                  <strong>that landmark&apos;s own coordinates</strong> — see
+                  &quot;Cloud Backup &amp; Sync&quot; below.
                 </li>
               </ul>
             </li>
@@ -103,7 +106,42 @@ export default function PrivacyPage() {
             </li>
           </ul>
 
-          <h2>2. AI Technology &amp; Data Processing</h2>
+          <h2>2. Cloud Backup &amp; Sync</h2>
+          <p>
+            Your <strong>Journey of Exploration</strong> (saved landmarks) and
+            your <strong>Trips</strong> are automatically backed up to our
+            servers so they survive reinstalling the App and follow you to a
+            new device. This backup is on by default and is not something you
+            need to switch on.
+          </p>
+          <ul>
+            <li>
+              <strong>What is uploaded</strong>: for each saved landmark, its
+              name, address, cover image URL, the landmark&apos;s coordinates,
+              the guide text generated for it, the language, and the
+              created/updated timestamps; for each trip, its name and dates.
+            </li>
+            <li>
+              <strong>What is not uploaded</strong>: your device&apos;s GPS
+              trail, your photos, and your Quick Guide entries, which stay on
+              your device.
+            </li>
+            <li>
+              <strong>Who it is tied to</strong>: an account identifier. If you
+              have not signed in, the App creates an{" "}
+              <strong>anonymous account</strong> on first launch and the backup
+              is tied to that. An anonymous account lives only on that
+              installation — if you reinstall the App or switch devices, a new
+              anonymous account is created and the earlier backup can no longer
+              be reached. Sign in to keep access to it across devices.
+            </li>
+            <li>
+              <strong>Access</strong>: rows are protected by row-level security
+              so an account can only ever read and write its own data.
+            </li>
+          </ul>
+
+          <h2>3. AI Technology &amp; Data Processing</h2>
           <p>
             The App utilizes advanced Artificial Intelligence technologies
             (e.g., OpenAI GPT or Google Gemini) to generate guide content.
@@ -122,7 +160,7 @@ export default function PrivacyPage() {
             </li>
           </ul>
 
-          <h2>3. Third-Party Services &amp; Data Sharing</h2>
+          <h2>4. Third-Party Services &amp; Data Sharing</h2>
           <p>
             We do not share your personal data with third parties, except in
             the following cases:
@@ -141,7 +179,7 @@ export default function PrivacyPage() {
             </li>
           </ul>
 
-          <h2>4. Data Security &amp; Retention</h2>
+          <h2>5. Data Security &amp; Retention</h2>
           <ul>
             <li>
               We implement industry-standard security measures to protect your
@@ -153,30 +191,34 @@ export default function PrivacyPage() {
             </li>
           </ul>
 
-          <h2>5. Your Rights (Account Deletion)</h2>
+          <h2>6. Your Rights (Data Deletion)</h2>
           <p>
-            You have the right to delete your account and all associated data
-            at any time.
+            You have the right to have your account and all associated data
+            deleted at any time.
           </p>
           <ul>
             <li>
-              <strong>How to delete</strong>: Go to{" "}
-              <strong>[Settings]</strong> &gt; tap{" "}
-              <strong>[Delete Account]</strong> within the App.
+              <strong>How to request deletion</strong>: email us at the address
+              in &quot;Contact Us&quot; below from the address associated with
+              your account, or — if you use the App without signing in —
+              include the account identifier shown in{" "}
+              <strong>[Settings]</strong>. We action deletion requests within
+              30 days.
             </li>
             <li>
-              Once confirmed, all your guide history and personal settings will
-              be permanently removed from our servers and cannot be recovered.
+              Once actioned, your guide history and personal settings are
+              permanently removed from our servers and cannot be recovered.
+              Deleting the App removes the local copy on that device.
             </li>
           </ul>
 
-          <h2>6. Children&apos;s Privacy</h2>
+          <h2>7. Children&apos;s Privacy</h2>
           <p>
             The App is not intended for children under the age of 13, and we
             do not knowingly collect personal information from children.
           </p>
 
-          <h2>7. Contact Us</h2>
+          <h2>8. Contact Us</h2>
           <p>
             If you have any questions regarding this Privacy Policy, please
             contact us at:

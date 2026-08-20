@@ -4,11 +4,11 @@ import 'package:context_app/features/auth/providers.dart';
 import 'package:context_app/features/onboarding/providers.dart';
 import 'package:context_app/features/settings/providers.dart';
 import 'package:context_app/features/subscription/providers.dart';
-import 'package:context_app/features/sync/providers.dart';
 import 'package:context_app/shared/widgets/adaptive/adaptive_widgets.dart';
 import 'package:context_app/shared/widgets/journal/floating_back_button.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -276,40 +276,53 @@ class _AccountGroup extends ConsumerWidget {
   }
 }
 
+/// 雲端同步的狀態列。沒有開關——journey 與 trip 一律同步（見
+/// syncSessionProvider）。留著這一列是因為「資料有沒有被備份」使用者有權知
+/// 道，而且匿名帳號那個限制（重裝就換一個 id、資料拿不回來）必須講清楚。
 class _SyncGroup extends ConsumerWidget {
   const _SyncGroup();
-
-  Future<void> _handleToggle(WidgetRef ref, bool value) async {
-    await ref.read(syncSettingsProvider.notifier).setEnabled(value);
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
-    final enabled = ref.watch(syncSettingsProvider);
-    final isSignedIn = user != null;
-
-    final subtitle = !isSignedIn
-        ? 'settings.sync_requires_signin'.tr()
-        : (enabled
-              ? 'settings.sync_toggle_subtitle_on'.tr()
-              : 'settings.sync_toggle_subtitle_off'.tr());
+    final hasAccount = user != null && !user.isAnonymous;
 
     return _SettingsGroup(
       label: 'settings.sync_section'.tr(),
       child: _SettingsCard(
         children: [
           _SettingsRow(
-            icon: Icons.cloud_sync,
-            title: 'settings.sync_toggle'.tr(),
-            subtitle: subtitle,
-            trailing: Switch(
-              key: const ValueKey('sync_toggle_switch'),
-              value: enabled && isSignedIn,
-              onChanged: isSignedIn ? (v) => _handleToggle(ref, v) : null,
-            ),
+            key: const ValueKey('sync_status_row'),
+            icon: Icons.cloud_done_outlined,
+            title: 'settings.sync_status'.tr(),
+            subtitle: hasAccount
+                ? 'settings.sync_status_account'.tr()
+                : 'settings.sync_status_anonymous'.tr(),
           ),
+          // 沒登入的人備份是綁在匿名帳號上的，這串 id 是他唯一能拿來要求刪
+          // 除資料的識別碼（隱私政策也是這樣寫的）。不顯示的話，「刪除我的
+          // 資料」這個權利對匿名使用者等於行使不了。
+          if (user != null && !hasAccount)
+            _SettingsRow(
+              key: const ValueKey('sync_account_id_row'),
+              icon: Icons.tag,
+              title: 'settings.sync_account_id'.tr(),
+              subtitle: user.id,
+              trailing: const Icon(Icons.copy_all_outlined, size: 18),
+              onTap: () => _copyAccountId(context, user.id),
+            ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _copyAccountId(BuildContext context, String id) async {
+    await Clipboard.setData(ClipboardData(text: id));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('settings.sync_account_id_copied'.tr()),
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }

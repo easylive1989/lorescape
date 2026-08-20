@@ -9,7 +9,6 @@ import 'package:context_app/features/settings/domain/models/appearance_state.dar
 import 'package:context_app/features/settings/providers.dart';
 import 'package:context_app/features/share/providers.dart';
 import 'package:context_app/features/subscription/providers.dart';
-import 'package:context_app/features/sync/domain/services/sync_session.dart';
 import 'package:context_app/features/sync/providers.dart';
 import 'package:context_app/shared/widgets/adaptive/adaptive_widgets.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -53,13 +52,9 @@ class LorescapeApp extends ConsumerWidget {
     // redirect knows to wait instead of flashing `/onboarding`.
     ref.read(onboardingControllerProvider.notifier).ensureLoaded();
 
-    // When the sync session becomes active (toggle on + signed in),
-    // run a full sync pass. Re-entry is guarded inside the coordinator.
-    ref.listen<SyncSession>(syncSessionProvider, (prev, next) {
-      if (next.isActive && !(prev?.isActive ?? false)) {
-        ref.read(syncCoordinatorProvider).runFullSync();
-      }
-    });
+    // journey 與 trip 的同步。session 一有效就跑 full sync，細節（為什麼不是
+    // 在這裡用 ref.listen）見 syncBootstrapProvider 的說明。
+    ref.watch(syncBootstrapProvider);
 
     // Keep RevenueCat identified with the current user. When an anonymous
     // user signs in (id changes anonymous → permanent), this re-points the

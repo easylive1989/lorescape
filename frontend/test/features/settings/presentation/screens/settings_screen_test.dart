@@ -70,9 +70,7 @@ void main() {
     );
 
     testWidgets('given no user is signed in, '
-        'then sign-in buttons are visible and sync toggle is disabled', (
-      tester,
-    ) async {
+        'then sign-in buttons are visible', (tester) async {
       final auth = FakeAuthService();
       addTearDown(auth.dispose);
 
@@ -81,11 +79,6 @@ void main() {
 
       expect(find.byKey(const ValueKey('sign_in_google')), findsOneWidget);
       expect(find.byKey(const ValueKey('sign_in_apple')), findsOneWidget);
-      final switchFinder = find.byKey(const ValueKey('sync_toggle_switch'));
-      expect(switchFinder, findsOneWidget);
-      final Switch toggle = tester.widget(switchFinder);
-      expect(toggle.onChanged, isNull);
-      expect(toggle.value, isFalse);
     });
 
     testWidgets('given the user taps the Google sign-in button, '
@@ -108,9 +101,28 @@ void main() {
       expect(find.byKey(const ValueKey('sign_in_google')), findsNothing);
     });
 
-    testWidgets('given a signed-in user, '
-        'when the sync toggle is flipped on, '
-        'then the sync preference is persisted as true', (tester) async {
+    testWidgets('given an anonymous user, when the settings screen is shown, '
+        'then the sync row states that data is backed up but needs an account '
+        'to come back on another device', (tester) async {
+      final auth = FakeAuthService(
+        initialUser: const AuthUser(id: 'anon-1', isAnonymous: true),
+      );
+      addTearDown(auth.dispose);
+
+      await _givenSettingsScreen(tester, authService: auth);
+      await tester.pump(const Duration(milliseconds: 50));
+
+      // 同步沒有開關可以按了——這一列純粹是狀態。匿名帳號的限制要講出來，
+      // 不然使用者會以為換手機資料就會跟著走。
+      expect(find.byKey(const ValueKey('sync_status_row')), findsOneWidget);
+      expect(find.byType(Switch), findsNothing);
+      expect(find.text('settings.sync_status_anonymous'), findsOneWidget);
+      // 匿名使用者唯一能拿去要求刪除資料的識別碼，隱私政策也是這樣寫的。
+      expect(find.text('anon-1'), findsOneWidget);
+    });
+
+    testWidgets('given a signed-in user, when the settings screen is shown, '
+        'then the anonymous account identifier row is gone', (tester) async {
       final auth = FakeAuthService(
         initialUser: const AuthUser(
           id: 'u1',
@@ -123,13 +135,26 @@ void main() {
       await _givenSettingsScreen(tester, authService: auth);
       await tester.pump(const Duration(milliseconds: 50));
 
-      final switchFinder = find.byKey(const ValueKey('sync_toggle_switch'));
-      await tester.tap(switchFinder);
-      await tester.pump();
+      expect(find.byKey(const ValueKey('sync_account_id_row')), findsNothing);
+    });
+
+    testWidgets('given a signed-in user, when the settings screen is shown, '
+        'then the sync row states that data syncs to their account', (
+      tester,
+    ) async {
+      final auth = FakeAuthService(
+        initialUser: const AuthUser(
+          id: 'u1',
+          email: 'a@b.com',
+          displayName: 'A',
+        ),
+      );
+      addTearDown(auth.dispose);
+
+      await _givenSettingsScreen(tester, authService: auth);
       await tester.pump(const Duration(milliseconds: 50));
 
-      final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getBool('sync_enabled'), isTrue);
+      expect(find.text('settings.sync_status_account'), findsOneWidget);
     });
 
     testWidgets('given the settings screen is shown, '
