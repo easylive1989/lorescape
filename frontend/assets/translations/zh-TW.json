@@ -262,6 +262,8 @@
     "sync_section": "雲端同步",
     "sync_status": "自動同步",
     "sync_status_account": "歷程與旅程會自動同步到你的帳號。",
+    "sync_last_ok": "上次同步：上傳 {pushed}、下載 {pulled} 筆。",
+    "sync_last_failed": "上次同步失敗：",
     "sync_status_anonymous": "歷程與旅程只存在這台裝置上。登入後會自動備份，換手機也帶得走。",
     "clear_local_data": "清除本機資料",
     "clear_local_data_subtitle": "移除這台裝置上的歷程與旅程副本，包含其他帳號留下的。",

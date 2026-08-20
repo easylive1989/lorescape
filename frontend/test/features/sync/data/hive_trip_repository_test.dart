@@ -30,29 +30,33 @@ void main() {
     await Hive.deleteFromDisk();
   });
 
-  test('given a trip saved by another account, both getAll and getById hide '
-      'it — getById is reachable by deep link and stale currentTripId',
-      () async {
-    currentUserId = 'user-a';
-    await repo.save(_makeTrip(id: 'a1'));
+  test(
+    'given a trip saved by another account, both getAll and getById hide '
+    'it — getById is reachable by deep link and stale currentTripId',
+    () async {
+      currentUserId = 'user-a';
+      await repo.save(_makeTrip(id: 'a1'));
 
-    currentUserId = 'user-b';
-    expect(await repo.getAll(), isEmpty);
-    expect(await repo.getById('a1'), isNull);
+      currentUserId = 'user-b';
+      expect(await repo.getAll(), isEmpty);
+      expect(await repo.getById('a1'), isNull);
 
-    currentUserId = 'user-a';
-    expect((await repo.getById('a1'))?.id, 'a1');
-  });
+      currentUserId = 'user-a';
+      expect((await repo.getById('a1'))?.id, 'a1');
+    },
+  );
 
-  test('given unowned trips, claimUnowned stamps them for that account',
-      () async {
-    await repo.save(_makeTrip(id: 'u1'));
+  test(
+    'given unowned trips, claimUnowned stamps them for that account',
+    () async {
+      await repo.save(_makeTrip(id: 'u1'));
 
-    expect(await repo.claimUnowned('user-a'), 1);
+      expect(await repo.claimUnowned('user-a'), 1);
 
-    currentUserId = 'user-b';
-    expect(await repo.getAll(), isEmpty);
-  });
+      currentUserId = 'user-b';
+      expect(await repo.getAll(), isEmpty);
+    },
+  );
 
   test('clearAll wipes trips from every account on the device', () async {
     currentUserId = 'user-a';

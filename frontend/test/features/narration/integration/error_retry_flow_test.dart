@@ -146,7 +146,8 @@ ProviderContainer _buildContainer({
 /// [AppError] or returns the string as narration text. Used to script
 /// "first call fails, second call succeeds" scenarios.
 class _SequencedNarrationService implements NarrationService {
-  _SequencedNarrationService(List<Object> outcomes) : _queue = List.of(outcomes);
+  _SequencedNarrationService(List<Object> outcomes)
+    : _queue = List.of(outcomes);
 
   final List<Object> _queue;
 

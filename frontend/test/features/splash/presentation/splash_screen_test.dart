@@ -4,12 +4,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 GoRouter _testRouter() => GoRouter(
-      initialLocation: '/splash',
-      routes: [
-        GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
-        GoRoute(path: '/', builder: (_, __) => const Text('HOME')),
-      ],
-    );
+  initialLocation: '/splash',
+  routes: [
+    GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
+    GoRoute(path: '/', builder: (_, __) => const Text('HOME')),
+  ],
+);
 
 void main() {
   testWidgets('播放約 2.4s 後導向 /（顯示 HOME）', (tester) async {

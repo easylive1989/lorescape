@@ -54,17 +54,20 @@ void main() {
       expect(result.toPush, isEmpty);
     });
 
-    test('given identical timestamps, remote is used as the canonical copy', () {
-      final ts = DateTime(2026, 5, 5);
-      final localItem = _Item('shared', ts);
-      final remoteItem = _Item('shared', ts);
+    test(
+      'given identical timestamps, remote is used as the canonical copy',
+      () {
+        final ts = DateTime(2026, 5, 5);
+        final localItem = _Item('shared', ts);
+        final remoteItem = _Item('shared', ts);
 
-      final result = _merge(local: [localItem], remote: [remoteItem]);
+        final result = _merge(local: [localItem], remote: [remoteItem]);
 
-      expect(result.merged.single, same(remoteItem));
-      expect(result.toPush, isEmpty);
-      expect(result.toApplyLocally, isEmpty);
-    });
+        expect(result.merged.single, same(remoteItem));
+        expect(result.toPush, isEmpty);
+        expect(result.toApplyLocally, isEmpty);
+      },
+    );
 
     test('given empty inputs, returns empty merge result', () {
       final result = _merge(local: const [], remote: const []);

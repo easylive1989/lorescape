@@ -8,7 +8,7 @@ void main() {
         'pageid': 7253,
         'title': '台北101',
         'coordinates': [
-          {'lat': 25.0336, 'lon': 121.5644, 'primary': ''}
+          {'lat': 25.0336, 'lon': 121.5644, 'primary': ''},
         ],
         'thumbnail': {
           'source': 'https://upload.wikimedia.org/x.jpg',
@@ -35,7 +35,7 @@ void main() {
         'pageid': 1,
         'title': 'No data place',
         'coordinates': [
-          {'lat': 10.0, 'lon': 20.0}
+          {'lat': 10.0, 'lon': 20.0},
         ],
       };
 

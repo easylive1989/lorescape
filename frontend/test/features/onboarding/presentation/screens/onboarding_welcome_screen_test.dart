@@ -13,28 +13,24 @@ void main() {
   });
 
   group('OnboardingWelcomeScreen', () {
-    testWidgets(
-      'given a first-time user, when the welcome screen loads, '
-      'then the welcome title and sample CTA are rendered',
-      (tester) async {
-        await _givenWelcomeScreen(tester);
+    testWidgets('given a first-time user, when the welcome screen loads, '
+        'then the welcome title and sample CTA are rendered', (tester) async {
+      await _givenWelcomeScreen(tester);
 
-        _thenWelcomeTitleIsVisible();
-      },
-    );
+      _thenWelcomeTitleIsVisible();
+    });
 
-    testWidgets(
-      'given the welcome screen is visible, when the user taps skip, '
-      'then welcomeDone is persisted and the router leaves /onboarding',
-      (tester) async {
-        final repo = InMemoryOnboardingRepository();
-        await _givenWelcomeScreen(tester, repository: repo);
+    testWidgets('given the welcome screen is visible, when the user taps skip, '
+        'then welcomeDone is persisted and the router leaves /onboarding', (
+      tester,
+    ) async {
+      final repo = InMemoryOnboardingRepository();
+      await _givenWelcomeScreen(tester, repository: repo);
 
-        await _whenUserTapsSkip(tester);
+      await _whenUserTapsSkip(tester);
 
-        expect(repo.markWelcomeDoneCalls, 1);
-      },
-    );
+      expect(repo.markWelcomeDoneCalls, 1);
+    });
   });
 }
 
@@ -48,10 +44,7 @@ Future<void> _givenWelcomeScreen(
     tester,
     initialLocation: '/onboarding',
     routes: [
-      GoRoute(
-        path: '/',
-        builder: (context, state) => const _HomeStub(),
-      ),
+      GoRoute(path: '/', builder: (context, state) => const _HomeStub()),
       GoRoute(
         path: '/onboarding',
         builder: (context, state) => const OnboardingWelcomeScreen(),

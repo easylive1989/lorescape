@@ -22,56 +22,49 @@ void main() {
   });
 
   group('Onboarding welcome flow', () {
-    testWidgets(
-      'given the welcome step, when the user taps next, '
-      'then the PageView advances to the value step',
-      (tester) async {
-        await _pumpOnboardingFlow(tester);
+    testWidgets('given the welcome step, when the user taps next, '
+        'then the PageView advances to the value step', (tester) async {
+      await _pumpOnboardingFlow(tester);
 
-        expect(find.text('onboarding.welcome.title'), findsOneWidget);
+      expect(find.text('onboarding.welcome.title'), findsOneWidget);
 
-        await tester.tap(find.text('onboarding.next_welcome'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.text('onboarding.next_welcome'));
+      await tester.pumpAndSettle();
 
-        expect(find.text('onboarding.value.title'), findsOneWidget);
-      },
-    );
+      expect(find.text('onboarding.value.title'), findsOneWidget);
+    });
 
-    testWidgets(
-      'given the welcome screen is visible, when the user taps Skip, '
-      'then the closing animation runs, welcomeDone is persisted '
-      'and the router lands on /',
-      (tester) async {
-        // Skip and the final button share the `_finish()` path, so tapping
-        // Skip exercises the same completion wiring without driving the
-        // PageView through every step.
-        final repo = InMemoryOnboardingRepository();
-        await _pumpOnboardingFlow(tester, repo: repo);
+    testWidgets('given the welcome screen is visible, when the user taps Skip, '
+        'then the closing animation runs, welcomeDone is persisted '
+        'and the router lands on /', (tester) async {
+      // Skip and the final button share the `_finish()` path, so tapping
+      // Skip exercises the same completion wiring without driving the
+      // PageView through every step.
+      final repo = InMemoryOnboardingRepository();
+      await _pumpOnboardingFlow(tester, repo: repo);
 
-        await tester.tap(find.text('onboarding.skip'));
-        await _settleFinish(tester);
+      await tester.tap(find.text('onboarding.skip'));
+      await _settleFinish(tester);
 
-        expect(repo.markWelcomeDoneCalls, 1);
-        expect(find.text('home-stub'), findsOneWidget);
-      },
-    );
+      expect(repo.markWelcomeDoneCalls, 1);
+      expect(find.text('home-stub'), findsOneWidget);
+    });
 
-    testWidgets(
-      'given welcomeDone has been set, when resetAll runs, '
-      'then the repository is reset and the controller drops welcomeDone',
-      (tester) async {
-        final repo = InMemoryOnboardingRepository(welcomeDone: true);
-        await _pumpOnboardingFlow(tester, repo: repo);
+    testWidgets('given welcomeDone has been set, when resetAll runs, '
+        'then the repository is reset and the controller drops welcomeDone', (
+      tester,
+    ) async {
+      final repo = InMemoryOnboardingRepository(welcomeDone: true);
+      await _pumpOnboardingFlow(tester, repo: repo);
 
-        final element = tester.element(find.byType(OnboardingWelcomeScreen));
-        final scope = ProviderScope.containerOf(element, listen: false);
-        await scope.read(onboardingControllerProvider.notifier).resetAll();
-        await tester.pump();
+      final element = tester.element(find.byType(OnboardingWelcomeScreen));
+      final scope = ProviderScope.containerOf(element, listen: false);
+      await scope.read(onboardingControllerProvider.notifier).resetAll();
+      await tester.pump();
 
-        expect(repo.resetCalls, 1);
-        expect(scope.read(onboardingControllerProvider).welcomeDone, isFalse);
-      },
-    );
+      expect(repo.resetCalls, 1);
+      expect(scope.read(onboardingControllerProvider).welcomeDone, isFalse);
+    });
   });
 }
 

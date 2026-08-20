@@ -10,86 +10,74 @@ void main() {
       SharedPreferences.setMockInitialValues(<String, Object>{});
     });
 
-    test(
-      'given_no_existing_pref_when_read_then_returns_default_on_'
-      'consent_state',
-      () async {
-        final prefs = await SharedPreferences.getInstance();
-        final repository = SharedPrefsConsentRepository(prefs);
+    test('given_no_existing_pref_when_read_then_returns_default_on_'
+        'consent_state', () async {
+      final prefs = await SharedPreferences.getInstance();
+      final repository = SharedPrefsConsentRepository(prefs);
 
-        final state = await repository.read();
+      final state = await repository.read();
 
-        expect(state.enabled, isTrue);
-        expect(state.updatedAt, isA<DateTime>());
-        await repository.dispose();
-      },
-    );
+      expect(state.enabled, isTrue);
+      expect(state.updatedAt, isA<DateTime>());
+      await repository.dispose();
+    });
 
-    test(
-      'given_existing_pref_disabled_when_read_then_returns_disabled_'
-      'state_with_persisted_timestamp',
-      () async {
-        final timestamp = DateTime(2026, 3, 15, 12);
-        SharedPreferences.setMockInitialValues(<String, Object>{
-          kConsentEnabledKey: false,
-          kConsentUpdatedAtKey: timestamp.millisecondsSinceEpoch,
-        });
-        final prefs = await SharedPreferences.getInstance();
-        final repository = SharedPrefsConsentRepository(prefs);
+    test('given_existing_pref_disabled_when_read_then_returns_disabled_'
+        'state_with_persisted_timestamp', () async {
+      final timestamp = DateTime(2026, 3, 15, 12);
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        kConsentEnabledKey: false,
+        kConsentUpdatedAtKey: timestamp.millisecondsSinceEpoch,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      final repository = SharedPrefsConsentRepository(prefs);
 
-        final state = await repository.read();
+      final state = await repository.read();
 
-        expect(state.enabled, isFalse);
-        expect(
-          state.updatedAt.millisecondsSinceEpoch,
-          timestamp.millisecondsSinceEpoch,
-        );
-        await repository.dispose();
-      },
-    );
+      expect(state.enabled, isFalse);
+      expect(
+        state.updatedAt.millisecondsSinceEpoch,
+        timestamp.millisecondsSinceEpoch,
+      );
+      await repository.dispose();
+    });
 
-    test(
-      'given_consent_state_when_write_then_persists_enabled_and_'
-      'updated_at_to_shared_prefs',
-      () async {
-        final prefs = await SharedPreferences.getInstance();
-        final repository = SharedPrefsConsentRepository(prefs);
-        final timestamp = DateTime.utc(2026, 5, 1);
-        final newState = ConsentState(enabled: false, updatedAt: timestamp);
+    test('given_consent_state_when_write_then_persists_enabled_and_'
+        'updated_at_to_shared_prefs', () async {
+      final prefs = await SharedPreferences.getInstance();
+      final repository = SharedPrefsConsentRepository(prefs);
+      final timestamp = DateTime.utc(2026, 5, 1);
+      final newState = ConsentState(enabled: false, updatedAt: timestamp);
 
-        await repository.write(newState);
+      await repository.write(newState);
 
-        expect(prefs.getBool(kConsentEnabledKey), isFalse);
-        expect(
-          prefs.getInt(kConsentUpdatedAtKey),
-          timestamp.millisecondsSinceEpoch,
-        );
-        await repository.dispose();
-      },
-    );
+      expect(prefs.getBool(kConsentEnabledKey), isFalse);
+      expect(
+        prefs.getInt(kConsentUpdatedAtKey),
+        timestamp.millisecondsSinceEpoch,
+      );
+      await repository.dispose();
+    });
 
-    test(
-      'given_repository_when_watch_called_then_first_emission_is_'
-      'current_state',
-      () async {
-        final timestamp = DateTime(2026, 2, 2);
-        SharedPreferences.setMockInitialValues(<String, Object>{
-          kConsentEnabledKey: false,
-          kConsentUpdatedAtKey: timestamp.millisecondsSinceEpoch,
-        });
-        final prefs = await SharedPreferences.getInstance();
-        final repository = SharedPrefsConsentRepository(prefs);
+    test('given_repository_when_watch_called_then_first_emission_is_'
+        'current_state', () async {
+      final timestamp = DateTime(2026, 2, 2);
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        kConsentEnabledKey: false,
+        kConsentUpdatedAtKey: timestamp.millisecondsSinceEpoch,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      final repository = SharedPrefsConsentRepository(prefs);
 
-        final first = await repository.watch().first;
+      final first = await repository.watch().first;
 
-        expect(first.enabled, isFalse);
-        expect(
-          first.updatedAt.millisecondsSinceEpoch,
-          timestamp.millisecondsSinceEpoch,
-        );
-        await repository.dispose();
-      },
-    );
+      expect(first.enabled, isFalse);
+      expect(
+        first.updatedAt.millisecondsSinceEpoch,
+        timestamp.millisecondsSinceEpoch,
+      );
+      await repository.dispose();
+    });
 
     test(
       'given_watcher_subscribed_when_write_called_then_emits_new_state',

@@ -19,21 +19,18 @@ import '../../fakes/fake_auth_service.dart';
 
 void main() {
   group('auth providers — signed-out launch', () {
-    test(
-      'given no user, when the app reads the providers, '
-      'then currentUser is null and isSignedIn is false',
-      () {
-        final fake = FakeAuthService();
-        addTearDown(fake.dispose);
-        final container = ProviderContainer(
-          overrides: [authServiceProvider.overrideWithValue(fake)],
-        );
-        addTearDown(container.dispose);
+    test('given no user, when the app reads the providers, '
+        'then currentUser is null and isSignedIn is false', () {
+      final fake = FakeAuthService();
+      addTearDown(fake.dispose);
+      final container = ProviderContainer(
+        overrides: [authServiceProvider.overrideWithValue(fake)],
+      );
+      addTearDown(container.dispose);
 
-        expect(container.read(currentUserProvider), isNull);
-        expect(container.read(isSignedInProvider), isFalse);
-      },
-    );
+      expect(container.read(currentUserProvider), isNull);
+      expect(container.read(isSignedInProvider), isFalse);
+    });
   });
 
   group('auth providers — restored session', () {
@@ -67,104 +64,88 @@ void main() {
   });
 
   group('auth providers — sign-in', () {
-    test(
-      'given a signed-out user, when signInWithGoogle succeeds, '
-      'then currentUser is the new user and isSignedIn is true',
-      () async {
-        final fake = FakeAuthService();
-        addTearDown(fake.dispose);
-        final container = ProviderContainer(
-          overrides: [authServiceProvider.overrideWithValue(fake)],
-        );
-        addTearDown(container.dispose);
+    test('given a signed-out user, when signInWithGoogle succeeds, '
+        'then currentUser is the new user and isSignedIn is true', () async {
+      final fake = FakeAuthService();
+      addTearDown(fake.dispose);
+      final container = ProviderContainer(
+        overrides: [authServiceProvider.overrideWithValue(fake)],
+      );
+      addTearDown(container.dispose);
 
-        container.listen<AsyncValue<AuthUser?>>(authStateProvider, (_, __) {});
+      container.listen<AsyncValue<AuthUser?>>(authStateProvider, (_, __) {});
 
-        final user = await container
-            .read(authServiceProvider)
-            .signInWithGoogle();
-        await Future<void>.delayed(Duration.zero);
+      final user = await container.read(authServiceProvider).signInWithGoogle();
+      await Future<void>.delayed(Duration.zero);
 
-        expect(user.id, 'fake-google-user');
-        expect(fake.googleSignInCount, 1);
-        expect(container.read(currentUserProvider)?.id, 'fake-google-user');
-        expect(container.read(isSignedInProvider), isTrue);
-      },
-    );
+      expect(user.id, 'fake-google-user');
+      expect(fake.googleSignInCount, 1);
+      expect(container.read(currentUserProvider)?.id, 'fake-google-user');
+      expect(container.read(isSignedInProvider), isTrue);
+    });
 
-    test(
-      'given a signed-out user, when signInWithApple succeeds, '
-      'then currentUser is the new user and isSignedIn is true',
-      () async {
-        final fake = FakeAuthService();
-        addTearDown(fake.dispose);
-        final container = ProviderContainer(
-          overrides: [authServiceProvider.overrideWithValue(fake)],
-        );
-        addTearDown(container.dispose);
+    test('given a signed-out user, when signInWithApple succeeds, '
+        'then currentUser is the new user and isSignedIn is true', () async {
+      final fake = FakeAuthService();
+      addTearDown(fake.dispose);
+      final container = ProviderContainer(
+        overrides: [authServiceProvider.overrideWithValue(fake)],
+      );
+      addTearDown(container.dispose);
 
-        container.listen<AsyncValue<AuthUser?>>(authStateProvider, (_, __) {});
+      container.listen<AsyncValue<AuthUser?>>(authStateProvider, (_, __) {});
 
-        final user = await container
-            .read(authServiceProvider)
-            .signInWithApple();
-        await Future<void>.delayed(Duration.zero);
+      final user = await container.read(authServiceProvider).signInWithApple();
+      await Future<void>.delayed(Duration.zero);
 
-        expect(user.id, 'fake-apple-user');
-        expect(fake.appleSignInCount, 1);
-        expect(container.read(currentUserProvider)?.id, 'fake-apple-user');
-        expect(container.read(isSignedInProvider), isTrue);
-      },
-    );
+      expect(user.id, 'fake-apple-user');
+      expect(fake.appleSignInCount, 1);
+      expect(container.read(currentUserProvider)?.id, 'fake-apple-user');
+      expect(container.read(isSignedInProvider), isTrue);
+    });
 
-    test(
-      'given the provider rejects sign-in, when signInWithGoogle is '
-      'called, then AuthFailureException propagates and the user '
-      'stays signed out',
-      () async {
-        final fake = FakeAuthService()..shouldFailSignIn = true;
-        addTearDown(fake.dispose);
-        final container = ProviderContainer(
-          overrides: [authServiceProvider.overrideWithValue(fake)],
-        );
-        addTearDown(container.dispose);
+    test('given the provider rejects sign-in, when signInWithGoogle is '
+        'called, then AuthFailureException propagates and the user '
+        'stays signed out', () async {
+      final fake = FakeAuthService()..shouldFailSignIn = true;
+      addTearDown(fake.dispose);
+      final container = ProviderContainer(
+        overrides: [authServiceProvider.overrideWithValue(fake)],
+      );
+      addTearDown(container.dispose);
 
-        container.listen<AsyncValue<AuthUser?>>(authStateProvider, (_, __) {});
+      container.listen<AsyncValue<AuthUser?>>(authStateProvider, (_, __) {});
 
-        await expectLater(
-          container.read(authServiceProvider).signInWithGoogle(),
-          throwsA(isA<AuthFailureException>()),
-        );
+      await expectLater(
+        container.read(authServiceProvider).signInWithGoogle(),
+        throwsA(isA<AuthFailureException>()),
+      );
 
-        expect(container.read(currentUserProvider), isNull);
-        expect(container.read(isSignedInProvider), isFalse);
-      },
-    );
+      expect(container.read(currentUserProvider), isNull);
+      expect(container.read(isSignedInProvider), isFalse);
+    });
   });
 
   group('auth providers — sign-out', () {
-    test(
-      'given a signed-in user, when signOut runs, then currentUser '
-      'becomes null and isSignedIn is false',
-      () async {
-        const restored = AuthUser(id: 'user-1');
-        final fake = FakeAuthService(initialUser: restored);
-        addTearDown(fake.dispose);
-        final container = ProviderContainer(
-          overrides: [authServiceProvider.overrideWithValue(fake)],
-        );
-        addTearDown(container.dispose);
+    test('given a signed-in user, when signOut runs, then currentUser '
+        'becomes null and isSignedIn is false', () async {
+      const restored = AuthUser(id: 'user-1');
+      final fake = FakeAuthService(initialUser: restored);
+      addTearDown(fake.dispose);
+      final container = ProviderContainer(
+        overrides: [authServiceProvider.overrideWithValue(fake)],
+      );
+      addTearDown(container.dispose);
 
-        container.listen<AsyncValue<AuthUser?>>(authStateProvider, (_, __) {});
-        expect(container.read(isSignedInProvider), isTrue);
+      container.listen<AsyncValue<AuthUser?>>(authStateProvider, (_, __) {});
+      expect(container.read(isSignedInProvider), isTrue);
 
-        await container.read(authServiceProvider).signOut();
-        await Future<void>.delayed(Duration.zero);
+      await container.read(authServiceProvider).signOut();
+      await Future<void>.delayed(Duration.zero);
 
-        expect(fake.signOutCount, 1);
-        expect(container.read(currentUserProvider), isNull);
-        expect(container.read(isSignedInProvider), isFalse);
-      },
-    );
+      expect(fake.signOutCount, 1);
+      expect(container.read(currentUserProvider), isNull);
+      expect(container.read(isSignedInProvider), isFalse);
+    });
   });
 }

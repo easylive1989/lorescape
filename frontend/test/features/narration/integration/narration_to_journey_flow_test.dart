@@ -41,48 +41,42 @@ void main() {
   });
 
   group('Narration → Journey wiring', () {
-    test(
-      'given no active trip, when narration is generated, '
-      'then a journey entry is saved with a null tripId',
-      () async {
-        final journey = InMemoryJourneyRepository();
-        final container = _buildContainer(journey: journey);
-        addTearDown(container.dispose);
+    test('given no active trip, when narration is generated, '
+        'then a journey entry is saved with a null tripId', () async {
+      final journey = InMemoryJourneyRepository();
+      final container = _buildContainer(journey: journey);
+      addTearDown(container.dispose);
 
-        await container
-            .read(narrationGenerationControllerProvider.notifier)
-            .generate(place: _place, language: Language.english);
+      await container
+          .read(narrationGenerationControllerProvider.notifier)
+          .generate(place: _place, language: Language.english);
 
-        final saved = await journey.getAll();
-        expect(saved, hasLength(1));
-        expect(saved.single.place.id, _place.id);
-        expect(saved.single.tripId, isNull);
-      },
-    );
+      final saved = await journey.getAll();
+      expect(saved, hasLength(1));
+      expect(saved.single.place.id, _place.id);
+      expect(saved.single.tripId, isNull);
+    });
 
-    test(
-      'given an active current trip, when narration is generated, '
-      'then the saved journey entry inherits that trip id',
-      () async {
-        final journey = InMemoryJourneyRepository();
-        final container = _buildContainer(journey: journey);
-        addTearDown(container.dispose);
+    test('given an active current trip, when narration is generated, '
+        'then the saved journey entry inherits that trip id', () async {
+      final journey = InMemoryJourneyRepository();
+      final container = _buildContainer(journey: journey);
+      addTearDown(container.dispose);
 
-        // Pre-load the controller so its build() runs before we mutate.
-        container.read(currentTripIdProvider);
-        await container
-            .read(currentTripIdProvider.notifier)
-            .setCurrentTripId('trip-kyoto-2025');
+      // Pre-load the controller so its build() runs before we mutate.
+      container.read(currentTripIdProvider);
+      await container
+          .read(currentTripIdProvider.notifier)
+          .setCurrentTripId('trip-kyoto-2025');
 
-        await container
-            .read(narrationGenerationControllerProvider.notifier)
-            .generate(place: _place, language: Language.english);
+      await container
+          .read(narrationGenerationControllerProvider.notifier)
+          .generate(place: _place, language: Language.english);
 
-        final saved = await journey.getAll();
-        expect(saved, hasLength(1));
-        expect(saved.single.tripId, 'trip-kyoto-2025');
-      },
-    );
+      final saved = await journey.getAll();
+      expect(saved, hasLength(1));
+      expect(saved.single.tripId, 'trip-kyoto-2025');
+    });
 
     test(
       'given the narration service fails, when generation runs, '

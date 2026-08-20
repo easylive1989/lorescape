@@ -15,15 +15,12 @@ void main() {
         await _givenBookshelf(tester, bookCount: 9);
 
         final rows = _thenBooksGroupedByRow(tester, bookCount: 9);
-        expect(
-          rows,
-          hasLength(1),
-          reason: 'v3 的書架只有一層，放不下就橫捲，不再往下長第二層',
-        );
+        expect(rows, hasLength(1), reason: 'v3 的書架只有一層，放不下就橫捲，不再往下長第二層');
         expect(
           rows.values.single,
           hasLength(9),
-          reason: '九本都要在那一層上——少了幾本同樣只會量到一個 dy，'
+          reason:
+              '九本都要在那一層上——少了幾本同樣只會量到一個 dy，'
               '不把本數釘住的話「只有一層」這個斷言就形同虛設',
         );
         expect(_horizontalScrollable(), findsOneWidget);
@@ -110,19 +107,16 @@ void main() {
       },
     );
 
-    testWidgets(
-      'given a selected book, when the lift animation settles, '
-      'then only that book is raised above the others',
-      (tester) async {
-        await _givenBookshelf(tester, bookCount: 3, selectedIndex: 1);
-        await tester.pumpAndSettle();
+    testWidgets('given a selected book, when the lift animation settles, '
+        'then only that book is raised above the others', (tester) async {
+      await _givenBookshelf(tester, bookCount: 3, selectedIndex: 1);
+      await tester.pumpAndSettle();
 
-        // 書是靠底部對齊的，被抽出來的那本底緣才會高於同排其他本。
-        final raised = tester.getBottomLeft(find.text('#1')).dy;
-        expect(raised, lessThan(tester.getBottomLeft(find.text('#0')).dy));
-        expect(raised, lessThan(tester.getBottomLeft(find.text('#2')).dy));
-      },
-    );
+      // 書是靠底部對齊的，被抽出來的那本底緣才會高於同排其他本。
+      final raised = tester.getBottomLeft(find.text('#1')).dy;
+      expect(raised, lessThan(tester.getBottomLeft(find.text('#0')).dy));
+      expect(raised, lessThan(tester.getBottomLeft(find.text('#2')).dy));
+    });
 
     testWidgets(
       'given the shelf holds only one book, when it is the selected one, '
@@ -152,20 +146,17 @@ void main() {
       },
     );
 
-    testWidgets(
-      'given no books at all, when the shelf is rendered, '
-      'then it stands empty without collapsing',
-      (tester) async {
-        await _givenBookshelf(tester, bookCount: 0);
+    testWidgets('given no books at all, when the shelf is rendered, '
+        'then it stands empty without collapsing', (tester) async {
+      await _givenBookshelf(tester, bookCount: 0);
 
-        // 一本書都沒有時凹槽仍撐在最小高度上，而不是塌成一條線。
-        expect(
-          tester.getRect(_horizontalScrollable()).height,
-          greaterThanOrEqualTo(172),
-        );
-        expect(tester.takeException(), isNull);
-      },
-    );
+      // 一本書都沒有時凹槽仍撐在最小高度上，而不是塌成一條線。
+      expect(
+        tester.getRect(_horizontalScrollable()).height,
+        greaterThanOrEqualTo(172),
+      );
+      expect(tester.takeException(), isNull);
+    });
   });
 }
 

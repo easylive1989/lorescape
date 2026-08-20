@@ -10,6 +10,7 @@ import 'package:context_app/features/auth/domain/models/auth_user.dart';
 import 'package:context_app/features/auth/providers.dart';
 import 'package:context_app/features/journey/domain/models/journey_entry.dart';
 import 'package:context_app/features/sync/data/local_ownership.dart';
+import 'package:context_app/features/sync/domain/models/sync_status.dart';
 import 'package:context_app/features/sync/domain/services/sync_coordinator.dart';
 import 'package:context_app/features/sync/domain/services/sync_engine.dart';
 import 'package:context_app/features/sync/providers.dart';
@@ -53,9 +54,15 @@ class _SpyCoordinator implements SyncCoordinator {
   int fullSyncCount = 0;
 
   @override
-  Future<void> runFullSync() async {
+  Future<SyncStatus?> runFullSync() async {
     log?.add('fullSync');
     fullSyncCount++;
+    return SyncStatus(
+      finishedAt: DateTime(2026, 8, 20),
+      pushed: 0,
+      pulled: 0,
+      errors: const [],
+    );
   }
 
   @override
@@ -75,14 +82,29 @@ Future<void> _settle() async {
   }
 }
 
+/// 模擬「逐筆上傳都被退回」的那種失敗。
+class _FailingCoordinator implements SyncCoordinator {
+  @override
+  Future<SyncStatus?> runFullSync() async => SyncStatus(
+    finishedAt: DateTime(2026, 8, 20),
+    pushed: 0,
+    pulled: 0,
+    errors: const ['column journey_entries.story_hook does not exist'],
+  );
+
+  @override
+  SyncEngine<JourneyEntry> get journey => throw UnimplementedError();
+
+  @override
+  SyncEngine<Trip> get trip => throw UnimplementedError();
+}
+
 ProviderContainer _container({AuthUser? user, SyncCoordinator? coordinator}) {
   // 沒有這個 override，syncSessionProvider 會去 watch 真的 Supabase
   // authStateChanges() stream 然後炸掉。
   final container = ProviderContainer(
     overrides: [
-      authServiceProvider.overrideWithValue(
-        FakeAuthService(initialUser: user),
-      ),
+      authServiceProvider.overrideWithValue(FakeAuthService(initialUser: user)),
       if (coordinator != null)
         syncCoordinatorProvider.overrideWithValue(coordinator),
       // 不讓測試碰到真的 Hive box。
@@ -138,43 +160,37 @@ void main() {
   });
 
   group('Sync bootstrap', () {
-    test(
-      'given the session is already active on the very first read — what a '
-      'cold start actually looks like — when the bootstrap provider is '
-      'watched, then a full sync still runs',
-      () async {
-        // Supabase 的 session 在建 widget tree 之前就還原好了（main() 的
-        // init() 裡 await 完才建），所以第一次 build 時 session 就已經
-        // active，不會有「非啟用 → 啟用」的轉換可以聽。
-        final coordinator = _SpyCoordinator();
-        final container = _container(
-          user: _permanentUser,
-          coordinator: coordinator,
-        );
+    test('given the session is already active on the very first read — what a '
+        'cold start actually looks like — when the bootstrap provider is '
+        'watched, then a full sync still runs', () async {
+      // Supabase 的 session 在建 widget tree 之前就還原好了（main() 的
+      // init() 裡 await 完才建），所以第一次 build 時 session 就已經
+      // active，不會有「非啟用 → 啟用」的轉換可以聽。
+      final coordinator = _SpyCoordinator();
+      final container = _container(
+        user: _permanentUser,
+        coordinator: coordinator,
+      );
 
-        container.read(syncBootstrapProvider);
-        await _settle();
+      container.read(syncBootstrapProvider);
+      await _settle();
 
-        expect(coordinator.fullSyncCount, 1);
-      },
-    );
+      expect(coordinator.fullSyncCount, 1);
+    });
 
-    test(
-      'given only an anonymous session, when the bootstrap provider is '
-      'watched, then nothing is uploaded',
-      () async {
-        final coordinator = _SpyCoordinator();
-        final container = _container(
-          user: _anonymousUser,
-          coordinator: coordinator,
-        );
+    test('given only an anonymous session, when the bootstrap provider is '
+        'watched, then nothing is uploaded', () async {
+      final coordinator = _SpyCoordinator();
+      final container = _container(
+        user: _anonymousUser,
+        coordinator: coordinator,
+      );
 
-        container.listen(syncBootstrapProvider, (_, __) {});
-        await _settle();
+      container.listen(syncBootstrapProvider, (_, __) {});
+      await _settle();
 
-        expect(coordinator.fullSyncCount, 0);
-      },
-    );
+      expect(coordinator.fullSyncCount, 0);
+    });
 
     test(
       'given local data with no owner, when the session becomes active, then '
@@ -204,33 +220,48 @@ void main() {
       },
     );
 
-    test(
-      'given an anonymous user who then signs in, when the session becomes '
-      'active, then their local data is finally uploaded',
-      () async {
-        final coordinator = _SpyCoordinator();
-        final auth = FakeAuthService(initialUser: _anonymousUser);
-        addTearDown(auth.dispose);
-        final container = ProviderContainer(
-          overrides: [
-            authServiceProvider.overrideWithValue(auth),
-            syncCoordinatorProvider.overrideWithValue(coordinator),
-            localOwnershipStoresProvider.overrideWithValue(const []),
-          ],
-        );
-        addTearDown(container.dispose);
+    test('given a sync run that failed, when it finishes, then the error is '
+        'recorded instead of vanishing into the log', () async {
+      // 這正是讓「每筆上傳都被 PostgREST 退回」隱形好幾個月的那個洞。
+      final coordinator = _FailingCoordinator();
+      final container = _container(
+        user: _permanentUser,
+        coordinator: coordinator,
+      );
 
-        // 保持訂閱，session 變動時 listener 才會被通知。
-        container.listen(syncBootstrapProvider, (_, __) {});
-        container.read(authStateProvider);
-        await _settle();
-        expect(coordinator.fullSyncCount, 0, reason: '匿名階段不上傳');
+      container.read(syncBootstrapProvider);
+      await _settle();
 
-        await auth.signInWithGoogle();
-        await _settle();
+      final status = container.read(syncStatusProvider);
+      expect(status, isNotNull);
+      expect(status!.isHealthy, isFalse);
+      expect(status.firstError, contains('column'));
+    });
 
-        expect(coordinator.fullSyncCount, 1, reason: '登入後才第一次同步');
-      },
-    );
+    test('given an anonymous user who then signs in, when the session becomes '
+        'active, then their local data is finally uploaded', () async {
+      final coordinator = _SpyCoordinator();
+      final auth = FakeAuthService(initialUser: _anonymousUser);
+      addTearDown(auth.dispose);
+      final container = ProviderContainer(
+        overrides: [
+          authServiceProvider.overrideWithValue(auth),
+          syncCoordinatorProvider.overrideWithValue(coordinator),
+          localOwnershipStoresProvider.overrideWithValue(const []),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      // 保持訂閱，session 變動時 listener 才會被通知。
+      container.listen(syncBootstrapProvider, (_, __) {});
+      container.read(authStateProvider);
+      await _settle();
+      expect(coordinator.fullSyncCount, 0, reason: '匿名階段不上傳');
+
+      await auth.signInWithGoogle();
+      await _settle();
+
+      expect(coordinator.fullSyncCount, 1, reason: '登入後才第一次同步');
+    });
   });
 }

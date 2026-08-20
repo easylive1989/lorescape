@@ -14,11 +14,9 @@ void main() {
 
   group('MidnightBottomNav', () {
     testWidgets('renders all items', (tester) async {
-      await tester.pumpWidget(host(MidnightBottomNav(
-        items: items,
-        currentIndex: 0,
-        onTap: (_) {},
-      )));
+      await tester.pumpWidget(
+        host(MidnightBottomNav(items: items, currentIndex: 0, onTap: (_) {})),
+      );
       expect(find.text('EXPLORE'), findsOneWidget);
       expect(find.text('NEARBY'), findsOneWidget);
       expect(find.text('SAVED'), findsOneWidget);
@@ -27,11 +25,15 @@ void main() {
 
     testWidgets('invokes onTap with item index', (tester) async {
       var lastIndex = -1;
-      await tester.pumpWidget(host(MidnightBottomNav(
-        items: items,
-        currentIndex: 0,
-        onTap: (i) => lastIndex = i,
-      )));
+      await tester.pumpWidget(
+        host(
+          MidnightBottomNav(
+            items: items,
+            currentIndex: 0,
+            onTap: (i) => lastIndex = i,
+          ),
+        ),
+      );
       await tester.tap(find.text('SAVED'));
       expect(lastIndex, 2);
     });

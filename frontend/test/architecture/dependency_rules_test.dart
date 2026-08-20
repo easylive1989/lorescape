@@ -54,8 +54,11 @@ List<String> _featureImports(File file) => _featureImportRe
 
 void main() {
   test('掃描根目錄存在（防 cwd 錯誤時 vacuous pass）', () {
-    expect(Directory('lib/features').existsSync(), isTrue,
-        reason: '測試須從 frontend/ package root 執行');
+    expect(
+      Directory('lib/features').existsSync(),
+      isTrue,
+      reason: '測試須從 frontend/ package root 執行',
+    );
   });
 
   test('feature 之間只能跨引 domain 與 providers.dart', () {

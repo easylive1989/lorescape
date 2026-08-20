@@ -10,25 +10,21 @@ void main() {
   });
 
   group('PageDots', () {
-    testWidgets(
-      'given fewer pages than the cap, when the row renders, '
-      'then every page gets its own dot',
-      (tester) async {
-        await _givenPageDots(tester, count: 4, index: 0);
+    testWidgets('given fewer pages than the cap, when the row renders, '
+        'then every page gets its own dot', (tester) async {
+      await _givenPageDots(tester, count: 4, index: 0);
 
-        expect(_dotSizes(tester).length, 4);
-      },
-    );
+      expect(_dotSizes(tester).length, 4);
+    });
 
-    testWidgets(
-      'given more pages than the cap, when the row renders, '
-      'then the row never grows beyond the capped number of dots',
-      (tester) async {
-        await _givenPageDots(tester, count: 31, index: 0);
+    testWidgets('given more pages than the cap, when the row renders, '
+        'then the row never grows beyond the capped number of dots', (
+      tester,
+    ) async {
+      await _givenPageDots(tester, count: 31, index: 0);
 
-        expect(_dotSizes(tester).length, PageDots.maxDots);
-      },
-    );
+      expect(_dotSizes(tester).length, PageDots.maxDots);
+    });
 
     testWidgets(
       'given a page in the middle of a long run, when the row renders, '
@@ -45,60 +41,43 @@ void main() {
       },
     );
 
-    testWidgets(
-      'given the first page of a long run, when the row renders, '
-      'then only the trailing edge hints at more pages',
-      (tester) async {
-        await _givenPageDots(tester, count: 20, index: 0);
+    testWidgets('given the first page of a long run, when the row renders, '
+        'then only the trailing edge hints at more pages', (tester) async {
+      await _givenPageDots(tester, count: 20, index: 0);
 
-        final sizes = _dotSizes(tester);
-        expect(sizes.first, _activeDot);
-        expect(sizes.last, _hintDot);
-        expect(sizes.where((s) => s == _hintDot).length, 1);
-      },
-    );
+      final sizes = _dotSizes(tester);
+      expect(sizes.first, _activeDot);
+      expect(sizes.last, _hintDot);
+      expect(sizes.where((s) => s == _hintDot).length, 1);
+    });
 
-    testWidgets(
-      'given the last page of a long run, when the row renders, '
-      'then only the leading edge hints at more pages',
-      (tester) async {
-        await _givenPageDots(tester, count: 20, index: 19);
+    testWidgets('given the last page of a long run, when the row renders, '
+        'then only the leading edge hints at more pages', (tester) async {
+      await _givenPageDots(tester, count: 20, index: 19);
 
-        final sizes = _dotSizes(tester);
-        expect(sizes.first, _hintDot);
-        expect(sizes.last, _activeDot);
-        expect(sizes.where((s) => s == _hintDot).length, 1);
-      },
-    );
+      final sizes = _dotSizes(tester);
+      expect(sizes.first, _hintDot);
+      expect(sizes.last, _activeDot);
+      expect(sizes.where((s) => s == _hintDot).length, 1);
+    });
 
-    testWidgets(
-      'given an onSelect callback, when a dot is tapped, '
-      'then it reports the page that dot stands for',
-      (tester) async {
-        final selected = <int>[];
+    testWidgets('given an onSelect callback, when a dot is tapped, '
+        'then it reports the page that dot stands for', (tester) async {
+      final selected = <int>[];
 
-        await _givenPageDots(
-          tester,
-          count: 20,
-          index: 0,
-          onSelect: selected.add,
-        );
-        await tester.tap(_dotTaps.at(2));
+      await _givenPageDots(tester, count: 20, index: 0, onSelect: selected.add);
+      await tester.tap(_dotTaps.at(2));
 
-        // 視窗從第 0 頁起算，所以第三顆點就是第 2 頁。
-        expect(selected, [2]);
-      },
-    );
+      // 視窗從第 0 頁起算，所以第三顆點就是第 2 頁。
+      expect(selected, [2]);
+    });
 
-    testWidgets(
-      'given no onSelect callback, when the row renders, '
-      'then the dots carry no tap handler',
-      (tester) async {
-        await _givenPageDots(tester, count: 4, index: 0);
+    testWidgets('given no onSelect callback, when the row renders, '
+        'then the dots carry no tap handler', (tester) async {
+      await _givenPageDots(tester, count: 4, index: 0);
 
-        expect(_dotTaps, findsNothing);
-      },
-    );
+      expect(_dotTaps, findsNothing);
+    });
   });
 }
 

@@ -61,29 +61,26 @@ void main() {
     await initTestEnvironment();
   });
 
-  testWidgets(
-    'given playback started and the player provider is kept alive, '
-    'when the narration screen is left (disposed), '
-    'then TTS is stopped',
-    (tester) async {
-      final tts = FakeTtsService();
-      await pumpScreen(
-        tester,
-        child: _Host(place: buildPlace(), content: buildNarrationContent()),
-        overrides: [ttsServiceProvider.overrideWithValue(tts)],
-      );
-      // Let initializeWithContent() + autoPlay reach speak().
-      await tester.pump(const Duration(milliseconds: 20));
-      await tester.pump(const Duration(milliseconds: 20));
-      await tester.pump(const Duration(milliseconds: 20));
-      expect(tts.speakCount, greaterThanOrEqualTo(1));
+  testWidgets('given playback started and the player provider is kept alive, '
+      'when the narration screen is left (disposed), '
+      'then TTS is stopped', (tester) async {
+    final tts = FakeTtsService();
+    await pumpScreen(
+      tester,
+      child: _Host(place: buildPlace(), content: buildNarrationContent()),
+      overrides: [ttsServiceProvider.overrideWithValue(tts)],
+    );
+    // Let initializeWithContent() + autoPlay reach speak().
+    await tester.pump(const Duration(milliseconds: 20));
+    await tester.pump(const Duration(milliseconds: 20));
+    await tester.pump(const Duration(milliseconds: 20));
+    expect(tts.speakCount, greaterThanOrEqualTo(1));
 
-      // Leave the screen.
-      tester.state<_HostState>(find.byType(_Host)).leaveScreen();
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 20));
+    // Leave the screen.
+    tester.state<_HostState>(find.byType(_Host)).leaveScreen();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 20));
 
-      expect(tts.stopCount, greaterThanOrEqualTo(1));
-    },
-  );
+    expect(tts.stopCount, greaterThanOrEqualTo(1));
+  });
 }

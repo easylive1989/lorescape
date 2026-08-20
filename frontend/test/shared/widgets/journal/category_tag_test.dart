@@ -6,7 +6,9 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   Future<void> pump(WidgetTester tester, Widget child) {
     return tester.pumpWidget(
-      MaterialApp(home: Scaffold(body: Center(child: child))),
+      MaterialApp(
+        home: Scaffold(body: Center(child: child)),
+      ),
     );
   }
 
@@ -18,8 +20,9 @@ void main() {
       expect(find.byIcon(Icons.terrain_outlined), findsOneWidget);
     });
 
-    testWidgets('uses the category background colour by default',
-        (tester) async {
+    testWidgets('uses the category background colour by default', (
+      tester,
+    ) async {
       await pump(tester, const CategoryTag(category: JournalCategory.urban));
 
       final container = tester.widget<Container>(
@@ -29,8 +32,9 @@ void main() {
       expect(decoration.color, JournalCategory.urban.bg);
     });
 
-    testWidgets('onPhoto variant uses a dark translucent surface',
-        (tester) async {
+    testWidgets('onPhoto variant uses a dark translucent surface', (
+      tester,
+    ) async {
       await pump(
         tester,
         const CategoryTag(category: JournalCategory.urban, onPhoto: true),

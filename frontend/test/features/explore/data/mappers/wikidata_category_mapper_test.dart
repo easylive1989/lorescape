@@ -81,16 +81,13 @@ void main() {
       );
     });
 
-    test(
-      'urban park + forest park (e.g. Wenxin Forest Park Q5507841) → '
-      'modernUrban',
-      () {
-        expect(
-          WikidataCategoryMapper.categorize(['Q22746', 'Q6629955']),
-          PlaceCategory.modernUrban,
-        );
-      },
-    );
+    test('urban park + forest park (e.g. Wenxin Forest Park Q5507841) → '
+        'modernUrban', () {
+      expect(
+        WikidataCategoryMapper.categorize(['Q22746', 'Q6629955']),
+        PlaceCategory.modernUrban,
+      );
+    });
 
     test('returns first whitelist hit when multiple P31 values', () {
       // street (not in WL) + sandō (in WL, cultural)

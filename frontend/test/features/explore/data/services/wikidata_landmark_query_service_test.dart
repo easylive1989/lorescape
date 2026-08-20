@@ -121,7 +121,11 @@ void main() {
           );
         }
         return http.Response.bytes(
-          utf8.encode(jsonEncode({'results': {'bindings': []}})),
+          utf8.encode(
+            jsonEncode({
+              'results': {'bindings': []},
+            }),
+          ),
           200,
           headers: {
             'content-type': 'application/sparql-results+json; charset=utf-8',
@@ -139,9 +143,7 @@ void main() {
     });
 
     test('throws AppError when wbsearchentities returns non-200', () async {
-      final mockClient = MockClient(
-        (_) async => http.Response('boom', 503),
-      );
+      final mockClient = MockClient((_) async => http.Response('boom', 503));
       final service = WikidataLandmarkQueryService(client: mockClient);
 
       expect(
@@ -208,19 +210,13 @@ void main() {
               'results': {
                 'bindings': [
                   {
-                    'place': {
-                      'value': 'http://www.wikidata.org/entity/Q1',
-                    },
+                    'place': {'value': 'http://www.wikidata.org/entity/Q1'},
                   },
                   {
-                    'place': {
-                      'value': 'http://www.wikidata.org/entity/Q1',
-                    },
+                    'place': {'value': 'http://www.wikidata.org/entity/Q1'},
                   },
                   {
-                    'place': {
-                      'value': 'http://www.wikidata.org/entity/Q2',
-                    },
+                    'place': {'value': 'http://www.wikidata.org/entity/Q2'},
                   },
                 ],
               },
@@ -234,10 +230,7 @@ void main() {
       });
       final service = WikidataLandmarkQueryService(client: mockClient);
 
-      final ids = await service.findLandmarkIdsForQuery(
-        'NZ',
-        wikiLang: 'en',
-      );
+      final ids = await service.findLandmarkIdsForQuery('NZ', wikiLang: 'en');
 
       expect(ids, ['Q1', 'Q2']);
     });

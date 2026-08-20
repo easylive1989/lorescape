@@ -61,7 +61,8 @@ void main() {
         PdfEntryData(
           title: 'Minimal Entry',
           date: DateTime(2026, 4, 11),
-          bodyText: 'A short description that still needs to render on its own page.',
+          bodyText:
+              'A short description that still needs to render on its own page.',
         ),
       ],
       coverPngBytes: _tinyPng,
@@ -81,10 +82,7 @@ void main() {
   });
 
   test('PdfLabels.renderPageOfTotal substitutes both placeholders', () {
-    expect(
-      labels.renderPageOfTotal(2, 5),
-      equals('Place 2 / 5'),
-    );
+    expect(labels.renderPageOfTotal(2, 5), equals('Place 2 / 5'));
   });
 
   test('builder output parses as a valid PDF document', () async {
@@ -99,6 +97,13 @@ void main() {
 
     // Spot-check: page format marker should appear somewhere in the stream.
     final content = String.fromCharCodes(bytes);
-    expect(content, contains(PdfPageFormat.a4.width.toStringAsFixed(0).isNotEmpty ? '/Page' : '/Page'));
+    expect(
+      content,
+      contains(
+        PdfPageFormat.a4.width.toStringAsFixed(0).isNotEmpty
+            ? '/Page'
+            : '/Page',
+      ),
+    );
   });
 }

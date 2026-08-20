@@ -7,67 +7,72 @@ import 'package:http/testing.dart';
 
 void main() {
   group('WikipediaPlacesService.geoSearch', () {
-    test('calls correct URL with lang/coord/radius and parses response',
-        () async {
-      late Uri capturedUri;
-      late Map<String, String> capturedHeaders;
-      final mockClient = MockClient((req) async {
-        capturedUri = req.url;
-        capturedHeaders = req.headers;
-        return http.Response.bytes(
-          utf8.encode(jsonEncode({
-            'query': {
-              'pages': {
-                '7253': {
-                  'pageid': 7253,
-                  'title': '台北101',
-                  'coordinates': [
-                    {'lat': 25.0336, 'lon': 121.5644}
-                  ],
-                  'thumbnail': {
-                    'source': 'https://upload.wikimedia.org/x.jpg',
-                    'width': 400,
-                    'height': 300,
+    test(
+      'calls correct URL with lang/coord/radius and parses response',
+      () async {
+        late Uri capturedUri;
+        late Map<String, String> capturedHeaders;
+        final mockClient = MockClient((req) async {
+          capturedUri = req.url;
+          capturedHeaders = req.headers;
+          return http.Response.bytes(
+            utf8.encode(
+              jsonEncode({
+                'query': {
+                  'pages': {
+                    '7253': {
+                      'pageid': 7253,
+                      'title': '台北101',
+                      'coordinates': [
+                        {'lat': 25.0336, 'lon': 121.5644},
+                      ],
+                      'thumbnail': {
+                        'source': 'https://upload.wikimedia.org/x.jpg',
+                        'width': 400,
+                        'height': 300,
+                      },
+                      'pageprops': {'wikibase_item': 'Q83101'},
+                    },
                   },
-                  'pageprops': {'wikibase_item': 'Q83101'},
                 },
-              },
-            },
-          })),
-          200,
-          headers: {'content-type': 'application/json; charset=utf-8'},
+              }),
+            ),
+            200,
+            headers: {'content-type': 'application/json; charset=utf-8'},
+          );
+        });
+
+        final service = WikipediaPlacesService(client: mockClient);
+
+        final results = await service.geoSearch(
+          lat: 25.0336,
+          lon: 121.5644,
+          radiusMeters: 1000,
+          wikiLang: 'zh',
         );
-      });
 
-      final service = WikipediaPlacesService(client: mockClient);
+        expect(capturedUri.host, 'zh.wikipedia.org');
+        expect(capturedUri.path, '/w/api.php');
+        expect(capturedUri.queryParameters['action'], 'query');
+        expect(capturedUri.queryParameters['generator'], 'geosearch');
+        expect(capturedUri.queryParameters['ggscoord'], '25.0336|121.5644');
+        expect(capturedUri.queryParameters['ggsradius'], '1000');
+        expect(
+          capturedUri.queryParameters['prop'],
+          'pageimages|coordinates|pageprops',
+        );
+        expect(capturedHeaders['User-Agent'], contains('InstantExplore'));
 
-      final results = await service.geoSearch(
-        lat: 25.0336,
-        lon: 121.5644,
-        radiusMeters: 1000,
-        wikiLang: 'zh',
-      );
-
-      expect(capturedUri.host, 'zh.wikipedia.org');
-      expect(capturedUri.path, '/w/api.php');
-      expect(capturedUri.queryParameters['action'], 'query');
-      expect(capturedUri.queryParameters['generator'], 'geosearch');
-      expect(capturedUri.queryParameters['ggscoord'], '25.0336|121.5644');
-      expect(capturedUri.queryParameters['ggsradius'], '1000');
-      expect(capturedUri.queryParameters['prop'],
-          'pageimages|coordinates|pageprops');
-      expect(capturedHeaders['User-Agent'], contains('InstantExplore'));
-
-      expect(results, hasLength(1));
-      expect(results.first.title, '台北101');
-      expect(results.first.wikidataId, 'Q83101');
-    });
+        expect(results, hasLength(1));
+        expect(results.first.title, '台北101');
+        expect(results.first.wikidataId, 'Q83101');
+      },
+    );
 
     test('returns empty list when query.pages missing', () async {
-      final mockClient = MockClient((_) async => http.Response(
-            jsonEncode({'batchcomplete': ''}),
-            200,
-          ));
+      final mockClient = MockClient(
+        (_) async => http.Response(jsonEncode({'batchcomplete': ''}), 200),
+      );
       final service = WikipediaPlacesService(client: mockClient);
 
       final results = await service.geoSearch(
@@ -86,7 +91,11 @@ void main() {
 
       expect(
         () => service.geoSearch(
-            lat: 0, lon: 0, radiusMeters: 1000, wikiLang: 'en'),
+          lat: 0,
+          lon: 0,
+          radiusMeters: 1000,
+          wikiLang: 'en',
+        ),
         throwsA(isA<Exception>()),
       );
     });
@@ -98,18 +107,26 @@ void main() {
       final mockClient = MockClient((req) async {
         capturedUri = req.url;
         return http.Response.bytes(
-          utf8.encode(jsonEncode({
-            'entities': {
-              'Q221716': {
-                'id': 'Q221716',
-                'claims': {
-                  'P31': [
-                    {'mainsnak': {'datavalue': {'value': {'id': 'Q5393308'}}}},
-                  ],
+          utf8.encode(
+            jsonEncode({
+              'entities': {
+                'Q221716': {
+                  'id': 'Q221716',
+                  'claims': {
+                    'P31': [
+                      {
+                        'mainsnak': {
+                          'datavalue': {
+                            'value': {'id': 'Q5393308'},
+                          },
+                        },
+                      },
+                    ],
+                  },
                 },
               },
-            },
-          })),
+            }),
+          ),
           200,
           headers: {'content-type': 'application/json; charset=utf-8'},
         );
@@ -160,20 +177,22 @@ void main() {
       final mockClient = MockClient((req) async {
         capturedUri = req.url;
         return http.Response.bytes(
-          utf8.encode(jsonEncode({
-            'query': {
-              'pages': {
-                '1': {
-                  'pageid': 1,
-                  'title': '清水寺',
-                  'coordinates': [
-                    {'lat': 34.9948, 'lon': 135.7850}
-                  ],
-                  'pageprops': {'wikibase_item': 'Q221716'},
+          utf8.encode(
+            jsonEncode({
+              'query': {
+                'pages': {
+                  '1': {
+                    'pageid': 1,
+                    'title': '清水寺',
+                    'coordinates': [
+                      {'lat': 34.9948, 'lon': 135.7850},
+                    ],
+                    'pageprops': {'wikibase_item': 'Q221716'},
+                  },
                 },
               },
-            },
-          })),
+            }),
+          ),
           200,
           headers: {'content-type': 'application/json; charset=utf-8'},
         );
@@ -194,21 +213,29 @@ void main() {
       final mockClient = MockClient((req) async {
         if (req.url.host == 'www.wikidata.org') {
           return http.Response.bytes(
-            utf8.encode(jsonEncode({
-              'entities': {
-                'Q221716': {
-                  'id': 'Q221716',
-                  'claims': {
-                    'P31': [
-                      {'mainsnak': {'datavalue': {'value': {'id': 'Q5393308'}}}},
-                    ],
-                  },
-                  'sitelinks': {
-                    'jawiki': {'site': 'jawiki', 'title': '清水寺'},
+            utf8.encode(
+              jsonEncode({
+                'entities': {
+                  'Q221716': {
+                    'id': 'Q221716',
+                    'claims': {
+                      'P31': [
+                        {
+                          'mainsnak': {
+                            'datavalue': {
+                              'value': {'id': 'Q5393308'},
+                            },
+                          },
+                        },
+                      ],
+                    },
+                    'sitelinks': {
+                      'jawiki': {'site': 'jawiki', 'title': '清水寺'},
+                    },
                   },
                 },
-              },
-            })),
+              }),
+            ),
             200,
             headers: {'content-type': 'application/json; charset=utf-8'},
           );
@@ -217,33 +244,34 @@ void main() {
         expect(req.url.host, 'ja.wikipedia.org');
         expect(req.url.queryParameters['titles'], '清水寺');
         return http.Response.bytes(
-          utf8.encode(jsonEncode({
-            'query': {
-              'pages': {
-                '1758861': {
-                  'pageid': 1758861,
-                  'title': '清水寺',
-                  'coordinates': [{'lat': 34.9948, 'lon': 135.785}],
-                  'thumbnail': {
-                    'source': 'https://upload.wikimedia.org/k.jpg',
-                    'width': 400,
-                    'height': 300,
+          utf8.encode(
+            jsonEncode({
+              'query': {
+                'pages': {
+                  '1758861': {
+                    'pageid': 1758861,
+                    'title': '清水寺',
+                    'coordinates': [
+                      {'lat': 34.9948, 'lon': 135.785},
+                    ],
+                    'thumbnail': {
+                      'source': 'https://upload.wikimedia.org/k.jpg',
+                      'width': 400,
+                      'height': 300,
+                    },
+                    'pageprops': {'wikibase_item': 'Q221716'},
                   },
-                  'pageprops': {'wikibase_item': 'Q221716'},
                 },
               },
-            },
-          })),
+            }),
+          ),
           200,
           headers: {'content-type': 'application/json; charset=utf-8'},
         );
       });
       final service = WikipediaPlacesService(client: mockClient);
 
-      final result = await service.fetchEntityById(
-        'Q221716',
-        wikiLang: 'ja',
-      );
+      final result = await service.fetchEntityById('Q221716', wikiLang: 'ja');
 
       expect(result, isNotNull);
       expect(result!.dto.title, '清水寺');
@@ -255,25 +283,20 @@ void main() {
       final mockClient = MockClient((req) async {
         expect(req.url.host, 'www.wikidata.org');
         return http.Response.bytes(
-          utf8.encode(jsonEncode({
-            'entities': {
-              'Q999': {
-                'id': 'Q999',
-                'claims': {},
-                'sitelinks': {},
+          utf8.encode(
+            jsonEncode({
+              'entities': {
+                'Q999': {'id': 'Q999', 'claims': {}, 'sitelinks': {}},
               },
-            },
-          })),
+            }),
+          ),
           200,
           headers: {'content-type': 'application/json; charset=utf-8'},
         );
       });
       final service = WikipediaPlacesService(client: mockClient);
 
-      expect(
-        await service.fetchEntityById('Q999', wikiLang: 'en'),
-        isNull,
-      );
+      expect(await service.fetchEntityById('Q999', wikiLang: 'en'), isNull);
     });
   });
 
@@ -295,22 +318,24 @@ void main() {
           expect(req.url.queryParameters['action'], 'wbgetentities');
           expect(req.url.queryParameters['props'], 'sitelinks');
           return http.Response.bytes(
-            utf8.encode(jsonEncode({
-              'entities': {
-                'Q190077': {
-                  'sitelinks': {
-                    'zhwiki': {'title': '米爾福德峽灣'},
-                    'enwiki': {'title': 'Milford Sound'},
+            utf8.encode(
+              jsonEncode({
+                'entities': {
+                  'Q190077': {
+                    'sitelinks': {
+                      'zhwiki': {'title': '米爾福德峽灣'},
+                      'enwiki': {'title': 'Milford Sound'},
+                    },
+                  },
+                  'Q47481': {
+                    'sitelinks': {
+                      'zhwiki': {'title': '皇后鎮'},
+                      'enwiki': {'title': 'Queenstown'},
+                    },
                   },
                 },
-                'Q47481': {
-                  'sitelinks': {
-                    'zhwiki': {'title': '皇后鎮'},
-                    'enwiki': {'title': 'Queenstown'},
-                  },
-                },
-              },
-            })),
+              }),
+            ),
             200,
             headers: {'content-type': 'application/json; charset=utf-8'},
           );
@@ -319,84 +344,92 @@ void main() {
         final titles = req.url.queryParameters['titles']!.split('|');
         expect(titles.toSet(), {'米爾福德峽灣', '皇后鎮'});
         return http.Response.bytes(
-          utf8.encode(jsonEncode({
-            'query': {
-              'pages': {
-                '1': {
-                  'pageid': 1,
-                  'title': '米爾福德峽灣',
-                  'coordinates': [{'lat': -44.6, 'lon': 167.9}],
-                  'pageprops': {'wikibase_item': 'Q190077'},
-                },
-                '2': {
-                  'pageid': 2,
-                  'title': '皇后鎮',
-                  'coordinates': [{'lat': -45.0, 'lon': 168.7}],
-                  'pageprops': {'wikibase_item': 'Q47481'},
+          utf8.encode(
+            jsonEncode({
+              'query': {
+                'pages': {
+                  '1': {
+                    'pageid': 1,
+                    'title': '米爾福德峽灣',
+                    'coordinates': [
+                      {'lat': -44.6, 'lon': 167.9},
+                    ],
+                    'pageprops': {'wikibase_item': 'Q190077'},
+                  },
+                  '2': {
+                    'pageid': 2,
+                    'title': '皇后鎮',
+                    'coordinates': [
+                      {'lat': -45.0, 'lon': 168.7},
+                    ],
+                    'pageprops': {'wikibase_item': 'Q47481'},
+                  },
                 },
               },
-            },
-          })),
+            }),
+          ),
           200,
           headers: {'content-type': 'application/json; charset=utf-8'},
         );
       });
       final service = WikipediaPlacesService(client: mockClient);
 
-      final results = await service.fetchPagesByWikidataIds(
-        const ['Q190077', 'Q47481'],
-        wikiLang: 'zh',
-      );
+      final results = await service.fetchPagesByWikidataIds(const [
+        'Q190077',
+        'Q47481',
+      ], wikiLang: 'zh');
 
-      expect(results.map((d) => d.wikidataId).toList(),
-          ['Q190077', 'Q47481']);
-      expect(results.map((d) => d.title).toList(),
-          ['米爾福德峽灣', '皇后鎮']);
+      expect(results.map((d) => d.wikidataId).toList(), ['Q190077', 'Q47481']);
+      expect(results.map((d) => d.title).toList(), ['米爾福德峽灣', '皇后鎮']);
     });
 
-    test('falls back to enwiki sitelink when preferred lang missing',
-        () async {
+    test('falls back to enwiki sitelink when preferred lang missing', () async {
       Uri? wikiUri;
       final mockClient = MockClient((req) async {
         if (req.url.host == 'www.wikidata.org') {
           return http.Response.bytes(
-            utf8.encode(jsonEncode({
-              'entities': {
-                'Q1': {
-                  'sitelinks': {
-                    'enwiki': {'title': 'Cathedral Cove'},
+            utf8.encode(
+              jsonEncode({
+                'entities': {
+                  'Q1': {
+                    'sitelinks': {
+                      'enwiki': {'title': 'Cathedral Cove'},
+                    },
                   },
                 },
-              },
-            })),
+              }),
+            ),
             200,
             headers: {'content-type': 'application/json; charset=utf-8'},
           );
         }
         wikiUri = req.url;
         return http.Response.bytes(
-          utf8.encode(jsonEncode({
-            'query': {
-              'pages': {
-                '1': {
-                  'pageid': 1,
-                  'title': 'Cathedral Cove',
-                  'coordinates': [{'lat': -36.8, 'lon': 175.8}],
-                  'pageprops': {'wikibase_item': 'Q1'},
+          utf8.encode(
+            jsonEncode({
+              'query': {
+                'pages': {
+                  '1': {
+                    'pageid': 1,
+                    'title': 'Cathedral Cove',
+                    'coordinates': [
+                      {'lat': -36.8, 'lon': 175.8},
+                    ],
+                    'pageprops': {'wikibase_item': 'Q1'},
+                  },
                 },
               },
-            },
-          })),
+            }),
+          ),
           200,
           headers: {'content-type': 'application/json; charset=utf-8'},
         );
       });
       final service = WikipediaPlacesService(client: mockClient);
 
-      final results = await service.fetchPagesByWikidataIds(
-        const ['Q1'],
-        wikiLang: 'zh',
-      );
+      final results = await service.fetchPagesByWikidataIds(const [
+        'Q1',
+      ], wikiLang: 'zh');
 
       expect(results, hasLength(1));
       expect(results.first.title, 'Cathedral Cove');
@@ -407,11 +440,13 @@ void main() {
       final mockClient = MockClient((req) async {
         if (req.url.host == 'www.wikidata.org') {
           return http.Response.bytes(
-            utf8.encode(jsonEncode({
-              'entities': {
-                'Q1': {'sitelinks': {}},
-              },
-            })),
+            utf8.encode(
+              jsonEncode({
+                'entities': {
+                  'Q1': {'sitelinks': {}},
+                },
+              }),
+            ),
             200,
             headers: {'content-type': 'application/json; charset=utf-8'},
           );
@@ -420,10 +455,9 @@ void main() {
       });
       final service = WikipediaPlacesService(client: mockClient);
 
-      final results = await service.fetchPagesByWikidataIds(
-        const ['Q1'],
-        wikiLang: 'en',
-      );
+      final results = await service.fetchPagesByWikidataIds(const [
+        'Q1',
+      ], wikiLang: 'en');
 
       expect(results, isEmpty);
     });

@@ -11,8 +11,7 @@ void main() {
     });
 
     test('every category has a non-placeholder icon and distinct bg', () {
-      final bgs =
-          JournalCategory.values.map((c) => c.bg.toARGB32()).toSet();
+      final bgs = JournalCategory.values.map((c) => c.bg.toARGB32()).toSet();
       expect(bgs.length, JournalCategory.values.length);
       for (final c in JournalCategory.values) {
         expect(c.icon, isA<IconData>());

@@ -12,19 +12,15 @@ void main() {
     });
 
     testWidgets('renders icon when provided', (tester) async {
-      await tester.pumpWidget(host(const StatusChip(
-        label: 'Saved',
-        icon: Icons.bookmark,
-      )));
+      await tester.pumpWidget(
+        host(const StatusChip(label: 'Saved', icon: Icons.bookmark)),
+      );
       expect(find.byIcon(Icons.bookmark), findsOneWidget);
     });
 
     testWidgets('all tones render without crash', (tester) async {
       for (final tone in StatusChipTone.values) {
-        await tester.pumpWidget(host(StatusChip(
-          label: tone.name,
-          tone: tone,
-        )));
+        await tester.pumpWidget(host(StatusChip(label: tone.name, tone: tone)));
         expect(find.text(tone.name.toUpperCase()), findsOneWidget);
       }
     });

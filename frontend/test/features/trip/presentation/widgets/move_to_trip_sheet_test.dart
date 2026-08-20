@@ -18,84 +18,67 @@ void main() {
   });
 
   group('MoveToTripSheet', () {
-    testWidgets(
-      'given no trips, when the sheet opens, '
-      'then only the uncategorized option and create action are shown',
-      (tester) async {
-        await _openSheet(tester, repo: InMemoryTripRepository());
+    testWidgets('given no trips, when the sheet opens, '
+        'then only the uncategorized option and create action are shown', (
+      tester,
+    ) async {
+      await _openSheet(tester, repo: InMemoryTripRepository());
 
-        expect(find.text('trip.uncategorized'), findsOneWidget);
-        expect(find.text('trip.create_action'), findsOneWidget);
-        expect(find.byIcon(Icons.inbox_outlined), findsOneWidget);
-        expect(find.byIcon(Icons.flag_outlined), findsNothing);
-      },
-    );
+      expect(find.text('trip.uncategorized'), findsOneWidget);
+      expect(find.text('trip.create_action'), findsOneWidget);
+      expect(find.byIcon(Icons.inbox_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.flag_outlined), findsNothing);
+    });
 
-    testWidgets(
-      'given two trips, when the sheet opens, '
-      'then a flag tile is rendered for each trip',
-      (tester) async {
-        final repo = InMemoryTripRepository();
-        await repo.save(
-          buildTrip(id: 't1', name: 'Kyoto', createdAt: DateTime(2024, 2, 1)),
-        );
-        await repo.save(
-          buildTrip(id: 't2', name: 'Tokyo', createdAt: DateTime(2024, 1, 1)),
-        );
+    testWidgets('given two trips, when the sheet opens, '
+        'then a flag tile is rendered for each trip', (tester) async {
+      final repo = InMemoryTripRepository();
+      await repo.save(
+        buildTrip(id: 't1', name: 'Kyoto', createdAt: DateTime(2024, 2, 1)),
+      );
+      await repo.save(
+        buildTrip(id: 't2', name: 'Tokyo', createdAt: DateTime(2024, 1, 1)),
+      );
 
-        await _openSheet(tester, repo: repo);
+      await _openSheet(tester, repo: repo);
 
-        expect(find.text('Kyoto'), findsOneWidget);
-        expect(find.text('Tokyo'), findsOneWidget);
-        expect(find.byIcon(Icons.flag_outlined), findsNWidgets(2));
-      },
-    );
+      expect(find.text('Kyoto'), findsOneWidget);
+      expect(find.text('Tokyo'), findsOneWidget);
+      expect(find.byIcon(Icons.flag_outlined), findsNWidgets(2));
+    });
 
-    testWidgets(
-      'given the sheet shows uncategorized, when the user taps it, '
-      'then the sheet pops with a null TripSelection',
-      (tester) async {
-        await _openSheet(tester, repo: InMemoryTripRepository());
+    testWidgets('given the sheet shows uncategorized, when the user taps it, '
+        'then the sheet pops with a null TripSelection', (tester) async {
+      await _openSheet(tester, repo: InMemoryTripRepository());
 
-        await tester.tap(find.text('trip.uncategorized'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.text('trip.uncategorized'));
+      await tester.pumpAndSettle();
 
-        expect(_Host.popped, isTrue);
-        expect(_Host.lastSelection, isNotNull);
-        expect(_Host.lastSelection!.tripId, isNull);
-      },
-    );
+      expect(_Host.popped, isTrue);
+      expect(_Host.lastSelection, isNotNull);
+      expect(_Host.lastSelection!.tripId, isNull);
+    });
 
-    testWidgets(
-      'given the sheet lists trips, when the user taps one, '
-      'then the sheet pops with the matching trip id',
-      (tester) async {
-        final repo = InMemoryTripRepository();
-        await repo.save(buildTrip(id: 't1', name: 'Kyoto'));
+    testWidgets('given the sheet lists trips, when the user taps one, '
+        'then the sheet pops with the matching trip id', (tester) async {
+      final repo = InMemoryTripRepository();
+      await repo.save(buildTrip(id: 't1', name: 'Kyoto'));
 
-        await _openSheet(tester, repo: repo);
+      await _openSheet(tester, repo: repo);
 
-        await tester.tap(find.text('Kyoto'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.text('Kyoto'));
+      await tester.pumpAndSettle();
 
-        expect(_Host.lastSelection?.tripId, equals('t1'));
-      },
-    );
+      expect(_Host.lastSelection?.tripId, equals('t1'));
+    });
 
-    testWidgets(
-      'given itemCount is greater than one, when the sheet opens, '
-      'then the batch title is shown',
-      (tester) async {
-        await _openSheet(
-          tester,
-          repo: InMemoryTripRepository(),
-          itemCount: 3,
-        );
+    testWidgets('given itemCount is greater than one, when the sheet opens, '
+        'then the batch title is shown', (tester) async {
+      await _openSheet(tester, repo: InMemoryTripRepository(), itemCount: 3);
 
-        expect(find.text('trip.move_title_batch'), findsOneWidget);
-        expect(find.text('trip.move_title'), findsNothing);
-      },
-    );
+      expect(find.text('trip.move_title_batch'), findsOneWidget);
+      expect(find.text('trip.move_title'), findsNothing);
+    });
 
     testWidgets(
       'given a currentTripId matches a listed trip, when the sheet opens, '
@@ -120,38 +103,34 @@ void main() {
       },
     );
 
-    testWidgets(
-      'given no currentTripId, when the sheet opens, '
-      'then the uncategorized option is marked selected',
-      (tester) async {
-        await _openSheet(tester, repo: InMemoryTripRepository());
+    testWidgets('given no currentTripId, when the sheet opens, '
+        'then the uncategorized option is marked selected', (tester) async {
+      await _openSheet(tester, repo: InMemoryTripRepository());
 
-        final selectedTileFinder = find.ancestor(
-          of: find.byIcon(Icons.check),
-          matching: find.byType(ListTile),
-        );
-        expect(
-          find.descendant(
-            of: selectedTileFinder,
-            matching: find.text('trip.uncategorized'),
-          ),
-          findsOneWidget,
-        );
-      },
-    );
+      final selectedTileFinder = find.ancestor(
+        of: find.byIcon(Icons.check),
+        matching: find.byType(ListTile),
+      );
+      expect(
+        find.descendant(
+          of: selectedTileFinder,
+          matching: find.text('trip.uncategorized'),
+        ),
+        findsOneWidget,
+      );
+    });
 
-    testWidgets(
-      'given the create-trip action, when the user taps it, '
-      'then the sheet pops and the router navigates to /trip/edit',
-      (tester) async {
-        await _openSheet(tester, repo: InMemoryTripRepository());
+    testWidgets('given the create-trip action, when the user taps it, '
+        'then the sheet pops and the router navigates to /trip/edit', (
+      tester,
+    ) async {
+      await _openSheet(tester, repo: InMemoryTripRepository());
 
-        await tester.tap(find.text('trip.create_action'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.text('trip.create_action'));
+      await tester.pumpAndSettle();
 
-        expect(find.byKey(const ValueKey('edit-screen')), findsOneWidget);
-      },
-    );
+      expect(find.byKey(const ValueKey('edit-screen')), findsOneWidget);
+    });
   });
 }
 
@@ -171,10 +150,8 @@ Future<void> _openSheet(
       ),
       GoRoute(
         path: '/trip/edit',
-        builder: (_, __) => const Scaffold(
-          key: ValueKey('edit-screen'),
-          body: Text('edit'),
-        ),
+        builder: (_, __) =>
+            const Scaffold(key: ValueKey('edit-screen'), body: Text('edit')),
       ),
     ],
     overrides: [tripRepositoryProvider.overrideWithValue(repo)],

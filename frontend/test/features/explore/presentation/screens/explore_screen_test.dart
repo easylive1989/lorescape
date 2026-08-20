@@ -87,10 +87,7 @@ void main() {
           )
           .top;
       final card = find
-          .ancestor(
-            of: _cardText('Senso-ji'),
-            matching: find.byType(Container),
-          )
+          .ancestor(of: _cardText('Senso-ji'), matching: find.byType(Container))
           .first;
       expect(badgeTop, greaterThanOrEqualTo(tester.getRect(card).bottom));
     });
@@ -195,8 +192,9 @@ void main() {
 
     testWidgets('given the explore screen is shown, '
         'when looking at the top bar, '
-        'then the shelf, settings and refresh buttons are all present',
-        (tester) async {
+        'then the shelf, settings and refresh buttons are all present', (
+      tester,
+    ) async {
       await _givenExploreScreen(tester);
 
       expect(find.byKey(const Key('explore-open-shelf')), findsOneWidget);
@@ -290,25 +288,24 @@ void main() {
       expect(_markerLabel('Meiji Shrine'), findsOneWidget);
     });
 
-    testWidgets(
-      'given a map pin under a router, when its name chip is tapped, '
-      'then the config route is pushed with the place as extra',
-      (tester) async {
-        final extras = <Object?>[];
+    testWidgets('given a map pin under a router, when its name chip is tapped, '
+        'then the config route is pushed with the place as extra', (
+      tester,
+    ) async {
+      final extras = <Object?>[];
 
-        await _givenExploreScreenWithRouter(
-          tester,
-          places: [buildPlace(id: 'p1', name: 'Senso-ji')],
-          onConfigPush: extras.add,
-        );
+      await _givenExploreScreenWithRouter(
+        tester,
+        places: [buildPlace(id: 'p1', name: 'Senso-ji')],
+        onConfigPush: extras.add,
+      );
 
-        await tester.tap(_markerLabel('Senso-ji'));
-        await tester.pumpAndSettle();
+      await tester.tap(_markerLabel('Senso-ji'));
+      await tester.pumpAndSettle();
 
-        expect(extras.single, isA<Place>());
-        expect((extras.single as Place).id, equals('p1'));
-      },
-    );
+      expect(extras.single, isA<Place>());
+      expect((extras.single as Place).id, equals('p1'));
+    });
 
     group('location gate', () {
       testWidgets(
@@ -446,36 +443,31 @@ void main() {
     });
 
     group('search loader', () {
-      testWidgets(
-        'given a slow search, when the user submits a query, '
-        'then the centred loader shows the searching copy with the query, '
-        'and disappears once results arrive',
-        (tester) async {
-          final repo = FakePlacesRepository(
-            nearbyPlaces: [buildPlace(id: 'p1', name: 'Nearby Place')],
-            searchResults: [buildPlace(id: 's1', name: 'Searched Place')],
-          );
-          await _givenExploreScreen(tester, repo: repo);
-          repo.delay = const Duration(milliseconds: 400);
+      testWidgets('given a slow search, when the user submits a query, '
+          'then the centred loader shows the searching copy with the query, '
+          'and disappears once results arrive', (tester) async {
+        final repo = FakePlacesRepository(
+          nearbyPlaces: [buildPlace(id: 'p1', name: 'Nearby Place')],
+          searchResults: [buildPlace(id: 's1', name: 'Searched Place')],
+        );
+        await _givenExploreScreen(tester, repo: repo);
+        repo.delay = const Duration(milliseconds: 400);
 
-          await tester.enterText(find.byType(TextField), '京都');
-          await tester.testTextInput.receiveAction(TextInputAction.done);
-          await tester.pump(const Duration(milliseconds: 20));
+        await tester.enterText(find.byType(TextField), '京都');
+        await tester.testTextInput.receiveAction(TextInputAction.done);
+        await tester.pump(const Duration(milliseconds: 20));
 
-          expect(find.byType(SearchLoader), findsOneWidget);
-          expect(find.text('explore.searching'), findsOneWidget);
-          expect(
-            tester
-                .widget<Text>(find.byKey(const Key('search-loader-name')))
-                .data,
-            '京都',
-          );
+        expect(find.byType(SearchLoader), findsOneWidget);
+        expect(find.text('explore.searching'), findsOneWidget);
+        expect(
+          tester.widget<Text>(find.byKey(const Key('search-loader-name'))).data,
+          '京都',
+        );
 
-          await tester.pump(const Duration(milliseconds: 500));
-          expect(find.byType(SearchLoader), findsNothing);
-          expect(_cardText('Searched Place'), findsOneWidget);
-        },
-      );
+        await tester.pump(const Duration(milliseconds: 500));
+        expect(find.byType(SearchLoader), findsNothing);
+        expect(_cardText('Searched Place'), findsOneWidget);
+      });
 
       testWidgets(
         'given a slow nearby lookup, when the screen is still loading, '
@@ -539,7 +531,6 @@ void main() {
         },
       );
     });
-
   });
 }
 

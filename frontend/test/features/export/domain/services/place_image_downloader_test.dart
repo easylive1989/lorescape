@@ -71,25 +71,27 @@ void main() {
       expect(result.usedPlaceholder, isTrue);
     });
 
-    test('returns placeholder for null or empty url without hitting client',
-        () async {
-      var called = false;
-      final mockClient = MockClient((_) async {
-        called = true;
-        return http.Response.bytes(const [], 200);
-      });
-      final downloader = PlaceImageDownloader(
-        placeholderBytes: _placeholder,
-        client: mockClient,
-      );
+    test(
+      'returns placeholder for null or empty url without hitting client',
+      () async {
+        var called = false;
+        final mockClient = MockClient((_) async {
+          called = true;
+          return http.Response.bytes(const [], 200);
+        });
+        final downloader = PlaceImageDownloader(
+          placeholderBytes: _placeholder,
+          client: mockClient,
+        );
 
-      final nullResult = await downloader.download(null);
-      final emptyResult = await downloader.download('');
+        final nullResult = await downloader.download(null);
+        final emptyResult = await downloader.download('');
 
-      expect(nullResult.usedPlaceholder, isTrue);
-      expect(emptyResult.usedPlaceholder, isTrue);
-      expect(called, isFalse);
-    });
+        expect(nullResult.usedPlaceholder, isTrue);
+        expect(emptyResult.usedPlaceholder, isTrue);
+        expect(called, isFalse);
+      },
+    );
 
     test('returns placeholder when body is empty even on 200', () async {
       final mockClient = MockClient(

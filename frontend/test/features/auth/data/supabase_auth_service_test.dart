@@ -92,62 +92,56 @@ void main() {
   }
 
   group('signInWithGoogle identity linking', () {
-    test(
-      'given an anonymous session, '
-      'when signing in, then the identity is linked in place',
-      () async {
-        when(() => auth.currentUser).thenReturn(_user(isAnonymous: true));
-        stubLink(AuthResponse(user: _user(isAnonymous: false, id: 'same-id')));
+    test('given an anonymous session, '
+        'when signing in, then the identity is linked in place', () async {
+      when(() => auth.currentUser).thenReturn(_user(isAnonymous: true));
+      stubLink(AuthResponse(user: _user(isAnonymous: false, id: 'same-id')));
 
-        final result = await service.signInWithGoogle();
+      final result = await service.signInWithGoogle();
 
-        expect(result.id, 'same-id');
-        expect(result.isAnonymous, isFalse);
-        verify(
-          () => auth.linkIdentityWithIdToken(
-            provider: any(named: 'provider'),
-            idToken: any(named: 'idToken'),
-            accessToken: any(named: 'accessToken'),
-            nonce: any(named: 'nonce'),
-          ),
-        ).called(1);
-        verifyNever(
-          () => auth.signInWithIdToken(
-            provider: any(named: 'provider'),
-            idToken: any(named: 'idToken'),
-            accessToken: any(named: 'accessToken'),
-            nonce: any(named: 'nonce'),
-          ),
-        );
-      },
-    );
+      expect(result.id, 'same-id');
+      expect(result.isAnonymous, isFalse);
+      verify(
+        () => auth.linkIdentityWithIdToken(
+          provider: any(named: 'provider'),
+          idToken: any(named: 'idToken'),
+          accessToken: any(named: 'accessToken'),
+          nonce: any(named: 'nonce'),
+        ),
+      ).called(1);
+      verifyNever(
+        () => auth.signInWithIdToken(
+          provider: any(named: 'provider'),
+          idToken: any(named: 'idToken'),
+          accessToken: any(named: 'accessToken'),
+          nonce: any(named: 'nonce'),
+        ),
+      );
+    });
 
-    test(
-      'given the identity already belongs to another account, '
-      'when linking fails with identity_already_exists, '
-      'then it falls back to a normal sign-in',
-      () async {
-        when(() => auth.currentUser).thenReturn(_user(isAnonymous: true));
-        stubLinkThrows(
-          const AuthException('exists', code: 'identity_already_exists'),
-        );
-        stubSignIn(
-          AuthResponse(user: _user(isAnonymous: false, id: 'existing-id')),
-        );
+    test('given the identity already belongs to another account, '
+        'when linking fails with identity_already_exists, '
+        'then it falls back to a normal sign-in', () async {
+      when(() => auth.currentUser).thenReturn(_user(isAnonymous: true));
+      stubLinkThrows(
+        const AuthException('exists', code: 'identity_already_exists'),
+      );
+      stubSignIn(
+        AuthResponse(user: _user(isAnonymous: false, id: 'existing-id')),
+      );
 
-        final result = await service.signInWithGoogle();
+      final result = await service.signInWithGoogle();
 
-        expect(result.id, 'existing-id');
-        verify(
-          () => auth.signInWithIdToken(
-            provider: any(named: 'provider'),
-            idToken: any(named: 'idToken'),
-            accessToken: any(named: 'accessToken'),
-            nonce: any(named: 'nonce'),
-          ),
-        ).called(1);
-      },
-    );
+      expect(result.id, 'existing-id');
+      verify(
+        () => auth.signInWithIdToken(
+          provider: any(named: 'provider'),
+          idToken: any(named: 'idToken'),
+          accessToken: any(named: 'accessToken'),
+          nonce: any(named: 'nonce'),
+        ),
+      ).called(1);
+    });
 
     test(
       'given manual linking is disabled, '
@@ -173,52 +167,46 @@ void main() {
       },
     );
 
-    test(
-      'given a non-anonymous current user, '
-      'when signing in, then it signs in directly without linking',
-      () async {
-        when(() => auth.currentUser).thenReturn(_user(isAnonymous: false));
-        stubSignIn(AuthResponse(user: _user(isAnonymous: false, id: 'other')));
+    test('given a non-anonymous current user, '
+        'when signing in, then it signs in directly without linking', () async {
+      when(() => auth.currentUser).thenReturn(_user(isAnonymous: false));
+      stubSignIn(AuthResponse(user: _user(isAnonymous: false, id: 'other')));
 
-        await service.signInWithGoogle();
+      await service.signInWithGoogle();
 
-        verify(
-          () => auth.signInWithIdToken(
-            provider: any(named: 'provider'),
-            idToken: any(named: 'idToken'),
-            accessToken: any(named: 'accessToken'),
-            nonce: any(named: 'nonce'),
-          ),
-        ).called(1);
-        verifyNever(
-          () => auth.linkIdentityWithIdToken(
-            provider: any(named: 'provider'),
-            idToken: any(named: 'idToken'),
-            accessToken: any(named: 'accessToken'),
-            nonce: any(named: 'nonce'),
-          ),
-        );
-      },
-    );
+      verify(
+        () => auth.signInWithIdToken(
+          provider: any(named: 'provider'),
+          idToken: any(named: 'idToken'),
+          accessToken: any(named: 'accessToken'),
+          nonce: any(named: 'nonce'),
+        ),
+      ).called(1);
+      verifyNever(
+        () => auth.linkIdentityWithIdToken(
+          provider: any(named: 'provider'),
+          idToken: any(named: 'idToken'),
+          accessToken: any(named: 'accessToken'),
+          nonce: any(named: 'nonce'),
+        ),
+      );
+    });
 
-    test(
-      'given no current session, '
-      'when signing in, then it signs in directly without linking',
-      () async {
-        when(() => auth.currentUser).thenReturn(null);
-        stubSignIn(AuthResponse(user: _user(isAnonymous: false, id: 'fresh')));
+    test('given no current session, '
+        'when signing in, then it signs in directly without linking', () async {
+      when(() => auth.currentUser).thenReturn(null);
+      stubSignIn(AuthResponse(user: _user(isAnonymous: false, id: 'fresh')));
 
-        await service.signInWithGoogle();
+      await service.signInWithGoogle();
 
-        verifyNever(
-          () => auth.linkIdentityWithIdToken(
-            provider: any(named: 'provider'),
-            idToken: any(named: 'idToken'),
-            accessToken: any(named: 'accessToken'),
-            nonce: any(named: 'nonce'),
-          ),
-        );
-      },
-    );
+      verifyNever(
+        () => auth.linkIdentityWithIdToken(
+          provider: any(named: 'provider'),
+          idToken: any(named: 'idToken'),
+          accessToken: any(named: 'accessToken'),
+          nonce: any(named: 'nonce'),
+        ),
+      );
+    });
   });
 }

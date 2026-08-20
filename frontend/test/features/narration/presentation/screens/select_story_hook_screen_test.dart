@@ -64,46 +64,40 @@ void main() {
   });
 
   group('SelectStoryHookScreen', () {
-    testWidgets(
-      'given a place, when the screen loads, '
-      'then the place name is rendered',
-      (tester) async {
-        final place = buildPlace(name: 'Fushimi Inari');
+    testWidgets('given a place, when the screen loads, '
+        'then the place name is rendered', (tester) async {
+      final place = buildPlace(name: 'Fushimi Inari');
 
-        await _pumpScreen(tester, place: place);
+      await _pumpScreen(tester, place: place);
 
-        expect(find.text(place.name), findsOneWidget);
-      },
-    );
+      expect(find.text(place.name), findsOneWidget);
+    });
 
-    testWidgets(
-      'given the hook service is still loading, '
-      'then the scan-phase generating animation shows the digging copy '
-      'and its step checklist',
-      (tester) async {
-        final gate = Completer<void>();
-        await _pumpScreen(
-          tester,
-          hookService: _FakeStoryHookService(
-            hooks: const [_hook1, _hook2],
-            gate: gate,
-          ),
-          settle: false,
-        );
-        await tester.pump(const Duration(milliseconds: 50));
+    testWidgets('given the hook service is still loading, '
+        'then the scan-phase generating animation shows the digging copy '
+        'and its step checklist', (tester) async {
+      final gate = Completer<void>();
+      await _pumpScreen(
+        tester,
+        hookService: _FakeStoryHookService(
+          hooks: const [_hook1, _hook2],
+          gate: gate,
+        ),
+        settle: false,
+      );
+      await tester.pump(const Duration(milliseconds: 50));
 
-        expect(find.byType(StoryGenerating), findsOneWidget);
-        expect(find.text('story_generating.scan_title'), findsOneWidget);
-        expect(find.text('story_generating.scan_sub'), findsOneWidget);
-        expect(find.text('story_generating.scan_step_1'), findsOneWidget);
-        expect(find.text('story_generating.scan_step_3'), findsOneWidget);
+      expect(find.byType(StoryGenerating), findsOneWidget);
+      expect(find.text('story_generating.scan_title'), findsOneWidget);
+      expect(find.text('story_generating.scan_sub'), findsOneWidget);
+      expect(find.text('story_generating.scan_step_1'), findsOneWidget);
+      expect(find.text('story_generating.scan_step_3'), findsOneWidget);
 
-        // Release the gate so autoDispose teardown doesn't leak a pending
-        // future into the next test.
-        gate.complete();
-        await tester.pumpAndSettle();
-      },
-    );
+      // Release the gate so autoDispose teardown doesn't leak a pending
+      // future into the next test.
+      gate.complete();
+      await tester.pumpAndSettle();
+    });
 
     testWidgets(
       'given the generating animation runs, when the step interval elapses, '
@@ -128,139 +122,121 @@ void main() {
       },
     );
 
-    testWidgets(
-      'given a hook is tapped and generation is in flight, '
-      'then the write-phase animation shows the writing copy, '
-      'and the player opens once generation completes',
-      (tester) async {
-        final narrationService = FakeNarrationService()
-          ..gate = Completer<void>();
+    testWidgets('given a hook is tapped and generation is in flight, '
+        'then the write-phase animation shows the writing copy, '
+        'and the player opens once generation completes', (tester) async {
+      final narrationService = FakeNarrationService()..gate = Completer<void>();
 
-        await _pumpScreenWithRouter(
-          tester,
-          hookService: _FakeStoryHookService(hooks: const [_hook1]),
-          narrationService: narrationService,
-        );
+      await _pumpScreenWithRouter(
+        tester,
+        hookService: _FakeStoryHookService(hooks: const [_hook1]),
+        narrationService: narrationService,
+      );
 
-        await tester.tap(find.text(_hook1.title));
-        await tester.pump(const Duration(milliseconds: 50));
+      await tester.tap(find.text(_hook1.title));
+      await tester.pump(const Duration(milliseconds: 50));
 
-        expect(find.byType(StoryGenerating), findsOneWidget);
-        expect(find.text('story_generating.write_title'), findsOneWidget);
-        expect(find.text('story_generating.write_step_1'), findsOneWidget);
+      expect(find.byType(StoryGenerating), findsOneWidget);
+      expect(find.text('story_generating.write_title'), findsOneWidget);
+      expect(find.text('story_generating.write_step_1'), findsOneWidget);
 
-        narrationService.gate!.complete();
-        await tester.pumpAndSettle();
+      narrationService.gate!.complete();
+      await tester.pumpAndSettle();
 
-        expect(find.byKey(const Key('player-screen')), findsOneWidget);
-      },
-    );
+      expect(find.byKey(const Key('player-screen')), findsOneWidget);
+    });
 
-    testWidgets(
-      'given hooks load successfully, '
-      'then both hook titles and teasers are rendered',
-      (tester) async {
-        await _pumpScreen(
-          tester,
-          hookService: _FakeStoryHookService(hooks: const [_hook1, _hook2]),
-        );
+    testWidgets('given hooks load successfully, '
+        'then both hook titles and teasers are rendered', (tester) async {
+      await _pumpScreen(
+        tester,
+        hookService: _FakeStoryHookService(hooks: const [_hook1, _hook2]),
+      );
 
-        expect(find.text('story_hook.title'), findsOneWidget);
-        expect(find.text(_hook1.title), findsOneWidget);
-        expect(find.text(_hook1.teaser), findsOneWidget);
-        expect(find.text(_hook2.title), findsOneWidget);
-      },
-    );
+      expect(find.text('story_hook.title'), findsOneWidget);
+      expect(find.text(_hook1.title), findsOneWidget);
+      expect(find.text(_hook1.teaser), findsOneWidget);
+      expect(find.text(_hook2.title), findsOneWidget);
+    });
 
-    testWidgets(
-      'given the service returns an empty list, '
-      'then the fallback "play default story" button is shown',
-      (tester) async {
-        await _pumpScreen(
-          tester,
-          hookService: _FakeStoryHookService(hooks: const []),
-        );
+    testWidgets('given the service returns an empty list, '
+        'then the fallback "play default story" button is shown', (
+      tester,
+    ) async {
+      await _pumpScreen(
+        tester,
+        hookService: _FakeStoryHookService(hooks: const []),
+      );
 
-        expect(find.text('story_hook.listen_default_button'), findsOneWidget);
-      },
-    );
+      expect(find.text('story_hook.listen_default_button'), findsOneWidget);
+    });
 
-    testWidgets(
-      'given the service throws, '
-      'then the fallback "play default story" button is shown',
-      (tester) async {
-        await _pumpScreen(
-          tester,
-          hookService: _FakeStoryHookService(
-            error: const AppError(type: NarrationError.networkError),
-          ),
-        );
+    testWidgets('given the service throws, '
+        'then the fallback "play default story" button is shown', (
+      tester,
+    ) async {
+      await _pumpScreen(
+        tester,
+        hookService: _FakeStoryHookService(
+          error: const AppError(type: NarrationError.networkError),
+        ),
+      );
 
-        expect(find.text('story_hook.listen_default_button'), findsOneWidget);
-      },
-    );
+      expect(find.text('story_hook.listen_default_button'), findsOneWidget);
+    });
 
-    testWidgets(
-      'given the service throws insufficientSource, '
-      'then the no-story message is shown and the listen button is NOT',
-      (tester) async {
-        await _pumpScreen(
-          tester,
-          hookService: _FakeStoryHookService(
-            error: const AppError(type: NarrationError.insufficientSource),
-          ),
-        );
+    testWidgets('given the service throws insufficientSource, '
+        'then the no-story message is shown and the listen button is NOT', (
+      tester,
+    ) async {
+      await _pumpScreen(
+        tester,
+        hookService: _FakeStoryHookService(
+          error: const AppError(type: NarrationError.insufficientSource),
+        ),
+      );
 
-        expect(
-          find.text('story_hook.insufficient_source_title'),
-          findsOneWidget,
-        );
-        expect(
-          find.text('story_hook.insufficient_source_body'),
-          findsOneWidget,
-        );
-        expect(find.text('story_hook.listen_default_button'), findsNothing);
-      },
-    );
+      expect(find.text('story_hook.insufficient_source_title'), findsOneWidget);
+      expect(find.text('story_hook.insufficient_source_body'), findsOneWidget);
+      expect(find.text('story_hook.listen_default_button'), findsNothing);
+    });
 
-    testWidgets(
-      'given a hook card, when tapped, '
-      'then narration generation is triggered with that hook',
-      (tester) async {
-        final narrationService = FakeNarrationService();
+    testWidgets('given a hook card, when tapped, '
+        'then narration generation is triggered with that hook', (
+      tester,
+    ) async {
+      final narrationService = FakeNarrationService();
 
-        await _pumpScreenWithRouter(
-          tester,
-          hookService: _FakeStoryHookService(hooks: const [_hook1]),
-          narrationService: narrationService,
-        );
+      await _pumpScreenWithRouter(
+        tester,
+        hookService: _FakeStoryHookService(hooks: const [_hook1]),
+        narrationService: narrationService,
+      );
 
-        await tester.tap(find.text(_hook1.title));
-        await tester.pumpAndSettle();
+      await tester.tap(find.text(_hook1.title));
+      await tester.pumpAndSettle();
 
-        expect(narrationService.lastHook, equals(_hook1));
-      },
-    );
+      expect(narrationService.lastHook, equals(_hook1));
+    });
 
-    testWidgets(
-      'given the fallback state, when the listen button is tapped, '
-      'then narration generation is triggered without a hook',
-      (tester) async {
-        final narrationService = FakeNarrationService();
+    testWidgets('given the fallback state, when the listen button is tapped, '
+        'then narration generation is triggered without a hook', (
+      tester,
+    ) async {
+      final narrationService = FakeNarrationService();
 
-        await _pumpScreenWithRouter(
-          tester,
-          hookService: _FakeStoryHookService(hooks: const []),
-          narrationService: narrationService,
-        );
+      await _pumpScreenWithRouter(
+        tester,
+        hookService: _FakeStoryHookService(hooks: const []),
+        narrationService: narrationService,
+      );
 
-        await tester.tap(find.text('story_hook.listen_default_button'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.text('story_hook.listen_default_button'));
+      await tester.pumpAndSettle();
 
-        expect(narrationService.lastHook, isNull);
-        expect(narrationService.lastPlace, isNotNull);
-      },
-    );
+      expect(narrationService.lastHook, isNull);
+      expect(narrationService.lastPlace, isNotNull);
+    });
 
     testWidgets(
       'given two hooks are returned, when the user taps the second one, '
@@ -295,49 +271,48 @@ void main() {
       },
     );
 
-    testWidgets(
-      'given no hooks were returned, when the user listens anyway, '
-      'then the outcome is empty and the selection is flagged as default',
-      (tester) async {
-        final analytics = RecordingAnalyticsService();
+    testWidgets('given no hooks were returned, when the user listens anyway, '
+        'then the outcome is empty and the selection is flagged as default', (
+      tester,
+    ) async {
+      final analytics = RecordingAnalyticsService();
 
-        await _pumpScreenWithRouter(
-          tester,
-          hookService: _FakeStoryHookService(hooks: const []),
-          analytics: analytics,
-        );
+      await _pumpScreenWithRouter(
+        tester,
+        hookService: _FakeStoryHookService(hooks: const []),
+        analytics: analytics,
+      );
 
-        await tester.tap(find.text('story_hook.listen_default_button'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.text('story_hook.listen_default_button'));
+      await tester.pumpAndSettle();
 
-        expect(analytics.firstOfType<HooksReturned>()!.outcome, HooksOutcome.empty);
-        // 沒挑角度時不送假的位置，靠 hook_index == null 分流。
-        expect(analytics.firstOfType<HookSelected>()!.hookIndex, isNull);
-      },
-    );
+      expect(
+        analytics.firstOfType<HooksReturned>()!.outcome,
+        HooksOutcome.empty,
+      );
+      // 沒挑角度時不送假的位置，靠 hook_index == null 分流。
+      expect(analytics.firstOfType<HookSelected>()!.hookIndex, isNull);
+    });
 
-    testWidgets(
-      'given the source is insufficient, when the screen loads, '
-      'then the outcome is recorded as insufficient_source',
-      (tester) async {
-        final analytics = RecordingAnalyticsService();
+    testWidgets('given the source is insufficient, when the screen loads, '
+        'then the outcome is recorded as insufficient_source', (tester) async {
+      final analytics = RecordingAnalyticsService();
 
-        await _pumpScreen(
-          tester,
-          hookService: _FakeStoryHookService(
-            error: const AppError(type: NarrationError.insufficientSource),
-          ),
-          analytics: analytics,
-        );
+      await _pumpScreen(
+        tester,
+        hookService: _FakeStoryHookService(
+          error: const AppError(type: NarrationError.insufficientSource),
+        ),
+        analytics: analytics,
+      );
 
-        // 「沒給角度」與「給了角度沒人挑」必須分得出來，否則漏斗無法解讀。
-        expect(analytics.types, ['hooks_requested', 'hooks_returned']);
-        expect(
-          analytics.firstOfType<HooksReturned>()!.outcome,
-          HooksOutcome.insufficientSource,
-        );
-      },
-    );
+      // 「沒給角度」與「給了角度沒人挑」必須分得出來，否則漏斗無法解讀。
+      expect(analytics.types, ['hooks_requested', 'hooks_returned']);
+      expect(
+        analytics.firstOfType<HooksReturned>()!.outcome,
+        HooksOutcome.insufficientSource,
+      );
+    });
 
     testWidgets(
       'given the backend reports quota exhausted, when a hook is tapped, '
@@ -371,71 +346,65 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byKey(const Key('subscription-screen')), findsOneWidget);
-        expect(
-          find.text('config_screen.generation_error_title'),
-          findsNothing,
-        );
+        expect(find.text('config_screen.generation_error_title'), findsNothing);
       },
     );
 
-    testWidgets(
-      'given the user completes a purchase from the quota paywall, '
-      'when they return, then the same hook regenerates automatically '
-      'and the player opens without a second tap',
-      (tester) async {
-        final narrationService = FakeNarrationService(
-          error: const AppError(type: NarrationError.freeQuotaExceeded),
-        );
+    testWidgets('given the user completes a purchase from the quota paywall, '
+        'when they return, then the same hook regenerates automatically '
+        'and the player opens without a second tap', (tester) async {
+      final narrationService = FakeNarrationService(
+        error: const AppError(type: NarrationError.freeQuotaExceeded),
+      );
 
-        await pumpRouterApp(
-          tester,
-          routes: [
-            GoRoute(
-              path: '/',
-              builder: (_, __) => SelectStoryHookScreen(place: buildPlace()),
-            ),
-            GoRoute(
-              path: '/subscription',
-              builder: (context, __) => Scaffold(
-                key: const Key('subscription-screen'),
-                body: ElevatedButton(
-                  key: const Key('fake-purchase-button'),
-                  onPressed: () => context.pop(true),
-                  child: const Text('buy'),
-                ),
-              ),
-            ),
-            GoRoute(
-              name: 'player',
-              path: '/player',
-              builder: (_, __) => const Scaffold(
-                key: Key('player-screen'),
-                body: SizedBox.shrink(),
-              ),
-            ),
-          ],
-          overrides: _overrides(
-            hookService: _FakeStoryHookService(hooks: const [_hook1]),
-            narrationService: narrationService,
+      await pumpRouterApp(
+        tester,
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, __) => SelectStoryHookScreen(place: buildPlace()),
           ),
-        );
-        await tester.pumpAndSettle();
+          GoRoute(
+            path: '/subscription',
+            builder: (context, __) => Scaffold(
+              key: const Key('subscription-screen'),
+              body: ElevatedButton(
+                key: const Key('fake-purchase-button'),
+                onPressed: () => context.pop(true),
+                child: const Text('buy'),
+              ),
+            ),
+          ),
+          GoRoute(
+            name: 'player',
+            path: '/player',
+            builder: (_, __) => const Scaffold(
+              key: Key('player-screen'),
+              body: SizedBox.shrink(),
+            ),
+          ),
+        ],
+        overrides: _overrides(
+          hookService: _FakeStoryHookService(hooks: const [_hook1]),
+          narrationService: narrationService,
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        await tester.tap(find.text(_hook1.title));
-        await tester.pumpAndSettle();
-        expect(find.byKey(const Key('subscription-screen')), findsOneWidget);
+      await tester.tap(find.text(_hook1.title));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('subscription-screen')), findsOneWidget);
 
-        // 模擬購買成功——webhook／live check 已經補上權益，這次不再擋。
-        narrationService.error = null;
-        await tester.tap(find.byKey(const Key('fake-purchase-button')));
-        await tester.pumpAndSettle();
+      // 模擬購買成功——webhook／live check 已經補上權益，這次不再擋。
+      narrationService.error = null;
+      await tester.tap(find.byKey(const Key('fake-purchase-button')));
+      await tester.pumpAndSettle();
 
-        // 沒有停在角度列表要求再點一次，而是直接進了播放器——同一個 hook
-        // 自動續作。
-        expect(find.byKey(const Key('player-screen')), findsOneWidget);
-        expect(narrationService.lastHook, equals(_hook1));
-      },
-    );
+      // 沒有停在角度列表要求再點一次，而是直接進了播放器——同一個 hook
+      // 自動續作。
+      expect(find.byKey(const Key('player-screen')), findsOneWidget);
+      expect(narrationService.lastHook, equals(_hook1));
+    });
 
     testWidgets(
       'given capturedImageBytes are provided, when the screen renders, '
@@ -448,9 +417,7 @@ void main() {
         );
 
         expect(
-          find.byWidgetPredicate(
-            (w) => w is Image && w.image is MemoryImage,
-          ),
+          find.byWidgetPredicate((w) => w is Image && w.image is MemoryImage),
           findsOneWidget,
         );
       },
@@ -468,8 +435,7 @@ void main() {
           routes: [
             GoRoute(
               path: '/',
-              builder: (_, __) =>
-                  SelectStoryHookScreen(place: buildPlace()),
+              builder: (_, __) => SelectStoryHookScreen(place: buildPlace()),
             ),
             GoRoute(
               name: 'player',
@@ -551,16 +517,13 @@ Future<void> _pumpScreenWithRouter(
     routes: [
       GoRoute(
         path: '/',
-        builder: (_, __) =>
-            SelectStoryHookScreen(place: place ?? buildPlace()),
+        builder: (_, __) => SelectStoryHookScreen(place: place ?? buildPlace()),
       ),
       GoRoute(
         name: 'player',
         path: '/player',
-        builder: (_, __) => const Scaffold(
-          key: Key('player-screen'),
-          body: SizedBox.shrink(),
-        ),
+        builder: (_, __) =>
+            const Scaffold(key: Key('player-screen'), body: SizedBox.shrink()),
       ),
     ],
     overrides: _overrides(
@@ -596,14 +559,72 @@ List<Override> _overrides({
 /// 1x1 transparent PNG bytes for Image.memory.
 Uint8List _transparentPngBytes() {
   return Uint8List.fromList(const [
-    0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
-    0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
-    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-    0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4,
-    0x89, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x44, 0x41,
-    0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00,
-    0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00,
-    0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE,
-    0x42, 0x60, 0x82,
+    0x89,
+    0x50,
+    0x4E,
+    0x47,
+    0x0D,
+    0x0A,
+    0x1A,
+    0x0A,
+    0x00,
+    0x00,
+    0x00,
+    0x0D,
+    0x49,
+    0x48,
+    0x44,
+    0x52,
+    0x00,
+    0x00,
+    0x00,
+    0x01,
+    0x00,
+    0x00,
+    0x00,
+    0x01,
+    0x08,
+    0x06,
+    0x00,
+    0x00,
+    0x00,
+    0x1F,
+    0x15,
+    0xC4,
+    0x89,
+    0x00,
+    0x00,
+    0x00,
+    0x0D,
+    0x49,
+    0x44,
+    0x41,
+    0x54,
+    0x78,
+    0x9C,
+    0x63,
+    0x00,
+    0x01,
+    0x00,
+    0x00,
+    0x05,
+    0x00,
+    0x01,
+    0x0D,
+    0x0A,
+    0x2D,
+    0xB4,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x49,
+    0x45,
+    0x4E,
+    0x44,
+    0xAE,
+    0x42,
+    0x60,
+    0x82,
   ]);
 }

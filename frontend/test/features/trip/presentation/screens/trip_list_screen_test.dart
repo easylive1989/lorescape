@@ -20,31 +20,22 @@ void main() {
   });
 
   group('TripListScreen', () {
-    testWidgets(
-      'given the user has saved trips, when the screen loads, '
-      'then each trip card is rendered in the grid',
-      (tester) async {
-        final kyoto = buildTrip(id: 't1', name: 'Kyoto Week');
-        final tokyo = buildTrip(id: 't2', name: 'Tokyo Weekend');
+    testWidgets('given the user has saved trips, when the screen loads, '
+        'then each trip card is rendered in the grid', (tester) async {
+      final kyoto = buildTrip(id: 't1', name: 'Kyoto Week');
+      final tokyo = buildTrip(id: 't2', name: 'Tokyo Weekend');
 
-        await _givenTripListScreen(
-          tester,
-          seededTrips: [kyoto, tokyo],
-        );
+      await _givenTripListScreen(tester, seededTrips: [kyoto, tokyo]);
 
-        _thenTripNamesAreVisible(['Kyoto Week', 'Tokyo Weekend']);
-      },
-    );
+      _thenTripNamesAreVisible(['Kyoto Week', 'Tokyo Weekend']);
+    });
 
-    testWidgets(
-      'given the user has no trips at all, when the screen loads, '
-      'then only the uncategorized placeholder is shown',
-      (tester) async {
-        await _givenTripListScreen(tester);
+    testWidgets('given the user has no trips at all, when the screen loads, '
+        'then only the uncategorized placeholder is shown', (tester) async {
+      await _givenTripListScreen(tester);
 
-        _thenUncategorizedCardIsVisible();
-      },
-    );
+      _thenUncategorizedCardIsVisible();
+    });
 
     testWidgets(
       'given the screen is loaded, when the user taps the add button, '
@@ -58,22 +49,21 @@ void main() {
       },
     );
 
-    testWidgets(
-      'given trips have item counts, when the screen loads, '
-      'then the counts are rendered on their respective cards',
-      (tester) async {
-        final trip = buildTrip(id: 't1', name: 'With Items');
-        final entry = buildJourneyEntry(id: 'e1', tripId: 't1');
+    testWidgets('given trips have item counts, when the screen loads, '
+        'then the counts are rendered on their respective cards', (
+      tester,
+    ) async {
+      final trip = buildTrip(id: 't1', name: 'With Items');
+      final entry = buildJourneyEntry(id: 'e1', tripId: 't1');
 
-        await _givenTripListScreen(
-          tester,
-          seededTrips: [trip],
-          seededJourneys: [entry],
-        );
+      await _givenTripListScreen(
+        tester,
+        seededTrips: [trip],
+        seededJourneys: [entry],
+      );
 
-        _thenTripNamesAreVisible(['With Items']);
-      },
-    );
+      _thenTripNamesAreVisible(['With Items']);
+    });
   });
 }
 

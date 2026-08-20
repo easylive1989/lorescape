@@ -11,94 +11,80 @@ void main() {
   });
 
   group('JournalPaperPainter', () {
-    test(
-      'given a paper height, when laying out the ruled lines, '
-      'then they start at 33px and repeat every 34px within the page',
-      () {
-        expect(JournalPaperPainter.ruleOffsets(80), [33.5, 67.5]);
-      },
-    );
+    test('given a paper height, when laying out the ruled lines, '
+        'then they start at 33px and repeat every 34px within the page', () {
+      expect(JournalPaperPainter.ruleOffsets(80), [33.5, 67.5]);
+    });
 
-    test(
-      'given a paper height, when laying out the binding holes, '
-      'then they start 24px down, repeat every 40px and respect the bottom '
-      'inset',
-      () {
-        expect(JournalPaperPainter.holeOffsets(110), [24.0, 64.0]);
-      },
-    );
+    test('given a paper height, when laying out the binding holes, '
+        'then they start 24px down, repeat every 40px and respect the bottom '
+        'inset', () {
+      expect(JournalPaperPainter.holeOffsets(110), [24.0, 64.0]);
+    });
 
-    test(
-      'given a page shorter than the first rule, when laying out, '
-      'then nothing is drawn',
-      () {
-        expect(JournalPaperPainter.ruleOffsets(20), isEmpty);
-        expect(JournalPaperPainter.holeOffsets(20), isEmpty);
-      },
-    );
+    test('given a page shorter than the first rule, when laying out, '
+        'then nothing is drawn', () {
+      expect(JournalPaperPainter.ruleOffsets(20), isEmpty);
+      expect(JournalPaperPainter.holeOffsets(20), isEmpty);
+    });
   });
 
   group('NotebookPager', () {
-    testWidgets(
-      'given a page with no callbacks, when the pager renders, '
-      'then no actions are shown and the title appears only in the note',
-      (tester) async {
-        await _givenPager(tester, pages: [_buildPage()]);
+    testWidgets('given a page with no callbacks, when the pager renders, '
+        'then no actions are shown and the title appears only in the note', (
+      tester,
+    ) async {
+      await _givenPager(tester, pages: [_buildPage()]);
 
-        expect(find.text('trip.add_to_trip'), findsNothing);
-        expect(find.text('common.share'), findsNothing);
-        expect(find.text('common.delete'), findsNothing);
-        expect(find.byIcon(Icons.play_arrow_rounded), findsNothing);
-        // 拍立得下方不再放手寫圖說，景點名只出現在筆記標題一處。
-        expect(find.text('Kinkaku-ji'), findsOneWidget);
-      },
-    );
+      expect(find.text('trip.add_to_trip'), findsNothing);
+      expect(find.text('common.share'), findsNothing);
+      expect(find.text('common.delete'), findsNothing);
+      expect(find.byIcon(Icons.play_arrow_rounded), findsNothing);
+      // 拍立得下方不再放手寫圖說，景點名只出現在筆記標題一處。
+      expect(find.text('Kinkaku-ji'), findsOneWidget);
+    });
 
-    testWidgets(
-      'given a page taller than its content, when the pager renders, '
-      'then the photo hugs the header and the slack falls below the note',
-      (tester) async {
-        tester.view.physicalSize = const Size(390, 900);
-        tester.view.devicePixelRatio = 1;
-        addTearDown(tester.view.reset);
+    testWidgets('given a page taller than its content, when the pager renders, '
+        'then the photo hugs the header and the slack falls below the note', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
 
-        await _givenPager(tester, pages: [_buildPage()]);
+      await _givenPager(tester, pages: [_buildPage()]);
 
-        final headerBottom = tester
-            .getRect(find.text('journey.notebook.entry_no'))
-            .bottom;
-        final photo = tester.getRect(_emptyPhotoFinder);
-        final noteBottom = tester
-            .getRect(find.text('A golden pavilion by the pond.'))
-            .bottom;
-        final footerTop = tester.getRect(find.text('01 / 01')).top;
+      final headerBottom = tester
+          .getRect(find.text('journey.notebook.entry_no'))
+          .bottom;
+      final photo = tester.getRect(_emptyPhotoFinder);
+      final noteBottom = tester
+          .getRect(find.text('A golden pavilion by the pond.'))
+          .bottom;
+      final footerTop = tester.getRect(find.text('01 / 01')).top;
 
-        // 照片緊接在頁首下方，只留設計稿的間距（含旋轉溢出的餘裕）。
-        expect(photo.top - headerBottom, lessThan(60));
-        // 多出來的高度全落在筆記與動作列之間。
-        expect(footerTop - noteBottom, greaterThan(100));
-      },
-    );
+      // 照片緊接在頁首下方，只留設計稿的間距（含旋轉溢出的餘裕）。
+      expect(photo.top - headerBottom, lessThan(60));
+      // 多出來的高度全落在筆記與動作列之間。
+      expect(footerTop - noteBottom, greaterThan(100));
+    });
 
-    testWidgets(
-      'given a tall page and a long note, when the pager renders, '
-      'then the note grows past three lines into the spare height and still '
-      'stops above the footer',
-      (tester) async {
-        tester.view.physicalSize = const Size(390, 900);
-        tester.view.devicePixelRatio = 1;
-        addTearDown(tester.view.reset);
+    testWidgets('given a tall page and a long note, when the pager renders, '
+        'then the note grows past three lines into the spare height and still '
+        'stops above the footer', (tester) async {
+      tester.view.physicalSize = const Size(390, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
 
-        await _givenPager(tester, pages: [_buildPage(text: _longNote)]);
+      await _givenPager(tester, pages: [_buildPage(text: _longNote)]);
 
-        final note = tester.getRect(find.text(_longNote));
-        final footerTop = tester.getRect(find.text('01 / 01')).top;
+      final note = tester.getRect(find.text(_longNote));
+      final footerTop = tester.getRect(find.text('01 / 01')).top;
 
-        // 改版前不論頁面多高都只有 3 行；空間夠時要遠超過這個高度。
-        expect(note.height, greaterThan(5 * _bodyLineExtent));
-        expect(note.bottom, lessThanOrEqualTo(footerTop));
-      },
-    );
+      // 改版前不論頁面多高都只有 3 行；空間夠時要遠超過這個高度。
+      expect(note.height, greaterThan(5 * _bodyLineExtent));
+      expect(note.bottom, lessThanOrEqualTo(footerTop));
+    });
 
     testWidgets(
       'given a page with no spare height and a long note, when the pager '
@@ -179,7 +165,11 @@ void main() {
 
         // 100px 遠低於 28% 螢幕寬的距離門檻，只靠甩動速度過關——修正前這
         // 種真實世界的快滑（起手點偏左時滑不出長距離）會被彈回原頁。
-        await tester.fling(find.byType(NotebookPager), const Offset(-100, 0), 2000);
+        await tester.fling(
+          find.byType(NotebookPager),
+          const Offset(-100, 0),
+          2000,
+        );
         await tester.pumpAndSettle();
 
         expect(seen, [1]);
@@ -193,10 +183,18 @@ void main() {
       (tester) async {
         final seen = <int>[];
         await _givenPager(tester, pages: _threePages, onPageChanged: seen.add);
-        await tester.fling(find.byType(NotebookPager), const Offset(-100, 0), 2000);
+        await tester.fling(
+          find.byType(NotebookPager),
+          const Offset(-100, 0),
+          2000,
+        );
         await tester.pumpAndSettle();
 
-        await tester.fling(find.byType(NotebookPager), const Offset(100, 0), 2000);
+        await tester.fling(
+          find.byType(NotebookPager),
+          const Offset(100, 0),
+          2000,
+        );
         await tester.pumpAndSettle();
 
         expect(seen, [1, 0]);
@@ -271,24 +269,25 @@ void main() {
       },
     );
 
-    testWidgets(
-      'given the pager on its last page, when the user flicks left, '
-      'then the pager stays put',
-      (tester) async {
-        final seen = <int>[];
-        await _givenPager(
-          tester,
-          pages: [_buildPage(text: 'Body 0')],
-          onPageChanged: seen.add,
-        );
+    testWidgets('given the pager on its last page, when the user flicks left, '
+        'then the pager stays put', (tester) async {
+      final seen = <int>[];
+      await _givenPager(
+        tester,
+        pages: [_buildPage(text: 'Body 0')],
+        onPageChanged: seen.add,
+      );
 
-        await tester.fling(find.byType(NotebookPager), const Offset(-100, 0), 2000);
-        await tester.pumpAndSettle();
+      await tester.fling(
+        find.byType(NotebookPager),
+        const Offset(-100, 0),
+        2000,
+      );
+      await tester.pumpAndSettle();
 
-        expect(seen, isEmpty);
-        expect(find.text('Body 0'), findsOneWidget);
-      },
-    );
+      expect(seen, isEmpty);
+      expect(find.text('Body 0'), findsOneWidget);
+    });
 
     testWidgets(
       'given a forward flip still settling, when the user flings left again '
@@ -298,10 +297,18 @@ void main() {
         final seen = <int>[];
         await _givenPager(tester, pages: _threePages, onPageChanged: seen.add);
 
-        await tester.fling(find.byType(NotebookPager), const Offset(-100, 0), 2000);
+        await tester.fling(
+          find.byType(NotebookPager),
+          const Offset(-100, 0),
+          2000,
+        );
         // 只推進 50ms，收尾動畫還在半路上就接著甩第二下。
         await tester.pump(const Duration(milliseconds: 50));
-        await tester.fling(find.byType(NotebookPager), const Offset(-100, 0), 2000);
+        await tester.fling(
+          find.byType(NotebookPager),
+          const Offset(-100, 0),
+          2000,
+        );
         await tester.pumpAndSettle();
 
         expect(seen, [1, 2]);
@@ -316,7 +323,11 @@ void main() {
         final seen = <int>[];
         await _givenPager(tester, pages: _threePages, onPageChanged: seen.add);
 
-        await tester.fling(find.byType(NotebookPager), const Offset(-100, 0), 2000);
+        await tester.fling(
+          find.byType(NotebookPager),
+          const Offset(-100, 0),
+          2000,
+        );
         await tester.pump(const Duration(milliseconds: 50));
         // 反悔：把還在收尾動畫中的那頁往回拖過門檻。
         await tester.dragFrom(
@@ -330,31 +341,28 @@ void main() {
       },
     );
 
-    testWidgets(
-      'given three pages, when the pager settles on the second page, '
-      'then the flipped first page stays mounted as a backside sliver '
-      'on the left edge instead of disappearing',
-      (tester) async {
-        await _givenPager(tester, pages: _threePages);
-        // 第一頁時左邊沒有上一頁可露，畫面上只掛著當前頁。
-        expect(find.byKey(const ValueKey(0)), findsOneWidget);
-        expect(find.byKey(const ValueKey(1)), findsNothing);
+    testWidgets('given three pages, when the pager settles on the second page, '
+        'then the flipped first page stays mounted as a backside sliver '
+        'on the left edge instead of disappearing', (tester) async {
+      await _givenPager(tester, pages: _threePages);
+      // 第一頁時左邊沒有上一頁可露，畫面上只掛著當前頁。
+      expect(find.byKey(const ValueKey(0)), findsOneWidget);
+      expect(find.byKey(const ValueKey(1)), findsNothing);
 
-        await tester.fling(
-          find.byType(NotebookPager),
-          const Offset(-100, 0),
-          2000,
-        );
-        await tester.pumpAndSettle();
+      await tester.fling(
+        find.byType(NotebookPager),
+        const Offset(-100, 0),
+        2000,
+      );
+      await tester.pumpAndSettle();
 
-        // 翻走的第一頁仍掛在樹上（-180° 的紙背，只在左緣露出孔帶），
-        // 但它的正面內容不再攤平顯示——攤平的是第二頁。
-        expect(find.byKey(const ValueKey(1)), findsOneWidget);
-        expect(find.byKey(const ValueKey(0)), findsOneWidget);
-        expect(find.text('Body 1'), findsOneWidget);
-        expect(find.text('Body 0'), findsNothing);
-      },
-    );
+      // 翻走的第一頁仍掛在樹上（-180° 的紙背，只在左緣露出孔帶），
+      // 但它的正面內容不再攤平顯示——攤平的是第二頁。
+      expect(find.byKey(const ValueKey(1)), findsOneWidget);
+      expect(find.byKey(const ValueKey(0)), findsOneWidget);
+      expect(find.text('Body 1'), findsOneWidget);
+      expect(find.text('Body 0'), findsNothing);
+    });
 
     testWidgets(
       'given more pages than the indicator cap, when the pager renders, '

@@ -7,8 +7,7 @@ import 'package:context_app/features/settings/domain/models/language.dart';
 class FakeTtsService implements TtsService {
   final StreamController<TtsProgress> _progress =
       StreamController<TtsProgress>.broadcast();
-  final StreamController<void> _complete =
-      StreamController<void>.broadcast();
+  final StreamController<void> _complete = StreamController<void>.broadcast();
   final StreamController<void> _start = StreamController<void>.broadcast();
   final StreamController<void> _pause = StreamController<void>.broadcast();
   final StreamController<String> _error = StreamController<String>.broadcast();

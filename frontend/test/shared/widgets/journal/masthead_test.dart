@@ -10,32 +10,30 @@ void main() {
   });
 
   group('Masthead', () {
-    testWidgets(
-      'given a title and actions, when the masthead renders, '
-      'then both sit at the shared inset with the rule drawn below',
-      (tester) async {
-        await _givenMasthead(
-          tester,
-          actions: const Icon(Icons.add, key: Key('actions')),
-        );
+    testWidgets('given a title and actions, when the masthead renders, '
+        'then both sit at the shared inset with the rule drawn below', (
+      tester,
+    ) async {
+      await _givenMasthead(
+        tester,
+        actions: const Icon(Icons.add, key: Key('actions')),
+      );
 
-        _thenTitleStartsAtSharedInset(tester);
-        expect(find.byKey(const Key('actions')), findsOneWidget);
-        expect(_ruleFinder, findsOneWidget);
-      },
-    );
+      _thenTitleStartsAtSharedInset(tester);
+      expect(find.byKey(const Key('actions')), findsOneWidget);
+      expect(_ruleFinder, findsOneWidget);
+    });
 
-    testWidgets(
-      'given showRule is false, when the masthead renders, '
-      'then the rule is gone but the title keeps the shared inset',
-      (tester) async {
-        await _givenMasthead(tester, showRule: false);
+    testWidgets('given showRule is false, when the masthead renders, '
+        'then the rule is gone but the title keeps the shared inset', (
+      tester,
+    ) async {
+      await _givenMasthead(tester, showRule: false);
 
-        // 探索頁浮在地圖上時關掉分隔線，位置仍必須與其他分頁對齊。
-        expect(_ruleFinder, findsNothing);
-        _thenTitleStartsAtSharedInset(tester);
-      },
-    );
+      // 探索頁浮在地圖上時關掉分隔線，位置仍必須與其他分頁對齊。
+      expect(_ruleFinder, findsNothing);
+      _thenTitleStartsAtSharedInset(tester);
+    });
 
     testWidgets('given a masthead, '
         'when it renders, '

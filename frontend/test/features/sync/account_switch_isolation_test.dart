@@ -88,27 +88,24 @@ void main() {
     await engine.fullSync();
   }
 
-  test(
-    'given account A synced on this device, when account B signs in on the '
-    'same device, then B neither sees nor uploads A\'s journeys',
-    () async {
-      currentUserId = 'user-a';
-      await repo.save(_entry('a1'));
-      await signIn('user-a');
-      expect(remoteRows['user-a']!.keys, ['a1']);
+  test('given account A synced on this device, when account B signs in on the '
+      'same device, then B neither sees nor uploads A\'s journeys', () async {
+    currentUserId = 'user-a';
+    await repo.save(_entry('a1'));
+    await signIn('user-a');
+    expect(remoteRows['user-a']!.keys, ['a1']);
 
-      // 登出不會清本機——這正是污染的前提條件。
-      currentUserId = null;
-      await signIn('user-b');
+    // 登出不會清本機——這正是污染的前提條件。
+    currentUserId = null;
+    await signIn('user-b');
 
-      expect(await repo.getAll(), isEmpty, reason: 'B 不該看到 A 的記錄');
-      expect(
-        remoteRows['user-b'] ?? const {},
-        isEmpty,
-        reason: 'A 的記錄不該被推進 B 的帳號',
-      );
-    },
-  );
+    expect(await repo.getAll(), isEmpty, reason: 'B 不該看到 A 的記錄');
+    expect(
+      remoteRows['user-b'] ?? const {},
+      isEmpty,
+      reason: 'A 的記錄不該被推進 B 的帳號',
+    );
+  });
 
   test(
     'given B took over the device, when A signs back in, then A\'s journeys '
@@ -126,11 +123,9 @@ void main() {
       await signIn('user-a');
 
       expect((await repo.getAll()).map((e) => e.id), ['a1']);
-      expect(
-        remoteRows['user-a']!.keys,
-        ['a1'],
-        reason: 'B 在這台裝置上存的東西不該跟著 A 上去',
-      );
+      expect(remoteRows['user-a']!.keys, [
+        'a1',
+      ], reason: 'B 在這台裝置上存的東西不該跟著 A 上去');
     },
   );
 

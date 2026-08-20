@@ -272,44 +272,38 @@ void main() {
         },
       );
 
-      test(
-        'given the user picked the second hook, when serialising, then the '
-        'index is kept and selected_default is false',
-        () {
-          final event = HookSelected(
-            placeId: 'place-1',
-            language: 'en-US',
-            hookIndex: 1,
-            hookCount: 3,
-          );
+      test('given the user picked the second hook, when serialising, then the '
+          'index is kept and selected_default is false', () {
+        final event = HookSelected(
+          placeId: 'place-1',
+          language: 'en-US',
+          hookIndex: 1,
+          hookCount: 3,
+        );
 
-          expect(event.type, 'hook_selected');
-          expect(event.payload(), {
-            'hook_index': 1,
-            'hook_count': 3,
-            'selected_default': false,
-          });
-        },
-      );
+        expect(event.type, 'hook_selected');
+        expect(event.payload(), {
+          'hook_index': 1,
+          'hook_count': 3,
+          'selected_default': false,
+        });
+      });
 
-      test(
-        'given the user listened without picking a hook, when serialising, '
-        'then the index is null and selected_default is true',
-        () {
-          final event = HookSelected(
-            placeId: 'place-1',
-            language: 'en-US',
-            hookIndex: null,
-            hookCount: 0,
-          );
+      test('given the user listened without picking a hook, when serialising, '
+          'then the index is null and selected_default is true', () {
+        final event = HookSelected(
+          placeId: 'place-1',
+          language: 'en-US',
+          hookIndex: null,
+          hookCount: 0,
+        );
 
-          expect(event.payload(), {
-            'hook_index': null,
-            'hook_count': 0,
-            'selected_default': true,
-          });
-        },
-      );
+        expect(event.payload(), {
+          'hook_index': null,
+          'hook_count': 0,
+          'selected_default': true,
+        });
+      });
     });
   });
 }

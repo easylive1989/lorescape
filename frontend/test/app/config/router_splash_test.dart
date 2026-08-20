@@ -9,27 +9,21 @@ import '../../fakes/in_memory_onboarding_repository.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test(
-    'given the app router, when it is created, '
-    'then it starts at /splash',
-    () {
-      final container = ProviderContainer(
-        overrides: [
-          // Avoids touching Firebase during router construction.
-          routeObserversProvider.overrideWithValue(const []),
-          onboardingRepositoryProvider.overrideWithValue(
-            InMemoryOnboardingRepository(),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
+  test('given the app router, when it is created, '
+      'then it starts at /splash', () {
+    final container = ProviderContainer(
+      overrides: [
+        // Avoids touching Firebase during router construction.
+        routeObserversProvider.overrideWithValue(const []),
+        onboardingRepositoryProvider.overrideWithValue(
+          InMemoryOnboardingRepository(),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
 
-      final router = container.read(routerProvider);
+    final router = container.read(routerProvider);
 
-      expect(
-        router.routeInformationProvider.value.uri.toString(),
-        '/splash',
-      );
-    },
-  );
+    expect(router.routeInformationProvider.value.uri.toString(), '/splash');
+  });
 }

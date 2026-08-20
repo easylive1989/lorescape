@@ -22,11 +22,13 @@ class FakeSubscriptionService implements SubscriptionService {
   final StreamController<SubscriptionStatus> _controller =
       StreamController<SubscriptionStatus>.broadcast();
 
-  FakeSubscriptionService({SubscriptionStatus initial = SubscriptionStatus.free})
-    : _current = initial;
+  FakeSubscriptionService({
+    SubscriptionStatus initial = SubscriptionStatus.free,
+  }) : _current = initial;
 
   /// Inspect the periods that [purchase] was invoked with, in order.
-  List<SubscriptionPeriod> get purchaseCalls => List.unmodifiable(_purchaseCalls);
+  List<SubscriptionPeriod> get purchaseCalls =>
+      List.unmodifiable(_purchaseCalls);
 
   /// Sets the value returned by [purchase].
   ///

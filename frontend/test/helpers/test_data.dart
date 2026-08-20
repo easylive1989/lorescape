@@ -60,7 +60,11 @@ NarrationContent buildNarrationContent({
   Language language = Language.english,
   GroundingInfo? grounding,
 }) {
-  return NarrationContent.create(text, language: language, grounding: grounding);
+  return NarrationContent.create(
+    text,
+    language: language,
+    grounding: grounding,
+  );
 }
 
 /// Builds a [StoryHook] with sensible defaults.
@@ -102,4 +106,3 @@ JourneyEntry buildJourneyEntry({
     tripId: tripId,
   );
 }
-

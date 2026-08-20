@@ -9,6 +9,7 @@ import 'package:context_app/features/sync/data/supabase_trip_remote_data_source.
 import 'package:context_app/features/sync/data/syncing_journey_repository.dart';
 import 'package:context_app/features/sync/data/syncing_trip_repository.dart';
 import 'package:context_app/features/sync/domain/services/remote_sync_data_source.dart';
+import 'package:context_app/features/sync/domain/models/sync_status.dart';
 import 'package:context_app/features/sync/domain/services/sync_coordinator.dart';
 import 'package:context_app/features/sync/domain/services/sync_engine.dart';
 import 'package:context_app/features/sync/domain/services/sync_session.dart';
@@ -73,12 +74,26 @@ void _onSession(Ref ref, SyncSession session) {
 /// 給當下這個帳號，之後換帳號再推一次給下一個人。認領等於把「這批東西屬於
 /// 第一個登入的帳號」這件事釘下來。
 Future<void> _claimThenSync(Ref ref, String userId) async {
-  for (final store in ref.read(localOwnershipStoresProvider)) {
-    await store.claimUnowned(userId);
+  try {
+    for (final store in ref.read(localOwnershipStoresProvider)) {
+      await store.claimUnowned(userId);
+    }
+    // Re-entry 由 SyncCoordinator 自己擋，重複觸發不會疊起來。
+    final status = await ref.read(syncCoordinatorProvider).runFullSync();
+    if (status != null) ref.read(syncStatusProvider.notifier).state = status;
+  } catch (e) {
+    // 這裡本來就不該有漏網的例外，但真的有的話也要留下痕跡，不能靜默。
+    ref.read(syncStatusProvider.notifier).state = SyncStatus(
+      finishedAt: DateTime.now(),
+      pushed: 0,
+      pulled: 0,
+      errors: ['$e'],
+    );
   }
-  // Re-entry 由 SyncCoordinator 自己擋，重複觸發不會疊起來。
-  await ref.read(syncCoordinatorProvider).runFullSync();
 }
+
+/// 最近一次同步的結果，給設定頁顯示。null＝這次啟動還沒同步過。
+final syncStatusProvider = StateProvider<SyncStatus?>((ref) => null);
 
 // ---------------------------------------------------------------------------
 // Local Hive repositories (always used for reads).

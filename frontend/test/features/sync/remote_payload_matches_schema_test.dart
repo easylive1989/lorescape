@@ -18,12 +18,13 @@ final _migrationsDir = Directory('../supabase/migrations');
 /// 從所有 migration 收集某張表目前的欄位名。
 Set<String> _schemaColumns(String table) {
   final columns = <String>{};
-  final files = _migrationsDir
-      .listSync()
-      .whereType<File>()
-      .where((f) => f.path.endsWith('.sql'))
-      .toList()
-    ..sort((a, b) => a.path.compareTo(b.path));
+  final files =
+      _migrationsDir
+          .listSync()
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.sql'))
+          .toList()
+        ..sort((a, b) => a.path.compareTo(b.path));
 
   for (final file in files) {
     final sql = file.readAsStringSync().toLowerCase();
@@ -79,13 +80,13 @@ Set<String> _payloadKeys(String dataSourcePath) {
   expect(
     body,
     isNotNull,
-    reason: '$dataSourcePath 的 _toRow 剖析不到——改了寫法就要同步改這條測試，'
+    reason:
+        '$dataSourcePath 的 _toRow 剖析不到——改了寫法就要同步改這條測試，'
         '否則守門會變成空轉',
   );
-  return RegExp("'([a-z_]+)':")
-      .allMatches(body!.group(1)!)
-      .map((m) => m.group(1)!)
-      .toSet();
+  return RegExp(
+    "'([a-z_]+)':",
+  ).allMatches(body!.group(1)!).map((m) => m.group(1)!).toSet();
 }
 
 void main() {
@@ -98,25 +99,24 @@ void main() {
 
     test('given journey entries, when one is upserted, then every column in '
         'the payload exists in the table', () {
-      final missing =
-          _payloadKeys(
-            'lib/features/sync/data/supabase_journey_remote_data_source.dart',
-          ).difference(_schemaColumns('journey_entries'));
+      final missing = _payloadKeys(
+        'lib/features/sync/data/supabase_journey_remote_data_source.dart',
+      ).difference(_schemaColumns('journey_entries'));
 
       expect(
         missing,
         isEmpty,
-        reason: 'PostgREST 會整筆退回，而 SyncEngine 只寫 log——漏一個欄位就是'
+        reason:
+            'PostgREST 會整筆退回，而 SyncEngine 只寫 log——漏一個欄位就是'
             '整條同步靜默失效',
       );
     });
 
     test('given trips, when one is upserted, then every column in the payload '
         'exists in the table', () {
-      final missing =
-          _payloadKeys(
-            'lib/features/sync/data/supabase_trip_remote_data_source.dart',
-          ).difference(_schemaColumns('trips'));
+      final missing = _payloadKeys(
+        'lib/features/sync/data/supabase_trip_remote_data_source.dart',
+      ).difference(_schemaColumns('trips'));
 
       expect(missing, isEmpty);
     });

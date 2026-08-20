@@ -261,6 +261,8 @@
     "sync_section": "Cloud Sync",
     "sync_status": "Automatic sync",
     "sync_status_account": "Your journeys and trips sync to your account automatically.",
+    "sync_last_ok": "Last sync: {pushed} uploaded, {pulled} downloaded.",
+    "sync_last_failed": "Last sync failed: ",
     "sync_status_anonymous": "Your journeys and trips stay on this device only. Sign in and they are backed up automatically, and follow you to a new phone.",
     "clear_local_data": "Clear local data",
     "clear_local_data_subtitle": "Remove the copies of journeys and trips on this device, including any left by other accounts.",

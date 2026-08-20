@@ -321,7 +321,7 @@ class _SyncGroup extends ConsumerWidget {
                 : Icons.cloud_off_outlined,
             title: 'settings.sync_status'.tr(),
             subtitle: hasAccount
-                ? 'settings.sync_status_account'.tr()
+                ? _accountSubtitle(ref)
                 : 'settings.sync_status_anonymous'.tr(),
           ),
           // 共用裝置的出口：別人在這台裝置登入過就會留下本機副本（我們刻意
@@ -336,6 +336,22 @@ class _SyncGroup extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  /// 已登入時，把最近一次同步的結果一起講出來。
+  ///
+  /// 同步的每一層都把錯誤吞成 log，所以「整條同步壞掉」在畫面上曾經完全看不
+  /// 出來（見 SyncStatus）。這一行就是那個痕跡。
+  String _accountSubtitle(WidgetRef ref) {
+    final base = 'settings.sync_status_account'.tr();
+    final status = ref.watch(syncStatusProvider);
+    if (status == null) return base;
+    if (status.isHealthy) {
+      return '$base\n'
+          '${'settings.sync_last_ok'.tr(namedArgs: {'pushed': '${status.pushed}', 'pulled': '${status.pulled}'})}';
+    }
+    return '$base\n'
+        '${'settings.sync_last_failed'.tr()}${status.firstError}';
   }
 
   Future<void> _confirmClearLocalData(

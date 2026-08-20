@@ -25,8 +25,7 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
 
   final fontBytes = _loadBundledRobotoBytes();
   if (fontBytes != null) {
-    final messenger =
-        TestWidgetsFlutterBinding.instance.defaultBinaryMessenger;
+    final messenger = TestWidgetsFlutterBinding.instance.defaultBinaryMessenger;
 
     messenger.setMockMessageHandler('flutter/assets', (message) async {
       final key = utf8.decode(

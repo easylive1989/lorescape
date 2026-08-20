@@ -32,12 +32,7 @@ Trip _trip({
   DateTime? createdAt,
 }) {
   final resolved = createdAt ?? DateTime(2026, 4, 10);
-  return Trip(
-    id: id,
-    name: name,
-    createdAt: resolved,
-    updatedAt: resolved,
-  );
+  return Trip(id: id, name: name, createdAt: resolved, updatedAt: resolved);
 }
 
 JourneyItem _narrationItem({
@@ -93,7 +88,9 @@ void main() {
   }) {
     downloader = PlaceImageDownloader(
       placeholderBytes: _tinyPng,
-      client: httpClient ?? MockClient((_) async => http.Response.bytes(_tinyPng, 200)),
+      client:
+          httpClient ??
+          MockClient((_) async => http.Response.bytes(_tinyPng, 200)),
     );
     return TripPdfExportService(
       tripRepository: tripRepo,
@@ -104,17 +101,18 @@ void main() {
         regular: pw.Font.helvetica(),
         bold: pw.Font.helveticaBold(),
       ),
-      buildDocument: ({
-        required trip,
-        required entries,
-        required coverPngBytes,
-        required fonts,
-        required labels,
-      }) => TripPdfDocumentBuilder(
-        regularFont: fonts.regular,
-        boldFont: fonts.bold,
-        labels: labels,
-      ).build(trip: trip, entries: entries, coverPngBytes: coverPngBytes),
+      buildDocument:
+          ({
+            required trip,
+            required entries,
+            required coverPngBytes,
+            required fonts,
+            required labels,
+          }) => TripPdfDocumentBuilder(
+            regularFont: fonts.regular,
+            boldFont: fonts.bold,
+            labels: labels,
+          ).build(trip: trip, entries: entries, coverPngBytes: coverPngBytes),
       writeToTemp: (bytes, fileName) async {
         capturedPdfBytes = bytes;
         capturedFileName = fileName;
@@ -148,11 +146,11 @@ void main() {
 
   test('records missing images when download fails', () async {
     when(() => tripRepo.getById('t1')).thenAnswer((_) async => _trip());
-    final failingClient = MockClient((_) async => http.Response.bytes(const [], 500));
+    final failingClient = MockClient(
+      (_) async => http.Response.bytes(const [], 500),
+    );
     final service = build(
-      fetchItems: (_) async => [
-        _narrationItem(placeName: 'Failed Place'),
-      ],
+      fetchItems: (_) async => [_narrationItem(placeName: 'Failed Place')],
       httpClient: failingClient,
     );
 
@@ -184,9 +182,9 @@ void main() {
   });
 
   test('uses fallback file name when trip name is empty', () async {
-    when(() => tripRepo.getById('t1')).thenAnswer(
-      (_) async => _trip(name: '   '),
-    );
+    when(
+      () => tripRepo.getById('t1'),
+    ).thenAnswer((_) async => _trip(name: '   '));
     final service = build(fetchItems: (_) async => [_narrationItem()]);
 
     await service.export(tripId: 't1', strings: _strings());
@@ -195,9 +193,9 @@ void main() {
   });
 
   test('sanitizes reserved characters in file name', () async {
-    when(() => tripRepo.getById('t1')).thenAnswer(
-      (_) async => _trip(name: 'Trip/2026:best?'),
-    );
+    when(
+      () => tripRepo.getById('t1'),
+    ).thenAnswer((_) async => _trip(name: 'Trip/2026:best?'));
     final service = build(fetchItems: (_) async => [_narrationItem()]);
 
     await service.export(tripId: 't1', strings: _strings());

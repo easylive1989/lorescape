@@ -55,9 +55,7 @@ void main() {
       'then the coordinates resolved from its Wikidata id are saved',
       () async {
         final repository = InMemoryJourneyRepository();
-        await repository.save(
-          _entry(id: 'e1', placeId: 'wikidata:Q42'),
-        );
+        await repository.save(_entry(id: 'e1', placeId: 'wikidata:Q42'));
         final resolver = _FakeResolver({
           'Q42': const PlaceLocation(latitude: 35.5, longitude: 139.5),
         });

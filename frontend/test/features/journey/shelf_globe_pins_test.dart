@@ -56,34 +56,31 @@ void main() {
   setUpAll(initTestEnvironment);
 
   group('shelfGlobePinsProvider', () {
-    test(
-      'given a trip with several stops, when the pins are built, then only '
-      'its first story shows up — one pin per book, not per stop',
-      () async {
-        final pins = await _pinsOf([
-          _entry(
-            id: 'a',
-            tripId: 't1',
-            createdAt: DateTime(2026, 1, 1),
-            lat: 1,
-            lng: 1,
-            name: 'first',
-          ),
-          _entry(
-            id: 'b',
-            tripId: 't1',
-            createdAt: DateTime(2026, 1, 5),
-            lat: 2,
-            lng: 2,
-            name: 'later',
-          ),
-        ]);
+    test('given a trip with several stops, when the pins are built, then only '
+        'its first story shows up — one pin per book, not per stop', () async {
+      final pins = await _pinsOf([
+        _entry(
+          id: 'a',
+          tripId: 't1',
+          createdAt: DateTime(2026, 1, 1),
+          lat: 1,
+          lng: 1,
+          name: 'first',
+        ),
+        _entry(
+          id: 'b',
+          tripId: 't1',
+          createdAt: DateTime(2026, 1, 5),
+          lat: 2,
+          lng: 2,
+          name: 'later',
+        ),
+      ]);
 
-        expect(pins, hasLength(1));
-        expect(pins.single.label, 'first');
-        expect(pins.single.id, 't1');
-      },
-    );
+      expect(pins, hasLength(1));
+      expect(pins.single.label, 'first');
+      expect(pins.single.id, 't1');
+    });
 
     test(
       'given several books, when the pins are built, then each one gets a pin '
@@ -130,17 +127,14 @@ void main() {
       },
     );
 
-    test(
-      'given a book whose stories all lack coordinates, when the pins are '
-      'built, then it simply has no pin',
-      () async {
-        final pins = await _pinsOf([
-          _entry(id: 'a', tripId: 't1', createdAt: DateTime(2026, 1, 1)),
-        ]);
+    test('given a book whose stories all lack coordinates, when the pins are '
+        'built, then it simply has no pin', () async {
+      final pins = await _pinsOf([
+        _entry(id: 'a', tripId: 't1', createdAt: DateTime(2026, 1, 1)),
+      ]);
 
-        expect(pins, isEmpty);
-      },
-    );
+      expect(pins, isEmpty);
+    });
 
     test('given a pin id, when it is mapped back, then the uncategorised '
         'sentinel round-trips to null', () {

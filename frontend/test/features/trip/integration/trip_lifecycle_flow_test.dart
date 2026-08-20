@@ -66,62 +66,48 @@ void main() {
   });
 
   group('Trip current-id wiring', () {
-    testWidgets(
-      'given a non-current trip, when set-as-current is invoked, '
-      'then currentTripIdProvider exposes that trip id',
-      (tester) async {
-        final tripRepo = InMemoryTripRepository();
-        final trip = buildTrip(id: 'kyoto', name: 'Kyoto');
-        await tripRepo.save(trip);
+    testWidgets('given a non-current trip, when set-as-current is invoked, '
+        'then currentTripIdProvider exposes that trip id', (tester) async {
+      final tripRepo = InMemoryTripRepository();
+      final trip = buildTrip(id: 'kyoto', name: 'Kyoto');
+      await tripRepo.save(trip);
 
-        await _pumpTripDetail(
-          tester,
-          tripId: 'kyoto',
-          tripRepo: tripRepo,
-        );
+      await _pumpTripDetail(tester, tripId: 'kyoto', tripRepo: tripRepo);
 
-        await tester.tap(find.byIcon(Icons.more_vert));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('trip.set_as_current'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.more_vert));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('trip.set_as_current'));
+      await tester.pumpAndSettle();
 
-        final element = tester.element(find.byType(TripDetailScreen));
-        final scope = ProviderScope.containerOf(element, listen: false);
-        expect(scope.read(currentTripIdProvider), 'kyoto');
-      },
-    );
+      final element = tester.element(find.byType(TripDetailScreen));
+      final scope = ProviderScope.containerOf(element, listen: false);
+      expect(scope.read(currentTripIdProvider), 'kyoto');
+    });
 
-    testWidgets(
-      'given an already-current trip, when end-current is invoked, '
-      'then currentTripIdProvider falls back to null',
-      (tester) async {
-        final tripRepo = InMemoryTripRepository();
-        final trip = buildTrip(id: 'kyoto', name: 'Kyoto');
-        await tripRepo.save(trip);
+    testWidgets('given an already-current trip, when end-current is invoked, '
+        'then currentTripIdProvider falls back to null', (tester) async {
+      final tripRepo = InMemoryTripRepository();
+      final trip = buildTrip(id: 'kyoto', name: 'Kyoto');
+      await tripRepo.save(trip);
 
-        await _pumpTripDetail(
-          tester,
-          tripId: 'kyoto',
-          tripRepo: tripRepo,
-        );
+      await _pumpTripDetail(tester, tripId: 'kyoto', tripRepo: tripRepo);
 
-        // First set it as current.
-        await tester.tap(find.byIcon(Icons.more_vert));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('trip.set_as_current'));
-        await tester.pumpAndSettle();
+      // First set it as current.
+      await tester.tap(find.byIcon(Icons.more_vert));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('trip.set_as_current'));
+      await tester.pumpAndSettle();
 
-        // Then end it.
-        await tester.tap(find.byIcon(Icons.more_vert));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('trip.end_current'));
-        await tester.pumpAndSettle();
+      // Then end it.
+      await tester.tap(find.byIcon(Icons.more_vert));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('trip.end_current'));
+      await tester.pumpAndSettle();
 
-        final element = tester.element(find.byType(TripDetailScreen));
-        final scope = ProviderScope.containerOf(element, listen: false);
-        expect(scope.read(currentTripIdProvider), isNull);
-      },
-    );
+      final element = tester.element(find.byType(TripDetailScreen));
+      final scope = ProviderScope.containerOf(element, listen: false);
+      expect(scope.read(currentTripIdProvider), isNull);
+    });
   });
 }
 

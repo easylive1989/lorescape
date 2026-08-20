@@ -96,20 +96,22 @@ void main() {
     expect((await repo.getAll()).single.id, 'a1');
   });
 
-  test('given entries from several accounts, clearAll wipes the device',
-      () async {
-    currentUserId = 'user-a';
-    await repo.save(_makeEntry(id: 'a1'));
-    currentUserId = 'user-b';
-    await repo.save(_makeEntry(id: 'b1'));
+  test(
+    'given entries from several accounts, clearAll wipes the device',
+    () async {
+      currentUserId = 'user-a';
+      await repo.save(_makeEntry(id: 'a1'));
+      currentUserId = 'user-b';
+      await repo.save(_makeEntry(id: 'b1'));
 
-    await repo.clearAll();
+      await repo.clearAll();
 
-    currentUserId = 'user-a';
-    expect(await repo.getAll(), isEmpty);
-    currentUserId = 'user-b';
-    expect(await repo.getAll(), isEmpty);
-  });
+      currentUserId = 'user-a';
+      expect(await repo.getAll(), isEmpty);
+      currentUserId = 'user-b';
+      expect(await repo.getAll(), isEmpty);
+    },
+  );
 
   test('getAll returns empty list when no entries saved', () async {
     final result = await repo.getAll();

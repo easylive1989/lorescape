@@ -6,16 +6,16 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('AmbientBackdrop', () {
     testWidgets('renders child on top', (tester) async {
-      await tester.pumpWidget(const MaterialApp(
-        home: AmbientBackdrop(child: Text('content')),
-      ));
+      await tester.pumpWidget(
+        const MaterialApp(home: AmbientBackdrop(child: Text('content'))),
+      );
       expect(find.text('content'), findsOneWidget);
     });
 
     testWidgets('paints backgroundDark as the base layer', (tester) async {
-      await tester.pumpWidget(const MaterialApp(
-        home: AmbientBackdrop(child: SizedBox.shrink()),
-      ));
+      await tester.pumpWidget(
+        const MaterialApp(home: AmbientBackdrop(child: SizedBox.shrink())),
+      );
       final coloredBoxes = find.byWidgetPredicate(
         (w) => w is ColoredBox && w.color == AppColors.backgroundDark,
       );
@@ -28,15 +28,17 @@ void main() {
       final original = FlutterError.onError;
       FlutterError.onError = errors.add;
 
-      await tester.pumpWidget(const MaterialApp(
-        home: AmbientBackdrop(
-          decorationImage: DecorationImage(
-            image: AssetImage('assets/test_texture.png'),
-            fit: BoxFit.cover,
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: AmbientBackdrop(
+            decorationImage: DecorationImage(
+              image: AssetImage('assets/test_texture.png'),
+              fit: BoxFit.cover,
+            ),
+            child: SizedBox.shrink(),
           ),
-          child: SizedBox.shrink(),
         ),
-      ));
+      );
       // Allow image error handler to run.
       await tester.pump(const Duration(milliseconds: 200));
 
@@ -44,7 +46,8 @@ void main() {
 
       expect(
         find.byWidgetPredicate(
-          (w) => w is DecoratedBox &&
+          (w) =>
+              w is DecoratedBox &&
               w.decoration is BoxDecoration &&
               (w.decoration as BoxDecoration).image != null,
         ),

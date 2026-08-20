@@ -6,13 +6,16 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   Future<void> pump(WidgetTester tester, Widget child) {
     return tester.pumpWidget(
-      MaterialApp(home: Scaffold(body: Center(child: child))),
+      MaterialApp(
+        home: Scaffold(body: Center(child: child)),
+      ),
     );
   }
 
   group('GlyphThumb', () {
-    testWidgets('fills with the category background and shows its glyph',
-        (tester) async {
+    testWidgets('fills with the category background and shows its glyph', (
+      tester,
+    ) async {
       await pump(
         tester,
         const GlyphThumb(category: JournalCategory.coast, size: 64),

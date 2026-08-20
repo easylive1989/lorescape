@@ -10,36 +10,33 @@ void main() {
   });
 
   group('showLorescapeDatePicker', () {
-    testWidgets(
-      'given the sheet is open, when a day is tapped and confirmed, '
-      'then it resolves with that date',
-      (tester) async {
-        DateTime? result;
-        await _pumpHost(
-          tester,
-          onOpen: (context) async {
-            result = await showLorescapeDatePicker(
-              context: context,
-              initialDate: DateTime(2026, 5, 15),
-              firstDate: DateTime(2026, 5, 1),
-              lastDate: DateTime(2026, 5, 31),
-            );
-          },
-        );
+    testWidgets('given the sheet is open, when a day is tapped and confirmed, '
+        'then it resolves with that date', (tester) async {
+      DateTime? result;
+      await _pumpHost(
+        tester,
+        onOpen: (context) async {
+          result = await showLorescapeDatePicker(
+            context: context,
+            initialDate: DateTime(2026, 5, 15),
+            firstDate: DateTime(2026, 5, 1),
+            lastDate: DateTime(2026, 5, 31),
+          );
+        },
+      );
 
-        await tester.tap(find.text('open'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
 
-        expect(find.text('date_picker.title'), findsOneWidget);
+      expect(find.text('date_picker.title'), findsOneWidget);
 
-        await tester.tap(find.text('20'));
-        await tester.pump();
-        await tester.tap(find.text('date_picker.confirm'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.text('20'));
+      await tester.pump();
+      await tester.tap(find.text('date_picker.confirm'));
+      await tester.pumpAndSettle();
 
-        expect(result, equals(DateTime(2026, 5, 20)));
-      },
-    );
+      expect(result, equals(DateTime(2026, 5, 20)));
+    });
 
     testWidgets(
       'given the sheet is open, when cancelled, then it resolves with null',
@@ -69,34 +66,31 @@ void main() {
       },
     );
 
-    testWidgets(
-      'given the previous-month nav, when tapped, '
-      'then the grid moves to the previous month',
-      (tester) async {
-        await _pumpHost(
-          tester,
-          onOpen: (context) async {
-            await showLorescapeDatePicker(
-              context: context,
-              initialDate: DateTime(2026, 5, 15),
-              firstDate: DateTime(2026, 1, 1),
-              lastDate: DateTime(2026, 12, 31),
-            );
-          },
-        );
+    testWidgets('given the previous-month nav, when tapped, '
+        'then the grid moves to the previous month', (tester) async {
+      await _pumpHost(
+        tester,
+        onOpen: (context) async {
+          await showLorescapeDatePicker(
+            context: context,
+            initialDate: DateTime(2026, 5, 15),
+            firstDate: DateTime(2026, 1, 1),
+            lastDate: DateTime(2026, 12, 31),
+          );
+        },
+      );
 
-        await tester.tap(find.text('open'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
 
-        // May has 31 days, April has 30 — tapping prev then '31' should
-        // find nothing if we are on April (regression guard on month shift).
-        await tester.tap(find.byIcon(Icons.chevron_left));
-        await tester.pumpAndSettle();
+      // May has 31 days, April has 30 — tapping prev then '31' should
+      // find nothing if we are on April (regression guard on month shift).
+      await tester.tap(find.byIcon(Icons.chevron_left));
+      await tester.pumpAndSettle();
 
-        expect(find.text('31'), findsNothing);
-        expect(find.text('30'), findsOneWidget);
-      },
-    );
+      expect(find.text('31'), findsNothing);
+      expect(find.text('30'), findsOneWidget);
+    });
   });
 }
 

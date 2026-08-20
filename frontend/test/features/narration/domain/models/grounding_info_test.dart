@@ -5,10 +5,7 @@ void main() {
   group('GroundingInfo.fromRaw', () {
     test('returns null when every field is empty', () {
       expect(GroundingInfo.fromRaw(), isNull);
-      expect(
-        GroundingInfo.fromRaw(renderedContent: ''),
-        isNull,
-      );
+      expect(GroundingInfo.fromRaw(renderedContent: ''), isNull);
     });
 
     test('keeps rendered content, queries, and sources', () {

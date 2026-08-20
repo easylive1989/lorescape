@@ -11,10 +11,10 @@ void main() {
             {
               'mainsnak': {
                 'datavalue': {
-                  'value': {'id': 'Q5393308'}
-                }
-              }
-            }
+                  'value': {'id': 'Q5393308'},
+                },
+              },
+            },
           ],
         },
       };
@@ -30,8 +30,20 @@ void main() {
         'id': 'Q11574990',
         'claims': {
           'P31': [
-            {'mainsnak': {'datavalue': {'value': {'id': 'Q79007'}}}},
-            {'mainsnak': {'datavalue': {'value': {'id': 'Q667783'}}}},
+            {
+              'mainsnak': {
+                'datavalue': {
+                  'value': {'id': 'Q79007'},
+                },
+              },
+            },
+            {
+              'mainsnak': {
+                'datavalue': {
+                  'value': {'id': 'Q667783'},
+                },
+              },
+            },
           ],
         },
       };
@@ -64,10 +76,7 @@ void main() {
             {
               'mainsnak': {
                 'datavalue': {
-                  'value': {
-                    'latitude': 25.037222,
-                    'longitude': 121.499722,
-                  },
+                  'value': {'latitude': 25.037222, 'longitude': 121.499722},
                 },
               },
             },
@@ -83,10 +92,7 @@ void main() {
     });
 
     test('returns null coordinates when P625 missing', () {
-      final entity = {
-        'id': 'Q1',
-        'claims': <String, dynamic>{},
-      };
+      final entity = {'id': 'Q1', 'claims': <String, dynamic>{}};
 
       final dto = WikidataEntityDto.fromEntity(entity);
 
@@ -99,7 +105,13 @@ void main() {
         'claims': {
           'P31': [
             {'mainsnak': {}},
-            {'mainsnak': {'datavalue': {'value': {'id': 'Q33506'}}}},
+            {
+              'mainsnak': {
+                'datavalue': {
+                  'value': {'id': 'Q33506'},
+                },
+              },
+            },
           ],
         },
       };

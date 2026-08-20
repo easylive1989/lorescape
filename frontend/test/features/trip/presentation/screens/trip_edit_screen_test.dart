@@ -14,59 +14,45 @@ void main() {
   });
 
   group('TripEditScreen', () {
-    testWidgets(
-      'given the create mode, when the screen loads, '
-      'then the form fields and create action are visible',
-      (tester) async {
-        await _givenCreateScreen(tester);
+    testWidgets('given the create mode, when the screen loads, '
+        'then the form fields and create action are visible', (tester) async {
+      await _givenCreateScreen(tester);
 
-        _thenCreateTitleIsVisible();
-        _thenSaveActionUsesCreateLabel();
-      },
-    );
+      _thenCreateTitleIsVisible();
+      _thenSaveActionUsesCreateLabel();
+    });
 
-    testWidgets(
-      'given create mode, when the user submits an empty name, '
-      'then the required-field error is shown',
-      (tester) async {
-        await _givenCreateScreen(tester);
+    testWidgets('given create mode, when the user submits an empty name, '
+        'then the required-field error is shown', (tester) async {
+      await _givenCreateScreen(tester);
 
-        await _whenUserTapsSave(tester);
+      await _whenUserTapsSave(tester);
 
-        _thenRequiredFieldErrorIsVisible();
-      },
-    );
+      _thenRequiredFieldErrorIsVisible();
+    });
 
-    testWidgets(
-      'given create mode, when the user saves a valid trip, '
-      'then the trip is persisted and the screen pops',
-      (tester) async {
-        final tripRepo = InMemoryTripRepository();
+    testWidgets('given create mode, when the user saves a valid trip, '
+        'then the trip is persisted and the screen pops', (tester) async {
+      final tripRepo = InMemoryTripRepository();
 
-        await _givenCreateScreenWithRouter(tester, tripRepo);
+      await _givenCreateScreenWithRouter(tester, tripRepo);
 
-        await _whenUserEntersTripName(tester, 'Osaka Foodie Tour');
-        await _whenUserTapsSave(tester);
+      await _whenUserEntersTripName(tester, 'Osaka Foodie Tour');
+      await _whenUserTapsSave(tester);
 
-        await _thenTripIsPersistedWithName(tripRepo, 'Osaka Foodie Tour');
-        _thenEditScreenIsDismissed();
-      },
-    );
+      await _thenTripIsPersistedWithName(tripRepo, 'Osaka Foodie Tour');
+      _thenEditScreenIsDismissed();
+    });
 
-    testWidgets(
-      'given edit mode with an existing trip, when the screen loads, '
-      'then the existing trip name prefills the form',
-      (tester) async {
-        final tripRepo = InMemoryTripRepository();
-        await tripRepo.save(
-          buildTrip(id: 'existing', name: 'Prefilled Trip'),
-        );
+    testWidgets('given edit mode with an existing trip, when the screen loads, '
+        'then the existing trip name prefills the form', (tester) async {
+      final tripRepo = InMemoryTripRepository();
+      await tripRepo.save(buildTrip(id: 'existing', name: 'Prefilled Trip'));
 
-        await _givenEditScreen(tester, tripRepo: tripRepo, tripId: 'existing');
+      await _givenEditScreen(tester, tripRepo: tripRepo, tripId: 'existing');
 
-        _thenTripNameFieldHasText('Prefilled Trip');
-      },
-    );
+      _thenTripNameFieldHasText('Prefilled Trip');
+    });
   });
 }
 
@@ -117,10 +103,7 @@ Future<void> _givenCreateScreenWithRouter(
   await tester.pump(const Duration(milliseconds: 400));
 }
 
-Future<void> _whenUserEntersTripName(
-  WidgetTester tester,
-  String name,
-) async {
+Future<void> _whenUserEntersTripName(WidgetTester tester, String name) async {
   await tester.enterText(find.byType(TextFormField), name);
   await tester.pump();
 }

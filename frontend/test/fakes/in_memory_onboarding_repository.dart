@@ -4,9 +4,8 @@ import 'package:context_app/features/onboarding/domain/onboarding_repository.dar
 /// Test double for [OnboardingRepository] that keeps state in memory and
 /// exposes counters for assertions.
 class InMemoryOnboardingRepository implements OnboardingRepository {
-  InMemoryOnboardingRepository({
-    bool welcomeDone = false,
-  }) : _welcomeDone = welcomeDone;
+  InMemoryOnboardingRepository({bool welcomeDone = false})
+    : _welcomeDone = welcomeDone;
 
   bool _welcomeDone;
   int loadCalls = 0;
@@ -16,10 +15,7 @@ class InMemoryOnboardingRepository implements OnboardingRepository {
   @override
   Future<OnboardingState> load() async {
     loadCalls += 1;
-    return OnboardingState(
-      hasLoaded: true,
-      welcomeDone: _welcomeDone,
-    );
+    return OnboardingState(hasLoaded: true, welcomeDone: _welcomeDone);
   }
 
   @override

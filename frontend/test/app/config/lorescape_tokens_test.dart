@@ -66,8 +66,7 @@ void main() {
         reading: ReadingSurface.paper,
       );
       final theme = ThemeData(extensions: [tokens]);
-      expect(theme.extension<LorescapeTokens>()!.clay,
-          const Color(0xFFB7842B));
+      expect(theme.extension<LorescapeTokens>()!.clay, const Color(0xFFB7842B));
     });
   });
 }

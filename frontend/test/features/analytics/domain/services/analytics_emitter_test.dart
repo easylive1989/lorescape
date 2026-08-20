@@ -6,31 +6,25 @@ import '../../../../fakes/recording_analytics_service.dart';
 
 void main() {
   group('AnalyticsEmitter', () {
-    test(
-      'given consent is enabled, when emitting an event, '
-      'then it reaches the analytics service',
-      () async {
-        final service = RecordingAnalyticsService();
-        final emitter = _emitter(service, consent: true);
+    test('given consent is enabled, when emitting an event, '
+        'then it reaches the analytics service', () async {
+      final service = RecordingAnalyticsService();
+      final emitter = _emitter(service, consent: true);
 
-        await emitter.emitAndWait(_event());
+      await emitter.emitAndWait(_event());
 
-        expect(service.types, ['hooks_requested']);
-      },
-    );
+      expect(service.types, ['hooks_requested']);
+    });
 
-    test(
-      'given consent is disabled, when emitting an event, '
-      'then nothing reaches the analytics service',
-      () async {
-        final service = RecordingAnalyticsService();
-        final emitter = _emitter(service, consent: false);
+    test('given consent is disabled, when emitting an event, '
+        'then nothing reaches the analytics service', () async {
+      final service = RecordingAnalyticsService();
+      final emitter = _emitter(service, consent: false);
 
-        await emitter.emitAndWait(_event());
+      await emitter.emitAndWait(_event());
 
-        expect(service.events, isEmpty);
-      },
-    );
+      expect(service.events, isEmpty);
+    });
 
     test(
       'given the transport throws, when emitting fire-and-forget, '
@@ -48,22 +42,19 @@ void main() {
       },
     );
 
-    test(
-      'given the consent lookup itself throws, when emitting, '
-      'then the caller still is not affected',
-      () async {
-        final service = RecordingAnalyticsService();
-        final emitter = AnalyticsEmitter(
-          consentEnabled: () async => throw StateError('prefs not ready'),
-          service: service,
-        );
+    test('given the consent lookup itself throws, when emitting, '
+        'then the caller still is not affected', () async {
+      final service = RecordingAnalyticsService();
+      final emitter = AnalyticsEmitter(
+        consentEnabled: () async => throw StateError('prefs not ready'),
+        service: service,
+      );
 
-        emitter.emit(_event());
-        await Future<void>.delayed(Duration.zero);
+      emitter.emit(_event());
+      await Future<void>.delayed(Duration.zero);
 
-        expect(service.events, isEmpty);
-      },
-    );
+      expect(service.events, isEmpty);
+    });
   });
 }
 

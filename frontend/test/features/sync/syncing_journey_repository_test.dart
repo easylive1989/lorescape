@@ -96,24 +96,21 @@ void main() {
       expect(remote.deletes, ['e1']);
     });
 
-    test(
-      'given sync inactive, delete only affects local',
-      () async {
-        final local = InMemoryJourneyRepository();
-        final remote = _FakeRemote();
-        final repo = _build(
-          local: local,
-          remote: remote,
-          session: () => const SyncSession.disabled(),
-        );
+    test('given sync inactive, delete only affects local', () async {
+      final local = InMemoryJourneyRepository();
+      final remote = _FakeRemote();
+      final repo = _build(
+        local: local,
+        remote: remote,
+        session: () => const SyncSession.disabled(),
+      );
 
-        await repo.save(buildJourneyEntry(id: 'e1'));
-        await repo.delete('e1');
+      await repo.save(buildJourneyEntry(id: 'e1'));
+      await repo.delete('e1');
 
-        expect(await local.getAll(), isEmpty);
-        expect(remote.deletes, isEmpty);
-      },
-    );
+      expect(await local.getAll(), isEmpty);
+      expect(remote.deletes, isEmpty);
+    });
 
     test(
       'engine.fullSync writes newer remote items locally and pushes newer locals',
