@@ -83,8 +83,8 @@ void main() {
     });
 
     test(
-      'given several books, when the pins are built, then each one gets a pin '
-      'including the uncategorised volume',
+      'given the uncategorised volume, when the pins are built, then it is '
+      'left off the globe — it is not a journey, its stops are unrelated',
       () async {
         final pins = await _pinsOf([
           _entry(
@@ -103,7 +103,7 @@ void main() {
           ),
         ]);
 
-        expect(pins.map((p) => p.id), ['t1', unassignedGlobePinId]);
+        expect(pins.map((p) => p.id), ['t1']);
       },
     );
 
@@ -136,11 +136,19 @@ void main() {
       expect(pins, isEmpty);
     });
 
-    test('given a pin id, when it is mapped back, then the uncategorised '
-        'sentinel round-trips to null', () {
-      expect(globePinIdForTrip(null), unassignedGlobePinId);
-      expect(tripIdForGlobePin(unassignedGlobePinId), isNull);
-      expect(tripIdForGlobePin('t1'), 't1');
+    test('given a pin, when it is inspected, then its id is the trip id — '
+        'that is what makes tapping a pin select that book', () async {
+      final pins = await _pinsOf([
+        _entry(
+          id: 'a',
+          tripId: 't-kyoto',
+          createdAt: DateTime(2026, 1, 1),
+          lat: 1,
+          lng: 1,
+        ),
+      ]);
+
+      expect(pins.single.id, 't-kyoto');
     });
   });
 }

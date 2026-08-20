@@ -57,10 +57,12 @@ final worldOutlineProvider = FutureProvider<WorldOutline>(
   (ref) => WorldOutline.load(rootBundle),
 );
 
-/// 書架上每一本書一個釘點：那本旅程**最早**、而且有座標的那個故事的地點。
+/// 每一趟**旅程**一個釘點：那趟旅程最早、而且有座標的那個故事的地點。
+///
+/// 未分類那本不在其中：它不是一趟旅程，裡面的地點彼此沒有關係。
 ///
 /// 不是「選中那本書的所有停點」——地球儀在這裡的角色是整個書架的鳥瞰，一本
-/// 書一個點，選中哪本就把地球轉過去（見 [globePinIdForTrip]）。
+/// 釘點的 id 就是 trip id，點釘點即可回頭選中那本書。
 ///
 /// 「最早」用 createdAt 判斷，也就是那趟旅程的起點。最早那筆沒有座標時往後
 /// 找下一筆有座標的——否則整本書只因為第一個故事缺座標就從地球上消失。
@@ -71,12 +73,16 @@ final worldOutlineProvider = FutureProvider<WorldOutline>(
 final shelfGlobePinsProvider = Provider.autoDispose<List<GlobePin>>((ref) {
   final entries = ref.watch(myJourneyProvider).valueOrNull ?? const [];
 
-  final firstByTrip = <String?, JourneyEntry>{};
+  final firstByTrip = <String, JourneyEntry>{};
   for (final entry in entries) {
+    // 未分類不是一趟旅程，不上地球——那本書裡的地點彼此沒有關係，釘一個點
+    // 代表整本反而是誤導。
+    final tripId = entry.tripId;
+    if (tripId == null) continue;
     if (entry.place.latitude == null || entry.place.longitude == null) continue;
-    final current = firstByTrip[entry.tripId];
+    final current = firstByTrip[tripId];
     if (current == null || entry.createdAt.isBefore(current.createdAt)) {
-      firstByTrip[entry.tripId] = entry;
+      firstByTrip[tripId] = entry;
     }
   }
 
@@ -85,18 +91,9 @@ final shelfGlobePinsProvider = Provider.autoDispose<List<GlobePin>>((ref) {
   return [
     for (final MapEntry(key: tripId, value: entry) in firsts)
       GlobePin(
-        id: globePinIdForTrip(tripId),
+        id: tripId,
         coordinate: LatLng(entry.place.latitude!, entry.place.longitude!),
         label: entry.place.name,
       ),
   ];
 });
-
-/// 釘點 id ↔ 旅程 id 的對應。未分類那本的 tripId 是 null，得換一個不會跟真
-/// 實 id 相撞的字串，點釘點才回得去正確的那本書。
-const String unassignedGlobePinId = '__unassigned__';
-
-String globePinIdForTrip(String? tripId) => tripId ?? unassignedGlobePinId;
-
-String? tripIdForGlobePin(String pinId) =>
-    pinId == unassignedGlobePinId ? null : pinId;

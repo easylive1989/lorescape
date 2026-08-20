@@ -35,6 +35,10 @@ class GlobePainter extends CustomPainter {
   /// 壓到球外，不畫也不參與點擊命中（GlobeView 的 tap 判定共用這個值）。
   static const double maxPinAngularDistance = 1.4;
 
+  /// 釘點與對焦標記共用的書本圖示，與書架上「有記錄的書」同一個
+  /// （trip_bookshelf 的 ShelfBook）。
+  static const IconData bookIcon = Icons.menu_book;
+
   @override
   void paint(Canvas canvas, Size size) {
     final radius = size.width / 2 - 3;
@@ -150,11 +154,9 @@ class GlobePainter extends CustomPainter {
   }
 
   void _paintPins(Canvas canvas, OrthographicProjection projection) {
-    final dot = Paint()..color = GlobePalette.pinDot;
-    final ring = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
-      ..color = GlobePalette.pinDotStroke;
+    // 釘點代表的是書架上的一本旅程，所以畫書、不畫點。底下墊一圈海色，書
+    // 才不會糊在抹茶綠的陸地上。
+    final halo = Paint()..color = GlobePalette.pinDotStroke;
 
     for (final pin in pins) {
       if (pin.id == focusId) continue;
@@ -165,10 +167,32 @@ class GlobePainter extends CustomPainter {
       final offset = projection.project(pin.coordinate);
       if (offset == null) continue;
 
-      canvas.drawCircle(offset, 4.5, dot);
-      canvas.drawCircle(offset, 4.5, ring);
+      canvas.drawCircle(offset, 9, halo);
+      _paintBookIcon(canvas, offset);
       _paintLabel(canvas, projection, offset, pin.label);
     }
+  }
+
+  /// 用 icon font 直接畫字形——在 CustomPaint 裡沒有 widget 可用，
+  /// TextPainter 加上 [IconData] 的 codePoint 與 fontFamily 就是標準作法。
+  void _paintBookIcon(Canvas canvas, Offset offset) {
+    const icon = bookIcon;
+    final painter = TextPainter(
+      text: TextSpan(
+        text: String.fromCharCode(icon.codePoint),
+        style: TextStyle(
+          fontSize: 13,
+          fontFamily: icon.fontFamily,
+          package: icon.fontPackage,
+          color: GlobePalette.pinDot,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    painter.paint(
+      canvas,
+      offset - Offset(painter.width / 2, painter.height / 2),
+    );
   }
 
   void _paintLabel(

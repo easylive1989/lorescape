@@ -244,13 +244,15 @@ class _TripGlobe extends ConsumerWidget {
     // 一本書一個釘點，選中那本轉過去。找不到（那本書一個有座標的故事都沒
     // 有）就不轉，地球儀維持原角度。
     final pins = ref.watch(shelfGlobePinsProvider);
-    final focusId = globePinIdForTrip(tripId);
-    final focus = pins.where((pin) => pin.id == focusId).firstOrNull;
+    // 未分類（tripId 為 null）在地球上沒有釘點，所以也沒有對焦目標。
+    final focus = tripId == null
+        ? null
+        : pins.where((pin) => pin.id == tripId).firstOrNull;
     return GlobeView(
       outline: outline,
       pins: pins,
       focus: focus,
-      onPinTap: (pin) => onSelectTrip(tripIdForGlobePin(pin.id)),
+      onPinTap: (pin) => onSelectTrip(pin.id),
       size: _size,
     );
   }

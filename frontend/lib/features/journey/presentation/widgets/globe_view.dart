@@ -346,13 +346,14 @@ class _FocusMarker extends StatelessWidget {
                         ),
                       ],
                     ),
+                    // 圖示要反轉回來：外層水滴為了讓尖角朝下轉了 -45 度。
                     child: Center(
-                      child: Container(
-                        width: 11,
-                        height: 11,
-                        decoration: const BoxDecoration(
+                      child: Transform.rotate(
+                        angle: math.pi / 4,
+                        child: const Icon(
+                          GlobePainter.bookIcon,
+                          size: 16,
                           color: _pinBorder,
-                          shape: BoxShape.circle,
                         ),
                       ),
                     ),
