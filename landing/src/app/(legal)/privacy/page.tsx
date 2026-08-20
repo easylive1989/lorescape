@@ -198,12 +198,21 @@ export default function PrivacyPage() {
           </p>
           <ul>
             <li>
-              <strong>How to request deletion</strong>: email us at the address
-              in &quot;Contact Us&quot; below from the address associated with
-              your account, or — if you use the App without signing in —
-              include the account identifier shown in{" "}
-              <strong>[Settings]</strong>. We action deletion requests within
-              30 days.
+              <strong>How to request deletion</strong>: open{" "}
+              <strong>[Settings]</strong> &gt; tap{" "}
+              <strong>[Delete Account]</strong> in the App, which opens our
+              deletion request form. If you use the App without signing in,
+              include the account identifier shown under{" "}
+              <strong>[Cloud Sync]</strong> in Settings — without it we cannot
+              tell which data is yours. You can also open the form directly:{" "}
+              <a
+                href="https://docs.google.com/forms/d/e/1FAIpQLSfZIMLaBq5y_quj-E28Bx1dm9aW8XNk3BhvmP1ngLUchIgX3w/viewform"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                deletion request form
+              </a>
+              . Requests are actioned manually by our team within 30 days.
             </li>
             <li>
               Once actioned, your guide history and personal settings are

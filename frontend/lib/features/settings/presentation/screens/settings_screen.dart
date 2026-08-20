@@ -204,6 +204,24 @@ class _AccountGroup extends ConsumerWidget {
     await ref.read(authServiceProvider).signOut();
   }
 
+  /// 申請刪除帳號的 Google 表單。App 內沒有自助刪除——由管理人員收到表單後
+  /// 人工處理。匿名使用者要在表單裡附上「雲端同步」區塊顯示的帳號識別碼，
+  /// 否則我們無從得知要刪哪一筆。
+  static final Uri _deleteAccountForm = Uri.parse(
+    'https://docs.google.com/forms/d/e/'
+    '1FAIpQLSfZIMLaBq5y_quj-E28Bx1dm9aW8XNk3BhvmP1ngLUchIgX3w/viewform',
+  );
+
+  Widget _deleteAccountRow() => _SettingsRow(
+    key: const ValueKey('delete_account_row'),
+    icon: Icons.person_remove_outlined,
+    title: 'settings.delete_account'.tr(),
+    subtitle: 'settings.delete_account_subtitle'.tr(),
+    trailing: const Icon(Icons.open_in_new, size: 18),
+    onTap: () =>
+        launchUrl(_deleteAccountForm, mode: LaunchMode.externalApplication),
+  );
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
@@ -232,6 +250,7 @@ class _AccountGroup extends ConsumerWidget {
                 child: Text('settings.sign_out'.tr()),
               ),
             ),
+            _deleteAccountRow(),
           ],
         ),
       );
@@ -270,6 +289,8 @@ class _AccountGroup extends ConsumerWidget {
               ],
             ),
           ),
+          // 匿名使用者的資料一樣會上傳，所以刪除的入口對他們一樣要在。
+          _deleteAccountRow(),
         ],
       ),
     );

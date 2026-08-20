@@ -102,6 +102,39 @@ void main() {
     });
 
     testWidgets('given an anonymous user, when the settings screen is shown, '
+        'then the delete-account entry is there too — their data is uploaded '
+        'by default, so the way out must be reachable without signing in', (
+      tester,
+    ) async {
+      final auth = FakeAuthService(
+        initialUser: const AuthUser(id: 'anon-1', isAnonymous: true),
+      );
+      addTearDown(auth.dispose);
+
+      await _givenSettingsScreen(tester, authService: auth);
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(find.byKey(const ValueKey('delete_account_row')), findsOneWidget);
+    });
+
+    testWidgets('given a signed-in user, when the settings screen is shown, '
+        'then the delete-account entry is there', (tester) async {
+      final auth = FakeAuthService(
+        initialUser: const AuthUser(
+          id: 'u1',
+          email: 'a@b.com',
+          displayName: 'A',
+        ),
+      );
+      addTearDown(auth.dispose);
+
+      await _givenSettingsScreen(tester, authService: auth);
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(find.byKey(const ValueKey('delete_account_row')), findsOneWidget);
+    });
+
+    testWidgets('given an anonymous user, when the settings screen is shown, '
         'then the sync row states that data is backed up but needs an account '
         'to come back on another device', (tester) async {
       final auth = FakeAuthService(
