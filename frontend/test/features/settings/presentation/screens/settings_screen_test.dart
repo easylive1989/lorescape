@@ -134,9 +134,10 @@ void main() {
       expect(find.byKey(const ValueKey('delete_account_row')), findsOneWidget);
     });
 
-    testWidgets('given an anonymous user, when the settings screen is shown, '
-        'then the sync row states that data is backed up but needs an account '
-        'to come back on another device', (tester) async {
+    testWidgets('given a user who has not signed in, when the settings screen '
+        'is shown, then the sync row says the data stays on this device', (
+      tester,
+    ) async {
       final auth = FakeAuthService(
         initialUser: const AuthUser(id: 'anon-1', isAnonymous: true),
       );
@@ -145,30 +146,11 @@ void main() {
       await _givenSettingsScreen(tester, authService: auth);
       await tester.pump(const Duration(milliseconds: 50));
 
-      // 同步沒有開關可以按了——這一列純粹是狀態。匿名帳號的限制要講出來，
-      // 不然使用者會以為換手機資料就會跟著走。
+      // 同步沒有開關可以按了——登入本身就是開關，這一列純粹是狀態。沒登入
+      // 的人得知道資料只在這台裝置上，不然刪 App 才發現就來不及了。
       expect(find.byKey(const ValueKey('sync_status_row')), findsOneWidget);
       expect(find.byType(Switch), findsNothing);
       expect(find.text('settings.sync_status_anonymous'), findsOneWidget);
-      // 匿名使用者唯一能拿去要求刪除資料的識別碼，隱私政策也是這樣寫的。
-      expect(find.text('anon-1'), findsOneWidget);
-    });
-
-    testWidgets('given a signed-in user, when the settings screen is shown, '
-        'then the anonymous account identifier row is gone', (tester) async {
-      final auth = FakeAuthService(
-        initialUser: const AuthUser(
-          id: 'u1',
-          email: 'a@b.com',
-          displayName: 'A',
-        ),
-      );
-      addTearDown(auth.dispose);
-
-      await _givenSettingsScreen(tester, authService: auth);
-      await tester.pump(const Duration(milliseconds: 50));
-
-      expect(find.byKey(const ValueKey('sync_account_id_row')), findsNothing);
     });
 
     testWidgets('given a signed-in user, when the settings screen is shown, '

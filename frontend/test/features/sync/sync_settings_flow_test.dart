@@ -1,6 +1,6 @@
-// 同步的開關已經拿掉：journey 與 trip 一律同步，匿名帳號也算數。這裡釘住
-// 的是那個決定的兩個要害——
-//   1. syncSessionProvider 只看「有沒有 user id」，匿名使用者不再被排除。
+// 同步的開關已經拿掉：登入本身就是開關——有正式帳號就自動同步，匿名帳號
+// 完全不上傳。這裡釘住的是那個決定的兩個要害——
+//   1. syncSessionProvider 只認正式帳號，匿名 session 不會讓資料離開裝置。
 //   2. syncBootstrapProvider 在 session 第一次讀到就已經是 active 時（冷啟動
 //      的實際情況）也要跑 full sync。用 ref.listen 的話這裡會無聲失敗。
 // 衝突解法與各 repository 的接線分別由 sync_merger_test 與
@@ -83,8 +83,8 @@ void main() {
     );
 
     test(
-      'given an anonymous user, when the session is read, then it is active — '
-      'sync is no longer gated behind a permanent account',
+      'given only an anonymous session, when the session is read, then it is '
+      'inactive — anonymous data never leaves the device',
       () async {
         final container = _container(user: _anonymousUser);
         container.read(authStateProvider);
@@ -92,8 +92,8 @@ void main() {
 
         final session = container.read(syncSessionProvider);
 
-        expect(session.isActive, isTrue);
-        expect(session.userId, 'anon-7');
+        expect(session.isActive, isFalse);
+        expect(session.userId, isNull);
       },
     );
 
@@ -118,12 +118,12 @@ void main() {
       'cold start actually looks like — when the bootstrap provider is '
       'watched, then a full sync still runs',
       () async {
-        // 匿名登入是在 main() 的 init() 裡 await 完才建 widget tree 的，所以
-        // 第一次 build 時 session 就已經 active，不會有「非啟用 → 啟用」的
-        // 轉換可以聽。
+        // Supabase 的 session 在建 widget tree 之前就還原好了（main() 的
+        // init() 裡 await 完才建），所以第一次 build 時 session 就已經
+        // active，不會有「非啟用 → 啟用」的轉換可以聽。
         final coordinator = _SpyCoordinator();
         final container = _container(
-          user: _anonymousUser,
+          user: _permanentUser,
           coordinator: coordinator,
         );
 
@@ -134,55 +134,25 @@ void main() {
     );
 
     test(
-      'given the startup anonymous sign-in failed so there is no session, '
-      'when the bootstrap provider is watched, then it retries the sign-in '
-      'rather than leaving this launch unsynced',
+      'given only an anonymous session, when the bootstrap provider is '
+      'watched, then nothing is uploaded',
       () async {
         final coordinator = _SpyCoordinator();
-        final auth = FakeAuthService();
-        addTearDown(auth.dispose);
-        final container = ProviderContainer(
-          overrides: [
-            authServiceProvider.overrideWithValue(auth),
-            syncCoordinatorProvider.overrideWithValue(coordinator),
-          ],
+        final container = _container(
+          user: _anonymousUser,
+          coordinator: coordinator,
         );
-        addTearDown(container.dispose);
 
         container.listen(syncBootstrapProvider, (_, __) {});
-
-        expect(auth.ensureSignedInCount, 1, reason: '沒有 id 就該再試一次登入');
-        expect(coordinator.fullSyncCount, 0, reason: '還沒有 session，不能同步');
-      },
-    );
-
-    test(
-      'given the retried sign-in succeeds, when the auth stream reports the '
-      'new anonymous user, then the full sync finally runs',
-      () async {
-        final coordinator = _SpyCoordinator();
-        final auth = FakeAuthService();
-        addTearDown(auth.dispose);
-        final container = ProviderContainer(
-          overrides: [
-            authServiceProvider.overrideWithValue(auth),
-            syncCoordinatorProvider.overrideWithValue(coordinator),
-          ],
-        );
-        addTearDown(container.dispose);
-
-        container.listen(syncBootstrapProvider, (_, __) {});
-        container.read(authStateProvider);
-        // FakeAuthService.ensureSignedIn 會建一個匿名 user 並推進 stream。
         await _settle();
 
-        expect(coordinator.fullSyncCount, 1);
+        expect(coordinator.fullSyncCount, 0);
       },
     );
 
     test(
-      'given an anonymous user who then signs in, when the session changes, '
-      'then a fresh full sync runs for the new session',
+      'given an anonymous user who then signs in, when the session becomes '
+      'active, then their local data is finally uploaded',
       () async {
         final coordinator = _SpyCoordinator();
         final auth = FakeAuthService(initialUser: _anonymousUser);
@@ -195,16 +165,16 @@ void main() {
         );
         addTearDown(container.dispose);
 
-        // 保持訂閱，session 變動時 bootstrap 才會重算。
+        // 保持訂閱，session 變動時 listener 才會被通知。
         container.listen(syncBootstrapProvider, (_, __) {});
         container.read(authStateProvider);
         await _settle();
-        expect(coordinator.fullSyncCount, 1);
+        expect(coordinator.fullSyncCount, 0, reason: '匿名階段不上傳');
 
         await auth.signInWithGoogle();
         await _settle();
 
-        expect(coordinator.fullSyncCount, 2);
+        expect(coordinator.fullSyncCount, 1, reason: '登入後才第一次同步');
       },
     );
   });

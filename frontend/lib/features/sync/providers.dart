@@ -21,17 +21,16 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 // ---------------------------------------------------------------------------
 
 /// 目前這台裝置能不能同步。
+///
+/// 有正式帳號就同步，沒有就完全不上傳——**沒有開關**，登入本身就是那個開關。
+///
+/// 匿名帳號（App 啟動時 main.dart 的 _ensureSignedIn 建的那個）刻意排除：它的
+/// id 綁在這次安裝上，重裝就換一個，備份上去也拿不回來，等於把資料送上伺服器
+/// 卻換不到任何好處。資料留在本機、要跨裝置就登入，是比較誠實的交換。
 final syncSessionProvider = Provider<SyncSession>((ref) {
   final user = ref.watch(currentUserProvider);
-  // journey 與 trip 一律同步，不再是使用者可以關掉的選項，匿名帳號也算數：
-  // App 一啟動就會建立匿名 session（main.dart 的 _ensureSignedIn），所以
-  // 這裡幾乎永遠拿得到 id；RLS policy 是 `auth.uid() = user_id`，匿名使用者
-  // 一樣過得了。
-  //
-  // 代價要知道：匿名 id 綁在裝置的 session 上，重裝 App 會拿到新的 id，舊
-  // 的列就成為孤兒。真正的跨裝置價值仍然要升級成正式帳號（linkIdentity 會
-  // 保留同一個 id，資料就接得上）。
-  return SyncSession(enabled: user != null, userId: user?.id);
+  final syncUserId = (user != null && !user.isAnonymous) ? user.id : null;
+  return SyncSession(enabled: syncUserId != null, userId: syncUserId);
 });
 
 /// 同步的啟動點：session 一有效就跑一次 full sync，之後 session 換人（匿名
@@ -60,15 +59,9 @@ final syncBootstrapProvider = Provider<void>((ref) {
 });
 
 void _onSession(Ref ref, SyncSession session) {
-  if (!session.isActive) {
-    // 沒有 id 就等於這次啟動完全不備份。啟動時的匿名登入是 best-effort
-    // （main.dart 的 _ensureSignedIn 失敗只寫 log），最常見的原因是當下沒網
-    // 路——所以這裡再試一次。成功的話 authStateChanges 會吐出新的 user，
-    // session 變動，這個 listener 再被叫一次就走下面的 full sync；再失敗則沒
-    // 有事件、不會有新的通知，也就不會打轉。
-    ref.read(authServiceProvider).ensureSignedIn().ignore();
-    return;
-  }
+  // 還沒登入（或只有匿名 session）就什麼都不做。這裡刻意不去催匿名登入：
+  // 匿名 session 是給後端 API 認證用的，由 main.dart 負責，與同步無關。
+  if (!session.isActive) return;
   // Re-entry 由 SyncCoordinator 自己擋，重複觸發不會疊起來。
   ref.read(syncCoordinatorProvider).runFullSync();
 }

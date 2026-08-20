@@ -70,8 +70,9 @@ export default function PrivacyPage() {
                   device&apos;s GPS positions, nor do we track your location in
                   the background. Note that a landmark you save to your Journey
                   is stored together with{" "}
-                  <strong>that landmark&apos;s own coordinates</strong> — see
-                  &quot;Cloud Backup &amp; Sync&quot; below.
+                  <strong>that landmark&apos;s own coordinates</strong>, and
+                  that if you are signed in this is backed up to our servers —
+                  see &quot;Cloud Backup &amp; Sync&quot; below.
                 </li>
               </ul>
             </li>
@@ -108,11 +109,17 @@ export default function PrivacyPage() {
 
           <h2>2. Cloud Backup &amp; Sync</h2>
           <p>
-            Your <strong>Journey of Exploration</strong> (saved landmarks) and
-            your <strong>Trips</strong> are automatically backed up to our
-            servers so they survive reinstalling the App and follow you to a
-            new device. This backup is on by default and is not something you
-            need to switch on.
+            <strong>If you are signed in</strong>, your{" "}
+            <strong>Journey of Exploration</strong> (saved landmarks) and your{" "}
+            <strong>Trips</strong> are backed up to our servers automatically,
+            so they survive reinstalling the App and follow you to a new
+            device. Signing in is what turns this on — there is no separate
+            switch.
+          </p>
+          <p>
+            <strong>If you are not signed in</strong>, none of this leaves your
+            device. Your journeys and trips are stored locally and are lost if
+            you delete the App.
           </p>
           <ul>
             <li>
@@ -125,15 +132,6 @@ export default function PrivacyPage() {
               <strong>What is not uploaded</strong>: your device&apos;s GPS
               trail, your photos, and your Quick Guide entries, which stay on
               your device.
-            </li>
-            <li>
-              <strong>Who it is tied to</strong>: an account identifier. If you
-              have not signed in, the App creates an{" "}
-              <strong>anonymous account</strong> on first launch and the backup
-              is tied to that. An anonymous account lives only on that
-              installation — if you reinstall the App or switch devices, a new
-              anonymous account is created and the earlier backup can no longer
-              be reached. Sign in to keep access to it across devices.
             </li>
             <li>
               <strong>Access</strong>: rows are protected by row-level security
@@ -201,10 +199,9 @@ export default function PrivacyPage() {
               <strong>How to request deletion</strong>: open{" "}
               <strong>[Settings]</strong> &gt; tap{" "}
               <strong>[Delete Account]</strong> in the App, which opens our
-              deletion request form. If you use the App without signing in,
-              include the account identifier shown under{" "}
-              <strong>[Cloud Sync]</strong> in Settings — without it we cannot
-              tell which data is yours. You can also open the form directly:{" "}
+              deletion request form. Submit it from — or naming — the account
+              you signed in with, so we can tell which data is yours. You can
+              also open the form directly:{" "}
               <a
                 href="https://docs.google.com/forms/d/e/1FAIpQLSfZIMLaBq5y_quj-E28Bx1dm9aW8XNk3BhvmP1ngLUchIgX3w/viewform"
                 target="_blank"
@@ -217,7 +214,9 @@ export default function PrivacyPage() {
             <li>
               Once actioned, your guide history and personal settings are
               permanently removed from our servers and cannot be recovered.
-              Deleting the App removes the local copy on that device.
+              Deleting the App removes the local copy on that device. If you
+              never signed in, there is nothing on our servers to delete —
+              deleting the App is enough.
             </li>
           </ul>
 

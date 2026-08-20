@@ -8,7 +8,6 @@ import 'package:context_app/shared/widgets/adaptive/adaptive_widgets.dart';
 import 'package:context_app/shared/widgets/journal/floating_back_button.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -297,9 +296,9 @@ class _AccountGroup extends ConsumerWidget {
   }
 }
 
-/// 雲端同步的狀態列。沒有開關——journey 與 trip 一律同步（見
-/// syncSessionProvider）。留著這一列是因為「資料有沒有被備份」使用者有權知
-/// 道，而且匿名帳號那個限制（重裝就換一個 id、資料拿不回來）必須講清楚。
+/// 雲端同步的狀態列。沒有開關——登入本身就是開關（見 syncSessionProvider）。
+/// 留著這一列是因為「資料有沒有被備份」使用者有權知道；沒登入時更要講清楚
+/// 資料只在這台裝置上，換手機就沒了。
 class _SyncGroup extends ConsumerWidget {
   const _SyncGroup();
 
@@ -314,36 +313,15 @@ class _SyncGroup extends ConsumerWidget {
         children: [
           _SettingsRow(
             key: const ValueKey('sync_status_row'),
-            icon: Icons.cloud_done_outlined,
+            icon: hasAccount
+                ? Icons.cloud_done_outlined
+                : Icons.cloud_off_outlined,
             title: 'settings.sync_status'.tr(),
             subtitle: hasAccount
                 ? 'settings.sync_status_account'.tr()
                 : 'settings.sync_status_anonymous'.tr(),
           ),
-          // 沒登入的人備份是綁在匿名帳號上的，這串 id 是他唯一能拿來要求刪
-          // 除資料的識別碼（隱私政策也是這樣寫的）。不顯示的話，「刪除我的
-          // 資料」這個權利對匿名使用者等於行使不了。
-          if (user != null && !hasAccount)
-            _SettingsRow(
-              key: const ValueKey('sync_account_id_row'),
-              icon: Icons.tag,
-              title: 'settings.sync_account_id'.tr(),
-              subtitle: user.id,
-              trailing: const Icon(Icons.copy_all_outlined, size: 18),
-              onTap: () => _copyAccountId(context, user.id),
-            ),
         ],
-      ),
-    );
-  }
-
-  Future<void> _copyAccountId(BuildContext context, String id) async {
-    await Clipboard.setData(ClipboardData(text: id));
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('settings.sync_account_id_copied'.tr()),
-        behavior: SnackBarBehavior.floating,
       ),
     );
   }
