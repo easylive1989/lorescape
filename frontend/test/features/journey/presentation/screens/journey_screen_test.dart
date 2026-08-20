@@ -331,6 +331,19 @@ void main() {
       expect(find.text('trip.current_badge'), findsOneWidget);
     });
 
+    testWidgets('given the journey screen, when the header is laid out, '
+        'then the floating back button does not overlap the title', (
+      tester,
+    ) async {
+      await _givenJourneyScreen(tester);
+
+      final back = tester.getRect(find.byKey(const Key('floating-back')));
+      final title = tester.getRect(find.text('journey.title'));
+
+      // 返回鈕是浮在頁面上的，大標得自己讓出那塊位置，否則兩者疊在一起。
+      expect(title.left, greaterThanOrEqualTo(back.right));
+    });
+
     testWidgets('given the journey screen pushed from home, '
         'when the user taps the back button, '
         'then it returns to the previous screen', (tester) async {

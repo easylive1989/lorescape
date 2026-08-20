@@ -32,7 +32,14 @@ class _JourneyScreenState extends ConsumerState<JourneyScreen> {
   static const double _globeBottomInset = 322;
 
   /// 標題左緣要讓出的寬度，位置留給浮動返回鈕（[Masthead] 自己已含 22）。
-  static const double _mastheadBackInset = 48 - Masthead.horizontalInset;
+  ///
+  /// 值＝返回鈕的右緣（左緣 ＋ 直徑）再留 8 的間隙，扣掉 Masthead 自帶的
+  /// 內距。寫死成 48 時鈕的右緣（54）會壓到大標的左緣，兩者重疊。
+  static const double _mastheadBackInset =
+      FloatingBackButton.leftInset +
+      FloatingBackButton.size +
+      8 -
+      Masthead.horizontalInset;
 
   /// 使用者選中的那本旅程。
   ///

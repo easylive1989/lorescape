@@ -539,8 +539,6 @@ class _MapTopOverlay extends StatelessWidget {
                       _ShelfButton(onPressed: onOpenShelf),
                       const SizedBox(width: 8),
                       _SettingsButton(onPressed: onOpenSettings),
-                      const SizedBox(width: 8),
-                      _RefreshButton(onPressed: onRefresh),
                     ],
                   ),
                 ),
@@ -553,11 +551,19 @@ class _MapTopOverlay extends StatelessWidget {
                     Masthead.horizontalInset,
                     22,
                   ),
-                  child: _SearchField(
-                    controller: searchController,
-                    onChanged: onSearchChanged,
-                    onSubmitted: onSearchSubmitted,
-                    onClear: onSearchClear,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _SearchField(
+                          controller: searchController,
+                          onChanged: onSearchChanged,
+                          onSubmitted: onSearchSubmitted,
+                          onClear: onSearchClear,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      _RefreshButton(onPressed: onRefresh),
+                    ],
                   ),
                 ),
               ],

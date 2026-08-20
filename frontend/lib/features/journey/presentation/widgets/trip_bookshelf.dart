@@ -100,47 +100,65 @@ class _ShelfHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    return Row(
-      children: [
-        // 可縮：窄螢幕配上長標（翻譯後字數多的語系）時，該讓路的是小標，
-        // 不是右邊那顆按鈕。沒有 Flexible 的話整條 Row 會直接爆版。
-        Flexible(
-          child: Text(
-            caption,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TripBookshelf._captionStyle(context),
+    // 小標只吃自己需要的寬度，剩下全歸中間那條線，pill 才會貼齊右緣。
+    // 曾經是 Flexible(小標) ＋ Expanded(線)：兩個 flex child 會把剩餘寬度
+    // 各分一半，小標那半用不完的部分不會還給線，於是整條 Row 短了一截、
+    // pill 停在半空中。改成非 flex 的小標 ＋ 上限（避免長標把線擠沒）。
+    return LayoutBuilder(
+      builder: (context, constraints) => Row(
+        children: [
+          // 可縮：窄螢幕配上長標（翻譯後字數多的語系）時，該讓路的是小標，
+          // 不是右邊那顆按鈕。沒有這個上限，Row 給非 flex child 的是無限寬，
+          // 長標會直接把整條 Row 撐爆。
+          ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: constraints.maxWidth * 0.45),
+            child: Text(
+              caption,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TripBookshelf._captionStyle(context),
+            ),
           ),
-        ),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Container(height: 1, color: tokens.line),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Container(height: 1, color: tokens.line),
+            ),
           ),
-        ),
-        Semantics(
-          button: true,
-          label: 'journey.shelf_new'.tr(),
-          child: GestureDetector(
-            onTap: onAddTrip,
-            behavior: HitTestBehavior.opaque,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: tokens.paperRaised,
-                border: Border.all(color: tokens.line),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              // 加號用全形文字而不是 Icons.add：設計稿的「＋ 新旅程」是同一
-              // 行 10.5px 的字，換成 icon 會是另一個字重與視覺大小。
-              child: Text(
-                '＋ ${'journey.shelf_new'.tr()}',
-                style: TripBookshelf._captionStyle(context),
+          // pill 同樣得有上限：兩邊都是非 flex child（Row 給的是無限寬），
+          // 45% ＋ 50% 加起來不超過一行，才不會在長翻譯下爆版。
+          ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: constraints.maxWidth * 0.5),
+            child: Semantics(
+              button: true,
+              label: 'journey.shelf_new'.tr(),
+              child: GestureDetector(
+                onTap: onAddTrip,
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: tokens.paperRaised,
+                    border: Border.all(color: tokens.line),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  // 加號用全形文字而不是 Icons.add：設計稿的「＋ 新旅程」是
+                  // 同一行 10.5px 的字，換成 icon 會是另一個字重與視覺大小。
+                  child: Text(
+                    '＋ ${'journey.shelf_new'.tr()}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TripBookshelf._captionStyle(context),
+                  ),
+                ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

@@ -76,6 +76,29 @@ void main() {
     );
 
     testWidgets(
+      'given a short caption, when the header row is rendered, then the '
+      'new-journey pill still sits flush against the shelf right edge',
+      (tester) async {
+        await _givenBookshelf(tester, bookCount: 3, caption: '5');
+
+        // 小標短的時候最容易露餡：小標與分隔線都是 flex child 時，兩者
+        // 平分剩餘寬度，小標用不完的那半不會還給分隔線，pill 就會停在
+        // 半空中而不是貼著右緣。
+        final pill = tester.getRect(
+          find
+              .ancestor(
+                of: find.text('＋ journey.shelf_new'),
+                matching: find.byType(DecoratedBox),
+              )
+              .first,
+        );
+        final shelf = tester.getRect(find.byType(TripBookshelf));
+
+        expect(shelf.right - pill.right, closeTo(22, 0.5));
+      },
+    );
+
+    testWidgets(
       'given any shelf, when it is rendered, then the only way to add a trip '
       'is the header pill',
       (tester) async {
@@ -167,6 +190,7 @@ Future<void> _givenBookshelf(
   required int bookCount,
   int? selectedIndex,
   VoidCallback? onAddTrip,
+  String? caption,
 }) async {
   tester.view.physicalSize = const Size(390 * 3, 900 * 3);
   tester.view.devicePixelRatio = 3;
@@ -177,7 +201,7 @@ Future<void> _givenBookshelf(
     child: Scaffold(
       body: SingleChildScrollView(
         child: TripBookshelf(
-          caption: '$bookCount 本旅程',
+          caption: caption ?? '$bookCount 本旅程',
           onAddTrip: onAddTrip ?? () {},
           books: [
             for (var i = 0; i < bookCount; i++)
