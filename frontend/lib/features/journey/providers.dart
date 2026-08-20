@@ -57,26 +57,46 @@ final worldOutlineProvider = FutureProvider<WorldOutline>(
   (ref) => WorldOutline.load(rootBundle),
 );
 
-/// 某本旅程的停點，只取有座標的記錄。`tripId` 為 `null` 代表未分類那本。
+/// 書架上每一本書一個釘點：那本旅程**最早**、而且有座標的那個故事的地點。
 ///
-/// 舊記錄沒存座標（見 20260819000000 migration），那些就不釘——補 (0,0)
-/// 會在幾內亞灣外海長出一排根本沒去過的點。
+/// 不是「選中那本書的所有停點」——地球儀在這裡的角色是整個書架的鳥瞰，一本
+/// 書一個點，選中哪本就把地球轉過去（見 [globePinIdForTrip]）。
+///
+/// 「最早」用 createdAt 判斷，也就是那趟旅程的起點。最早那筆沒有座標時往後
+/// 找下一筆有座標的——否則整本書只因為第一個故事缺座標就從地球上消失。
 ///
 /// 跟著 [myJourneyProvider] 一起 autoDispose：非 autoDispose 的 provider 會把
 /// 它 watch 的 autoDispose provider 一路釘活，等於讓記錄快取在整個 App 生命
 /// 週期裡再也不會失效、sync 完也不重取。
-final tripGlobePinsProvider = Provider.autoDispose
-    .family<List<GlobePin>, String?>((ref, tripId) {
-      final entries = ref.watch(myJourneyProvider).valueOrNull ?? const [];
-      return [
-        for (final entry in entries)
-          if (entry.tripId == tripId)
-            if (entry.place.latitude case final lat?)
-              if (entry.place.longitude case final lng?)
-                GlobePin(
-                  id: entry.id,
-                  coordinate: LatLng(lat, lng),
-                  label: entry.place.name,
-                ),
-      ];
-    });
+final shelfGlobePinsProvider = Provider.autoDispose<List<GlobePin>>((ref) {
+  final entries = ref.watch(myJourneyProvider).valueOrNull ?? const [];
+
+  final firstByTrip = <String?, JourneyEntry>{};
+  for (final entry in entries) {
+    if (entry.place.latitude == null || entry.place.longitude == null) continue;
+    final current = firstByTrip[entry.tripId];
+    if (current == null || entry.createdAt.isBefore(current.createdAt)) {
+      firstByTrip[entry.tripId] = entry;
+    }
+  }
+
+  final firsts = firstByTrip.entries.toList()
+    ..sort((a, b) => a.value.createdAt.compareTo(b.value.createdAt));
+  return [
+    for (final MapEntry(key: tripId, value: entry) in firsts)
+      GlobePin(
+        id: globePinIdForTrip(tripId),
+        coordinate: LatLng(entry.place.latitude!, entry.place.longitude!),
+        label: entry.place.name,
+      ),
+  ];
+});
+
+/// 釘點 id ↔ 旅程 id 的對應。未分類那本的 tripId 是 null，得換一個不會跟真
+/// 實 id 相撞的字串，點釘點才回得去正確的那本書。
+const String unassignedGlobePinId = '__unassigned__';
+
+String globePinIdForTrip(String? tripId) => tripId ?? unassignedGlobePinId;
+
+String? tripIdForGlobePin(String pinId) =>
+    pinId == unassignedGlobePinId ? null : pinId;

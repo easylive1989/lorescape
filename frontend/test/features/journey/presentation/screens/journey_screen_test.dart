@@ -89,9 +89,9 @@ void main() {
       },
     );
 
-    testWidgets('given a selected trip whose entries have coordinates, '
+    testWidgets('given a trip with several stops, '
         'when the shelf screen renders, '
-        'then the globe pins those stops', (tester) async {
+        'then the globe pins the trip once, not every stop', (tester) async {
       await _givenJourneyScreen(
         tester,
         seededTrips: [buildTrip(id: 't1', name: '義大利')],
@@ -101,8 +101,9 @@ void main() {
         ],
       );
 
+      // 地球儀是整個書架的鳥瞰：一本書一個點。
       final globe = tester.widget<GlobeView>(find.byType(GlobeView));
-      expect(globe.pins, hasLength(2));
+      expect(globe.pins, hasLength(1));
     });
 
     testWidgets('given entries without coordinates, '
@@ -149,8 +150,16 @@ void main() {
         ],
         onTripPush: pushed.add,
       );
+      // 兩本書都在地球上；換選只換對焦的那一個。
       expect(
-        tester.widget<GlobeView>(find.byType(GlobeView)).pins.single.label,
+        tester
+            .widget<GlobeView>(find.byType(GlobeView))
+            .pins
+            .map((p) => p.label),
+        containsAll(['清水寺', '大阪城']),
+      );
+      expect(
+        tester.widget<GlobeView>(find.byType(GlobeView)).focus?.label,
         '清水寺',
       );
 
@@ -158,7 +167,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        tester.widget<GlobeView>(find.byType(GlobeView)).pins.single.label,
+        tester.widget<GlobeView>(find.byType(GlobeView)).focus?.label,
         '大阪城',
       );
       expect(pushed, isEmpty, reason: '第一下只是換選，不該把旅程打開');
@@ -226,18 +235,15 @@ void main() {
       // 畫布被壓扁時圓不會跟著扁——GlobePainter 拿 `size.width / 2 - 3` 當
       // 半徑、`size` 的正中心當圓心，所以半徑仍由「寬」決定，圓會畫到畫布
       // 外面。這裡照它的公式算真正畫出來的下緣，而不是量畫布的邊界。
-      final paintedBottom = canvas.top + canvas.height / 2 + canvas.width / 2 - 3;
+      final paintedBottom =
+          canvas.top + canvas.height / 2 + canvas.width / 2 - 3;
 
       expect(
         paintedBottom,
         lessThanOrEqualTo(tester.getRect(find.byType(TripBookshelf)).top),
         reason: '地球儀畫出來的下緣不能蓋到書架上',
       );
-      expect(
-        canvas.width,
-        canvas.height,
-        reason: '地球是圓的，畫布被壓成長方形就代表圓已經溢出畫布',
-      );
+      expect(canvas.width, canvas.height, reason: '地球是圓的，畫布被壓成長方形就代表圓已經溢出畫布');
     });
 
     testWidgets('given a selected volume, when the shelf loads, '
@@ -269,34 +275,32 @@ void main() {
 
     testWidgets(
       'given two real trips plus loose entries, when the shelf loads, '
-      'then the shelf count is the trip count, not the book count', (
-      tester,
-    ) async {
-      await _givenJourneyScreenWithRealShelfCount(
-        tester,
-        seededTrips: [
-          buildTrip(id: 't1', name: '京都'),
-          buildTrip(id: 't2', name: '大阪'),
-        ],
-        seededJourneys: [journeyEntryWithoutCoords(tripId: null)],
-      );
-
-      // 架上有三本書（兩個旅程 + 未分類），但旅程只有兩個。
-      expect(_bookFinder(), findsNWidgets(3));
-      expect(find.text('2 journeys'), findsOneWidget);
-    });
-
-    testWidgets(
-      'given exactly one real trip, when the shelf loads, '
-      'then the shelf count uses the singular form', (tester) async {
+      'then the shelf count is the trip count, not the book count',
+      (tester) async {
         await _givenJourneyScreenWithRealShelfCount(
           tester,
-          seededTrips: [buildTrip(id: 't1', name: '京都')],
+          seededTrips: [
+            buildTrip(id: 't1', name: '京都'),
+            buildTrip(id: 't2', name: '大阪'),
+          ],
+          seededJourneys: [journeyEntryWithoutCoords(tripId: null)],
         );
 
-        expect(find.text('1 journey'), findsOneWidget);
+        // 架上有三本書（兩個旅程 + 未分類），但旅程只有兩個。
+        expect(_bookFinder(), findsNWidgets(3));
+        expect(find.text('2 journeys'), findsOneWidget);
       },
     );
+
+    testWidgets('given exactly one real trip, when the shelf loads, '
+        'then the shelf count uses the singular form', (tester) async {
+      await _givenJourneyScreenWithRealShelfCount(
+        tester,
+        seededTrips: [buildTrip(id: 't1', name: '京都')],
+      );
+
+      expect(find.text('1 journey'), findsOneWidget);
+    });
 
     testWidgets(
       'given the by-trip shelf under a router, when the user taps the '
@@ -582,9 +586,8 @@ JourneyEntry journeyEntryWithoutCoords({
 Finder _bookFinder() => _bookWhere((label) => label.contains('｜'));
 
 /// 架上書名為 [title] 的那一本。
-Finder _bookNamed(String title) => _bookWhere(
-  (label) => label.startsWith('$title｜'),
-);
+Finder _bookNamed(String title) =>
+    _bookWhere((label) => label.startsWith('$title｜'));
 
 Finder _bookWhere(bool Function(String label) matches) => find.descendant(
   of: find.byType(TripBookshelf),

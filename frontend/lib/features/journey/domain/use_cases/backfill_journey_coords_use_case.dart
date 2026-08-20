@@ -7,7 +7,7 @@ import 'package:logging/logging.dart';
 ///
 /// `place_lat` / `place_lng` 是 2026-08-19 才加的欄位（migration
 /// 20260819000000 明文不回填），寫入端也是同一天才進 App，所以在那之前存下
-/// 來的記錄座標全是 null，`tripGlobePinsProvider` 會整批跳過——地球儀因此一
+/// 來的記錄座標全是 null，`shelfGlobePinsProvider` 會整批跳過——地球儀因此一
 /// 個點都沒有。
 ///
 /// 記錄的 `place.id` 是探索頁存下來的 `wikidata:Q…`，所以座標救得回來：拿

@@ -76,7 +76,13 @@ class _JourneyScreenState extends ConsumerState<JourneyScreen> {
                 top: _globeTopInset,
                 bottom: _globeBottomInset,
               ),
-              child: Center(child: _TripGlobe(tripId: selectedTripId)),
+              child: Center(
+                child: _TripGlobe(
+                  tripId: selectedTripId,
+                  onSelectTrip: (tripId) =>
+                      setState(() => _selectedTripId = tripId),
+                ),
+              ),
             ),
           ),
           Positioned(
@@ -220,9 +226,12 @@ class _Volume {
 
 /// 釘著某本旅程停點的地球儀。輪廓還在載入時先不畫。
 class _TripGlobe extends ConsumerWidget {
-  const _TripGlobe({required this.tripId});
+  const _TripGlobe({required this.tripId, required this.onSelectTrip});
 
   final String? tripId;
+
+  /// 點地球儀上別本書的釘點＝換選那本書（與點書架上的書同一個動作）。
+  final ValueChanged<String?> onSelectTrip;
 
   /// 設計稿在書架頁把地球儀縮到 300（首頁那顆是 344）。
   static const double _size = 300;
@@ -232,11 +241,16 @@ class _TripGlobe extends ConsumerWidget {
     final outline = ref.watch(worldOutlineProvider).asData?.value;
     if (outline == null) return const SizedBox.shrink();
 
-    final pins = ref.watch(tripGlobePinsProvider(tripId));
+    // 一本書一個釘點，選中那本轉過去。找不到（那本書一個有座標的故事都沒
+    // 有）就不轉，地球儀維持原角度。
+    final pins = ref.watch(shelfGlobePinsProvider);
+    final focusId = globePinIdForTrip(tripId);
+    final focus = pins.where((pin) => pin.id == focusId).firstOrNull;
     return GlobeView(
       outline: outline,
       pins: pins,
-      focus: pins.isEmpty ? null : pins.first,
+      focus: focus,
+      onPinTap: (pin) => onSelectTrip(tripIdForGlobePin(pin.id)),
       size: _size,
     );
   }
