@@ -2,6 +2,7 @@ import 'package:context_app/features/auth/providers.dart';
 import 'package:context_app/features/journey/domain/models/journey_entry.dart';
 import 'package:context_app/features/journey/domain/repositories/journey_repository.dart';
 import 'package:context_app/features/sync/data/hive_journey_repository.dart';
+import 'package:context_app/features/sync/data/local_ownership.dart';
 import 'package:context_app/features/sync/data/hive_trip_repository.dart';
 import 'package:context_app/features/sync/data/supabase_journey_remote_data_source.dart';
 import 'package:context_app/features/sync/data/supabase_trip_remote_data_source.dart';
@@ -62,20 +63,52 @@ void _onSession(Ref ref, SyncSession session) {
   // 還沒登入（或只有匿名 session）就什麼都不做。這裡刻意不去催匿名登入：
   // 匿名 session 是給後端 API 認證用的，由 main.dart 負責，與同步無關。
   if (!session.isActive) return;
+  _claimThenSync(ref, session.userId!);
+}
+
+/// 先認領無主資料，再同步。
+///
+/// 順序不能顛倒：fullSync 會把「遠端沒有的本機項目」推上去，而無主資料在
+/// 認領之前對每個帳號都是可見的——先同步的話，未登入期間累積的東西會被推
+/// 給當下這個帳號，之後換帳號再推一次給下一個人。認領等於把「這批東西屬於
+/// 第一個登入的帳號」這件事釘下來。
+Future<void> _claimThenSync(Ref ref, String userId) async {
+  for (final store in ref.read(localOwnershipStoresProvider)) {
+    await store.claimUnowned(userId);
+  }
   // Re-entry 由 SyncCoordinator 自己擋，重複觸發不會疊起來。
-  ref.read(syncCoordinatorProvider).runFullSync();
+  await ref.read(syncCoordinatorProvider).runFullSync();
 }
 
 // ---------------------------------------------------------------------------
 // Local Hive repositories (always used for reads).
 // ---------------------------------------------------------------------------
 
-final localJourneyRepositoryProvider = Provider<JourneyRepository>((ref) {
-  return HiveJourneyRepository();
+/// 讀寫本機資料時「我是誰」。
+///
+/// 這裡用的是**登入身分**（含匿名 session 的 id 為 null 的情況），不是
+/// syncSessionProvider——後者代表「能不能同步」。未登入時存下來的資料是無
+/// 主的，登入時才被認領（見 local_ownership.dart）。
+String? _localOwnerId(Ref ref) {
+  final user = ref.read(currentUserProvider);
+  return (user != null && !user.isAnonymous) ? user.id : null;
+}
+
+final localJourneyRepositoryProvider = Provider<HiveJourneyRepository>((ref) {
+  return HiveJourneyRepository(currentUserId: () => _localOwnerId(ref));
 });
 
-final localTripRepositoryProvider = Provider<TripRepository>((ref) {
-  return HiveTripRepository();
+final localTripRepositoryProvider = Provider<HiveTripRepository>((ref) {
+  return HiveTripRepository(currentUserId: () => _localOwnerId(ref));
+});
+
+/// 需要做擁有者維護的本機儲存。認領與清空都要兩個 box 一起動，漏掉一個就
+/// 會出現「旅程還在、記錄不見」這種半套狀態。
+final localOwnershipStoresProvider = Provider<List<LocalOwnershipStore>>((ref) {
+  return [
+    ref.watch(localJourneyRepositoryProvider),
+    ref.watch(localTripRepositoryProvider),
+  ];
 });
 
 // ---------------------------------------------------------------------------

@@ -41,15 +41,74 @@ JourneyEntry _makeEntry({String id = 'e1', DateTime? createdAt}) {
 
 void main() {
   late HiveJourneyRepository repo;
+  // box 是整台裝置共用的，所以「現在是誰」是這個 repository 的輸入之一。
+  String? currentUserId;
 
   setUp(() async {
     final dir = Directory.systemTemp.createTempSync();
     Hive.init(dir.path);
-    repo = HiveJourneyRepository();
+    currentUserId = null;
+    repo = HiveJourneyRepository(currentUserId: () => currentUserId);
   });
 
   tearDown(() async {
     await Hive.deleteFromDisk();
+  });
+
+  test('given data saved by another account, getAll hides it — a shared '
+      'device must not show one account the other one\'s journeys', () async {
+    currentUserId = 'user-a';
+    await repo.save(_makeEntry(id: 'a1'));
+
+    currentUserId = 'user-b';
+    expect(await repo.getAll(), isEmpty);
+
+    currentUserId = 'user-a';
+    expect((await repo.getAll()).single.id, 'a1');
+  });
+
+  test('given data saved while signed out, getAll shows it to everyone until '
+      'someone claims it', () async {
+    await repo.save(_makeEntry(id: 'u1'));
+
+    currentUserId = 'user-a';
+    expect((await repo.getAll()).single.id, 'u1', reason: '無主資料人人看得到');
+  });
+
+  test('given unowned data, claimUnowned stamps it and it stops being '
+      'visible to other accounts', () async {
+    await repo.save(_makeEntry(id: 'u1'));
+
+    currentUserId = 'user-a';
+    expect(await repo.claimUnowned('user-a'), 1);
+
+    currentUserId = 'user-b';
+    expect(await repo.getAll(), isEmpty, reason: '認領後就只屬於 user-a');
+  });
+
+  test('given data already owned, claimUnowned leaves it alone', () async {
+    currentUserId = 'user-a';
+    await repo.save(_makeEntry(id: 'a1'));
+
+    expect(await repo.claimUnowned('user-b'), 0);
+
+    currentUserId = 'user-a';
+    expect((await repo.getAll()).single.id, 'a1');
+  });
+
+  test('given entries from several accounts, clearAll wipes the device',
+      () async {
+    currentUserId = 'user-a';
+    await repo.save(_makeEntry(id: 'a1'));
+    currentUserId = 'user-b';
+    await repo.save(_makeEntry(id: 'b1'));
+
+    await repo.clearAll();
+
+    currentUserId = 'user-a';
+    expect(await repo.getAll(), isEmpty);
+    currentUserId = 'user-b';
+    expect(await repo.getAll(), isEmpty);
   });
 
   test('getAll returns empty list when no entries saved', () async {

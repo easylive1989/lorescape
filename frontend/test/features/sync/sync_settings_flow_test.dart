@@ -9,6 +9,7 @@
 import 'package:context_app/features/auth/domain/models/auth_user.dart';
 import 'package:context_app/features/auth/providers.dart';
 import 'package:context_app/features/journey/domain/models/journey_entry.dart';
+import 'package:context_app/features/sync/data/local_ownership.dart';
 import 'package:context_app/features/sync/domain/services/sync_coordinator.dart';
 import 'package:context_app/features/sync/domain/services/sync_engine.dart';
 import 'package:context_app/features/sync/providers.dart';
@@ -28,12 +29,34 @@ const _permanentUser = AuthUser(
 
 const _anonymousUser = AuthUser(id: 'anon-7', isAnonymous: true);
 
+/// 記下認領順序，讓「先認領、再同步」這件事驗得到。
+class _SpyOwnershipStore implements LocalOwnershipStore {
+  _SpyOwnershipStore(this.log);
+
+  final List<String> log;
+
+  @override
+  Future<int> claimUnowned(String userId) async {
+    log.add('claim:$userId');
+    return 0;
+  }
+
+  @override
+  Future<void> clearAll() async => log.add('clear');
+}
+
 /// 只數 runFullSync 被呼叫幾次；engine 本身不該被碰到，碰到就是接線錯了。
 class _SpyCoordinator implements SyncCoordinator {
+  _SpyCoordinator([this.log]);
+
+  final List<String>? log;
   int fullSyncCount = 0;
 
   @override
-  Future<void> runFullSync() async => fullSyncCount++;
+  Future<void> runFullSync() async {
+    log?.add('fullSync');
+    fullSyncCount++;
+  }
 
   @override
   SyncEngine<JourneyEntry> get journey => throw UnimplementedError();
@@ -62,6 +85,8 @@ ProviderContainer _container({AuthUser? user, SyncCoordinator? coordinator}) {
       ),
       if (coordinator != null)
         syncCoordinatorProvider.overrideWithValue(coordinator),
+      // 不讓測試碰到真的 Hive box。
+      localOwnershipStoresProvider.overrideWithValue(const []),
     ],
   );
   addTearDown(container.dispose);
@@ -128,6 +153,7 @@ void main() {
         );
 
         container.read(syncBootstrapProvider);
+        await _settle();
 
         expect(coordinator.fullSyncCount, 1);
       },
@@ -151,6 +177,34 @@ void main() {
     );
 
     test(
+      'given local data with no owner, when the session becomes active, then '
+      'it is claimed for that account before anything is pushed',
+      () async {
+        // 順序顛倒的話，未登入期間累積的資料會先被推給當下這個帳號，之後
+        // 換帳號再推一次給下一個人。
+        final log = <String>[];
+        final coordinator = _SpyCoordinator(log);
+        final container = ProviderContainer(
+          overrides: [
+            authServiceProvider.overrideWithValue(
+              FakeAuthService(initialUser: _permanentUser),
+            ),
+            syncCoordinatorProvider.overrideWithValue(coordinator),
+            localOwnershipStoresProvider.overrideWithValue([
+              _SpyOwnershipStore(log),
+            ]),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        container.read(syncBootstrapProvider);
+        await _settle();
+
+        expect(log, ['claim:user-42', 'fullSync']);
+      },
+    );
+
+    test(
       'given an anonymous user who then signs in, when the session becomes '
       'active, then their local data is finally uploaded',
       () async {
@@ -161,6 +215,7 @@ void main() {
           overrides: [
             authServiceProvider.overrideWithValue(auth),
             syncCoordinatorProvider.overrideWithValue(coordinator),
+            localOwnershipStoresProvider.overrideWithValue(const []),
           ],
         );
         addTearDown(container.dispose);

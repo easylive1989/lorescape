@@ -17,15 +17,50 @@ Trip _makeTrip({String id = 't1', DateTime? createdAt}) {
 
 void main() {
   late HiveTripRepository repo;
+  String? currentUserId;
 
   setUp(() async {
     final dir = Directory.systemTemp.createTempSync();
     Hive.init(dir.path);
-    repo = HiveTripRepository();
+    currentUserId = null;
+    repo = HiveTripRepository(currentUserId: () => currentUserId);
   });
 
   tearDown(() async {
     await Hive.deleteFromDisk();
+  });
+
+  test('given a trip saved by another account, both getAll and getById hide '
+      'it — getById is reachable by deep link and stale currentTripId',
+      () async {
+    currentUserId = 'user-a';
+    await repo.save(_makeTrip(id: 'a1'));
+
+    currentUserId = 'user-b';
+    expect(await repo.getAll(), isEmpty);
+    expect(await repo.getById('a1'), isNull);
+
+    currentUserId = 'user-a';
+    expect((await repo.getById('a1'))?.id, 'a1');
+  });
+
+  test('given unowned trips, claimUnowned stamps them for that account',
+      () async {
+    await repo.save(_makeTrip(id: 'u1'));
+
+    expect(await repo.claimUnowned('user-a'), 1);
+
+    currentUserId = 'user-b';
+    expect(await repo.getAll(), isEmpty);
+  });
+
+  test('clearAll wipes trips from every account on the device', () async {
+    currentUserId = 'user-a';
+    await repo.save(_makeTrip(id: 'a1'));
+
+    await repo.clearAll();
+
+    expect(await repo.getAll(), isEmpty);
   });
 
   test('getAll returns empty list when no trips saved', () async {

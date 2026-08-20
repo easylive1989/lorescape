@@ -2,7 +2,10 @@ import 'package:context_app/app/config/lorescape_tokens.dart';
 import 'package:context_app/features/auth/domain/services/auth_service.dart';
 import 'package:context_app/features/auth/providers.dart';
 import 'package:context_app/features/onboarding/providers.dart';
+import 'package:context_app/features/journey/providers.dart';
 import 'package:context_app/features/settings/providers.dart';
+import 'package:context_app/features/sync/providers.dart';
+import 'package:context_app/features/trip/providers.dart';
 import 'package:context_app/features/subscription/providers.dart';
 import 'package:context_app/shared/widgets/adaptive/adaptive_widgets.dart';
 import 'package:context_app/shared/widgets/journal/floating_back_button.dart';
@@ -321,9 +324,48 @@ class _SyncGroup extends ConsumerWidget {
                 ? 'settings.sync_status_account'.tr()
                 : 'settings.sync_status_anonymous'.tr(),
           ),
+          // 共用裝置的出口：別人在這台裝置登入過就會留下本機副本（我們刻意
+          // 不在登出時刪掉，換回原帳號資料才還在），所以要有地方一次清乾淨。
+          _SettingsRow(
+            key: const ValueKey('clear_local_data_row'),
+            icon: Icons.delete_sweep_outlined,
+            title: 'settings.clear_local_data'.tr(),
+            subtitle: 'settings.clear_local_data_subtitle'.tr(),
+            onTap: () => _confirmClearLocalData(context, ref),
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _confirmClearLocalData(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final confirmed = await showAdaptiveAlertDialog<bool>(
+      context: context,
+      title: 'settings.clear_local_data'.tr(),
+      content: 'settings.clear_local_data_confirm'.tr(),
+      actions: [
+        AdaptiveDialogAction(
+          label: 'settings.cancel'.tr(),
+          isDefault: true,
+          result: false,
+        ),
+        AdaptiveDialogAction(
+          label: 'settings.clear_local_data'.tr(),
+          isDestructive: true,
+          result: true,
+        ),
+      ],
+    );
+    if (confirmed != true) return;
+
+    for (final store in ref.read(localOwnershipStoresProvider)) {
+      await store.clearAll();
+    }
+    ref.invalidate(myJourneyProvider);
+    ref.invalidate(tripsProvider);
   }
 }
 
