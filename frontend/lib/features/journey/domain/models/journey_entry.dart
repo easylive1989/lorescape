@@ -1,4 +1,5 @@
 import 'package:context_app/features/explore/domain/models/place.dart';
+import 'package:context_app/features/explore/domain/models/place_location.dart';
 import 'package:context_app/features/journey/domain/models/saved_place.dart';
 import 'package:context_app/features/narration/domain/models/narration_content.dart';
 import 'package:context_app/features/narration/domain/models/story_hook.dart';
@@ -70,6 +71,29 @@ class JourneyEntry {
   JourneyEntry copyWithTripId(String? tripId) => JourneyEntry(
     id: id,
     place: place,
+    narrationContent: narrationContent,
+    storyHook: storyHook,
+    createdAt: createdAt,
+    updatedAt: DateTime.now(),
+    language: language,
+    tripId: tripId,
+  );
+
+  /// 回傳補上地點座標後的副本，給舊記錄回填用（見
+  /// `BackfillJourneyCoordsUseCase`）。
+  ///
+  /// [updatedAt] 一併推到現在：SyncEngine 以 updatedAt 比新舊、新的一邊覆蓋
+  /// 另一邊，不推的話這筆補好的記錄會在下次同步被遠端那份沒座標的覆蓋回去。
+  JourneyEntry copyWithCoordinates(PlaceLocation location) => JourneyEntry(
+    id: id,
+    place: SavedPlace(
+      id: place.id,
+      name: place.name,
+      address: place.address,
+      imageUrl: place.imageUrl,
+      latitude: location.latitude,
+      longitude: location.longitude,
+    ),
     narrationContent: narrationContent,
     storyHook: storyHook,
     createdAt: createdAt,

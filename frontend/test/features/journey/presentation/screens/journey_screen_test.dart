@@ -1,6 +1,8 @@
+import 'package:context_app/features/explore/domain/models/place_location.dart';
 import 'package:context_app/features/journey/domain/globe/world_outline.dart';
 import 'package:context_app/features/journey/domain/models/journey_entry.dart';
 import 'package:context_app/features/journey/domain/models/saved_place.dart';
+import 'package:context_app/features/journey/domain/services/place_coords_resolver.dart';
 import 'package:context_app/features/journey/presentation/screens/journey_screen.dart';
 import 'package:context_app/features/journey/presentation/widgets/globe_view.dart';
 import 'package:context_app/features/journey/presentation/widgets/trip_bookshelf.dart';
@@ -507,6 +509,9 @@ Future<List<Override>> _buildJourneyOverrides({
   return [
     journeyRepositoryProvider.overrideWithValue(journeyRepo),
     tripRepositoryProvider.overrideWithValue(tripRepo),
+    // 書架頁一進來就會觸發舊記錄的座標回填；不換掉 resolver 的話 widget test
+    // 會真的去打 Wikidata。
+    placeCoordsResolverProvider.overrideWithValue(const _OfflineResolver()),
     // 同步給值，地球儀第一幀就畫得出來（真的 provider 要讀 asset）。
     worldOutlineProvider.overrideWith((ref) => _outline),
     if (currentTripIdInitial != null)
@@ -514,6 +519,16 @@ Future<List<Override>> _buildJourneyOverrides({
         () => _StaticCurrentTripIdNotifier(currentTripIdInitial),
       ),
   ];
+}
+
+/// 回填在測試裡一律查不到座標：本檔的斷言都不看地球儀上的點，讓它安靜地
+/// 什麼都不做即可。
+class _OfflineResolver implements PlaceCoordsResolver {
+  const _OfflineResolver();
+
+  @override
+  Future<Map<String, PlaceLocation>> resolve(Set<String> qids) async =>
+      const {};
 }
 
 class _StaticCurrentTripIdNotifier extends CurrentTripIdNotifier {

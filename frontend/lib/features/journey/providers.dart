@@ -2,7 +2,10 @@ import 'package:context_app/features/journey/domain/globe/world_outline.dart';
 import 'package:context_app/features/journey/domain/models/globe_pin.dart';
 import 'package:context_app/features/journey/domain/models/journey_entry.dart';
 import 'package:context_app/features/journey/domain/models/journey_item.dart';
+import 'package:context_app/features/journey/data/services/wikidata_place_coords_service.dart';
 import 'package:context_app/features/journey/domain/repositories/journey_repository.dart';
+import 'package:context_app/features/journey/domain/services/place_coords_resolver.dart';
+import 'package:context_app/features/journey/domain/use_cases/backfill_journey_coords_use_case.dart';
 import 'package:context_app/features/sync/providers.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -31,6 +34,23 @@ final allJourneyItemsProvider = FutureProvider.autoDispose<List<JourneyItem>>((
 
   return items;
 });
+
+/// 舊記錄的座標回填。書架頁進來時跑一次（provider 不是 autoDispose，所以
+/// 一個 App 生命週期只跑一次），補完才 invalidate 記錄清單讓地球儀重畫。
+///
+/// 補不到（離線、WDQS 掛了）就回 0，畫面維持現狀，下次開 App 再試。
+final journeyCoordsBackfillProvider = FutureProvider<int>((ref) async {
+  final filled = await BackfillJourneyCoordsUseCase(
+    repository: ref.read(journeyRepositoryProvider),
+    resolver: ref.read(placeCoordsResolverProvider),
+  )();
+  if (filled > 0) ref.invalidate(myJourneyProvider);
+  return filled;
+});
+
+final placeCoordsResolverProvider = Provider<PlaceCoordsResolver>(
+  (ref) => WikidataPlaceCoordsService(),
+);
 
 /// 地球儀的世界輪廓。只解析一次，書架頁共用。
 final worldOutlineProvider = FutureProvider<WorldOutline>(

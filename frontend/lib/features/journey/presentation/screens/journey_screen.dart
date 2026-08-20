@@ -48,6 +48,15 @@ class _JourneyScreenState extends ConsumerState<JourneyScreen> {
   String? _selectedTripId;
 
   @override
+  void initState() {
+    super.initState();
+    // 舊記錄沒存座標（見 BackfillJourneyCoordsUseCase），不補的話地球儀上一
+    // 個點都沒有。放在這裡而不是 App 啟動時：只有真的看得到地球儀的人才值得
+    // 花那幾個網路請求。
+    ref.read(journeyCoordsBackfillProvider);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final asyncTrips = ref.watch(tripsProvider);
     final counts =

@@ -12,6 +12,11 @@
 places_repository_impl.dart），所以座標救得回來：拿 QID 查 P625 即可。與
 backfill_place_coords.py 同一套作法，只是換一張表。
 
+**注意**：2026-08-20 檢查時四張 sync 表都是 0 筆——sync 是選用的，沒開同步的
+使用者資料只存在裝置本機的 Hive，伺服器上根本沒有東西可補。所以真正修好地球
+儀的是 App 端的一次性回填（`BackfillJourneyCoordsUseCase`，開書架頁時跑）；
+這支 script 是給「已經有同步資料」的情況備用的，現在跑會是 0 筆。
+
 `updated_at` 會一併推到現在。SyncEngine 是以 updated_at 比新舊、新的一邊覆蓋
 另一邊（sync_engine.dart 的 fullSync），不推的話裝置上那份較新的本地記錄會在
 下次同步時把補好的座標推回 null。
