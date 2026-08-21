@@ -9,11 +9,11 @@ class GlobePin extends Equatable {
     required this.label,
   });
 
-  /// 對應的每日故事識別碼（用發布日期字串即可）。
+  /// 對應的旅程 id——點釘點就是選中書架上那本書。
   final String id;
   final LatLng coordinate;
 
-  /// 顯示在點旁邊或紙卡 chip 上的地名。
+  /// 顯示在點旁邊或紙卡 chip 上的旅程名稱。
   final String label;
 
   @override

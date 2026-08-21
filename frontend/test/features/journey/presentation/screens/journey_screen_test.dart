@@ -156,11 +156,11 @@ void main() {
             .widget<GlobeView>(find.byType(GlobeView))
             .pins
             .map((p) => p.label),
-        containsAll(['清水寺', '大阪城']),
+        containsAll(['京都', '大阪']),
       );
       expect(
         tester.widget<GlobeView>(find.byType(GlobeView)).focus?.label,
-        '清水寺',
+        '京都',
       );
 
       await tester.tap(_bookNamed('大阪'));
@@ -168,7 +168,7 @@ void main() {
 
       expect(
         tester.widget<GlobeView>(find.byType(GlobeView)).focus?.label,
-        '大阪城',
+        '大阪',
       );
       expect(pushed, isEmpty, reason: '第一下只是換選，不該把旅程打開');
     });
