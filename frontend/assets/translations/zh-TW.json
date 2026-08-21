@@ -137,17 +137,6 @@
     "select_all": "全選",
     "selected_count": "已選 {} 個"
   },
-  "export": {
-    "menu_item": "匯出 PDF",
-    "generating": "正在產生 PDF…",
-    "success": "匯出完成",
-    "failed": "匯出失敗：{error}",
-    "empty_trip": "此旅程尚無記錄，無法匯出",
-    "some_images_missing": "{count} 張圖片無法下載，已以佔位圖代替",
-    "stamp_label": "已造訪",
-    "entry_count_label": "{count} 個景點",
-    "page_of_total": "景點 {index} / {total}"
-  },
   "explore": {
     "title": "探索",
     "open_shelf": "旅程書架",

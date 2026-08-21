@@ -310,7 +310,7 @@ void main() {
 
       expect(find.text('trip.set_as_current'), findsOneWidget);
       expect(find.text('trip.edit_action'), findsOneWidget);
-      expect(find.text('export.menu_item'), findsOneWidget);
+      expect(find.text('export.menu_item'), findsNothing);
       expect(find.text('trip.delete_action'), findsOneWidget);
     });
 

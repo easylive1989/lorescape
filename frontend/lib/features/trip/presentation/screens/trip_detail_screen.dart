@@ -1,9 +1,6 @@
 import 'dart:async';
 
 import 'package:context_app/core/utils/share_position_origin.dart';
-import 'package:context_app/features/export/domain/models/pdf_export_result.dart';
-import 'package:context_app/features/export/domain/services/trip_pdf_export_service.dart';
-import 'package:context_app/features/export/providers.dart';
 import 'package:context_app/features/journey/domain/models/journey_entry.dart';
 import 'package:context_app/features/journey/domain/models/journey_item.dart';
 import 'package:context_app/shared/widgets/journal/notebook_pager.dart';
@@ -273,10 +270,6 @@ class _TripMenuButton extends ConsumerWidget {
           child: Text('trip.edit_action'.tr()),
         ),
         PopupMenuItem(
-          value: _TripMenuAction.exportPdf,
-          child: Text('export.menu_item'.tr()),
-        ),
-        PopupMenuItem(
           value: _TripMenuAction.delete,
           child: Text(
             'trip.delete_action'.tr(),
@@ -300,8 +293,6 @@ class _TripMenuButton extends ConsumerWidget {
             .setCurrentTripId(isCurrent ? null : tripId);
       case _TripMenuAction.edit:
         if (context.mounted) context.push('/trip/edit/$tripId');
-      case _TripMenuAction.exportPdf:
-        await _exportPdf(context, ref, tripId);
       case _TripMenuAction.delete:
         final confirmed = await _confirmDelete(context);
         if (!confirmed) return;
@@ -344,82 +335,7 @@ class _TripMenuButton extends ConsumerWidget {
   }
 }
 
-enum _TripMenuAction { setCurrent, edit, exportPdf, delete }
-
-Future<void> _exportPdf(
-  BuildContext context,
-  WidgetRef ref,
-  String tripId,
-) async {
-  final messenger = ScaffoldMessenger.of(context);
-
-  showDialog<void>(
-    context: context,
-    barrierDismissible: false,
-    builder: (_) => AlertDialog(
-      content: Row(
-        children: [
-          const CircularProgressIndicator(),
-          const SizedBox(width: 16),
-          Expanded(child: Text('export.generating'.tr())),
-        ],
-      ),
-    ),
-  );
-
-  try {
-    final result = await exportTripAsPdf(
-      ref: ref,
-      context: context,
-      tripId: tripId,
-      strings: _buildExportStrings(),
-    );
-    if (!context.mounted) return;
-    Navigator.of(context, rootNavigator: true).pop();
-    _showResultSnackBar(messenger, result);
-  } on EmptyTripExportException {
-    if (!context.mounted) return;
-    Navigator.of(context, rootNavigator: true).pop();
-    messenger.showSnackBar(SnackBar(content: Text('export.empty_trip'.tr())));
-  } catch (e) {
-    if (!context.mounted) return;
-    Navigator.of(context, rootNavigator: true).pop();
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text('export.failed'.tr(namedArgs: {'error': e.toString()})),
-      ),
-    );
-  }
-}
-
-void _showResultSnackBar(
-  ScaffoldMessengerState messenger,
-  PdfExportResult result,
-) {
-  if (result.hasMissingImages) {
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          'export.some_images_missing'.tr(
-            namedArgs: {'count': '${result.missingImagePlaceNames.length}'},
-          ),
-        ),
-      ),
-    );
-    return;
-  }
-  messenger.showSnackBar(SnackBar(content: Text('export.success'.tr())));
-}
-
-TripPdfExportStrings _buildExportStrings() {
-  return TripPdfExportStrings(
-    stampLabel: 'export.stamp_label'.tr(),
-    appName: 'app.name'.tr(),
-    tagline: 'app.tagline'.tr(),
-    entryCountLabel: 'export.entry_count_label'.tr(),
-    pdfLabels: PdfLabels(pageOfTotal: 'export.page_of_total'.tr()),
-  );
-}
+enum _TripMenuAction { setCurrent, edit, delete }
 
 class _ItemsList extends ConsumerWidget {
   final AsyncValue<List<JourneyItem>> itemsAsync;

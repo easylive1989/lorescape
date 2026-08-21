@@ -136,17 +136,6 @@
     "select_all": "Select all",
     "selected_count": "{} selected"
   },
-  "export": {
-    "menu_item": "Export as PDF",
-    "generating": "Generating PDF…",
-    "success": "Export complete",
-    "failed": "Export failed: {error}",
-    "empty_trip": "This trip has no entries to export",
-    "some_images_missing": "{count} images could not be downloaded and were replaced with placeholders",
-    "stamp_label": "VISITED",
-    "entry_count_label": "{count} places",
-    "page_of_total": "Place {index} / {total}"
-  },
   "explore": {
     "title": "Explore",
     "open_shelf": "Bookshelf",
