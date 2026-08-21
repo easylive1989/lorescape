@@ -107,7 +107,10 @@ class _SelectStoryHookScreenState extends ConsumerState<SelectStoryHookScreen> {
 
   void _navigateToPlayer(NarrationGenerationState genState) {
     ref.read(narrationGenerationControllerProvider.notifier).reset();
-    context.pushNamed(
+    // pushReplacement 而不是 push：hook 選完就沒有回頭的意義（生成狀態已經
+    // reset，退回去只會看到一份選過的清單），把這頁換掉，播放頁的返回鍵才
+    // 會直接落回進來前的那一頁。
+    context.pushReplacementNamed(
       'player',
       extra: {
         'place': widget.place,

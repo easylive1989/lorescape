@@ -163,7 +163,12 @@ class _NarrationHeader extends StatelessWidget {
                   size: 20,
                   color: palette.clay,
                 ),
-                onPressed: () => context.go('/'),
+                // 回上一頁而不是一律回首頁：從旅程手記按重聽進來的要回到那本
+                // 旅程。故事 hook 頁跳來時是 pushReplacement，pop 會落回 hook
+                // 頁的上一頁（首頁／探索），不會退回已經選完的 hook 清單。
+                // 深連結直接開播放頁時堆疊裡沒有上一頁，才退回首頁。
+                onPressed: () =>
+                    context.canPop() ? context.pop() : context.go('/'),
               ),
               const SizedBox(width: 4),
               Expanded(
