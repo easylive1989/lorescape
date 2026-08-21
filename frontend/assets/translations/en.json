@@ -129,6 +129,7 @@
     "set_as_current": "Set as active trip",
     "end_current": "End trip",
     "add_to_trip": "Add to trip",
+    "remove_from_trip": "Remove from trip",
     "move_title": "Move to trip",
     "move_title_batch": "Move {} entries to trip",
     "move_selected": "Move to trip",

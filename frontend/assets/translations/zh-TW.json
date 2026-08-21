@@ -130,6 +130,7 @@
     "set_as_current": "設為當前旅程",
     "end_current": "結束旅程",
     "add_to_trip": "加入旅程",
+    "remove_from_trip": "從旅程中移除",
     "move_title": "移至旅程",
     "move_title_batch": "將 {} 筆記錄移至旅程",
     "move_selected": "移至旅程",

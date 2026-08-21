@@ -38,27 +38,39 @@ void main() {
 
       _thenTripNameIsVisible('Kyoto Temples');
       _thenNotebookPagerIsShown();
-      // 手記本身帶三顆動作；重聽鍵是筆記標題右側的 icon 圓鈕。
-      expect(find.text('trip.add_to_trip'), findsOneWidget);
+      // 這一則已經在這本旅程裡，所以沒有「加入旅程」——只剩分享與刪除。
+      // 重聽鍵是筆記標題右側的 icon 圓鈕。
+      expect(find.text('trip.add_to_trip'), findsNothing);
       expect(find.text('common.share'), findsOneWidget);
       expect(find.text('common.delete'), findsOneWidget);
       expect(find.byIcon(Icons.play_arrow_rounded), findsOneWidget);
     });
 
+    testWidgets('given a loose entry in the uncategorised volume, when it '
+        'renders, then add-to-trip is offered — it belongs to no trip yet', (
+      tester,
+    ) async {
+      await _givenTripDetailScreen(
+        tester,
+        tripId: null,
+        seededJourneys: [buildJourneyEntry(id: 'e1', tripId: null)],
+      );
+
+      expect(find.text('trip.add_to_trip'), findsOneWidget);
+    });
+
     testWidgets(
-      'given a trip entry in reading mode, when the user taps add-to-trip, '
+      'given a loose entry in reading mode, when the user taps add-to-trip, '
       'then the move-to-trip sheet opens',
       (tester) async {
-        final trip = buildTrip(id: 'kyoto', name: 'Kyoto Temples');
-        final entry = buildJourneyEntry(id: 'e1', tripId: 'kyoto');
         final tripRepo = InMemoryTripRepository();
         final journeyRepo = InMemoryJourneyRepository();
-        await tripRepo.save(trip);
-        await journeyRepo.save(entry);
+        await tripRepo.save(buildTrip(id: 'kyoto', name: 'Kyoto Temples'));
+        await journeyRepo.save(buildJourneyEntry(id: 'e1', tripId: null));
 
         await _givenTripDetailScreenWithRouter(
           tester,
-          tripId: 'kyoto',
+          tripId: null,
           tripRepo: tripRepo,
           journeyRepo: journeyRepo,
         );
@@ -71,25 +83,72 @@ void main() {
     );
 
     testWidgets(
-      'given a trip entry in reading mode, when the user confirms delete, '
-      'then the entry is removed from the repository',
+      'given a trip entry in reading mode, when the user taps delete, '
+      'then a sheet asks whether to remove it from the trip or delete it',
       (tester) async {
-        final trip = buildTrip(id: 'kyoto', name: 'Kyoto Temples');
-        final entry = buildJourneyEntry(id: 'e1', tripId: 'kyoto');
+        await _givenTripEntryUnderRouter(tester);
+
+        await tester.tap(find.text('common.delete'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('trip.remove_from_trip'), findsOneWidget);
+        expect(find.text('journey.delete_confirm'), findsOneWidget);
+        expect(find.text('trip.cancel'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'given that sheet, when the user picks remove-from-trip, then the entry '
+      'moves back to uncategorised instead of being deleted',
+      (tester) async {
+        final journeyRepo = await _givenTripEntryUnderRouter(tester);
+
+        await tester.tap(find.text('common.delete'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('trip.remove_from_trip'));
+        await tester.pumpAndSettle();
+
+        final remaining = await journeyRepo.getAll();
+        expect(remaining, hasLength(1));
+        expect(remaining.single.tripId, isNull);
+      },
+    );
+
+    testWidgets(
+      'given that sheet, when the user picks delete, then the entry is '
+      'removed from the repository',
+      (tester) async {
+        final journeyRepo = await _givenTripEntryUnderRouter(tester);
+
+        await tester.tap(find.text('common.delete'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('journey.delete_confirm'));
+        await tester.pumpAndSettle();
+
+        expect(await journeyRepo.getAll(), isEmpty);
+      },
+    );
+
+    testWidgets(
+      'given a loose entry in reading mode, when the user taps delete, then '
+      'the plain confirm dialog is shown — there is no trip to remove it from',
+      (tester) async {
         final tripRepo = InMemoryTripRepository();
         final journeyRepo = InMemoryJourneyRepository();
-        await tripRepo.save(trip);
-        await journeyRepo.save(entry);
+        await journeyRepo.save(buildJourneyEntry(id: 'e1', tripId: null));
 
         await _givenTripDetailScreenWithRouter(
           tester,
-          tripId: 'kyoto',
+          tripId: null,
           tripRepo: tripRepo,
           journeyRepo: journeyRepo,
         );
 
         await tester.tap(find.text('common.delete'));
         await tester.pumpAndSettle();
+        expect(find.text('trip.remove_from_trip'), findsNothing);
+        expect(find.text('journey.delete_message'), findsOneWidget);
+
         await tester.tap(find.text('journey.delete_confirm'));
         await tester.pumpAndSettle();
 
@@ -466,6 +525,25 @@ void main() {
       },
     );
   });
+}
+
+/// 一則已經收在旅程裡的記錄，開在 router 底下——刪除鍵的 action sheet 相關
+/// 測試共用這個起點。
+Future<InMemoryJourneyRepository> _givenTripEntryUnderRouter(
+  WidgetTester tester,
+) async {
+  final tripRepo = InMemoryTripRepository();
+  final journeyRepo = InMemoryJourneyRepository();
+  await tripRepo.save(buildTrip(id: 'kyoto', name: 'Kyoto Temples'));
+  await journeyRepo.save(buildJourneyEntry(id: 'e1', tripId: 'kyoto'));
+
+  await _givenTripDetailScreenWithRouter(
+    tester,
+    tripId: 'kyoto',
+    tripRepo: tripRepo,
+    journeyRepo: journeyRepo,
+  );
+  return journeyRepo;
 }
 
 Future<void> _givenTripDetailScreen(

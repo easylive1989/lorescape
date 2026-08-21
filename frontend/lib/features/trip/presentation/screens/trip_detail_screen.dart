@@ -395,7 +395,54 @@ class _ItemsList extends ConsumerWidget {
     );
   }
 
+  /// 這一則已經在某本旅程裡時，刪除鍵先問清楚意圖：多半只是想把它移出這本
+  /// 旅程（回到未分類），而不是把整篇記錄砍掉。未分類的沒有這個歧義，直接
+  /// 走原本的刪除確認對話框。
   Future<void> _delete(
+    BuildContext context,
+    WidgetRef ref,
+    JourneyEntry entry,
+  ) {
+    return entry.tripId == null
+        ? _confirmDeleteLooseEntry(context, ref, entry)
+        : _askRemoveOrDelete(context, ref, entry);
+  }
+
+  Future<void> _askRemoveOrDelete(
+    BuildContext context,
+    WidgetRef ref,
+    JourneyEntry entry,
+  ) async {
+    final action = await showAdaptiveActionSheet<_EntryDeleteAction>(
+      context: context,
+      title: entry.place.name,
+      actions: [
+        AdaptiveDialogAction(
+          label: 'trip.remove_from_trip'.tr(),
+          result: _EntryDeleteAction.removeFromTrip,
+        ),
+        AdaptiveDialogAction(
+          label: 'journey.delete_confirm'.tr(),
+          isDestructive: true,
+          result: _EntryDeleteAction.deleteEntry,
+        ),
+      ],
+      cancelLabel: 'trip.cancel'.tr(),
+    );
+    final journeyRepo = ref.read(journeyRepositoryProvider);
+    switch (action) {
+      case null:
+        return;
+      case _EntryDeleteAction.removeFromTrip:
+        await journeyRepo.save(entry.copyWithTripId(null));
+      case _EntryDeleteAction.deleteEntry:
+        // action sheet 上的紅字本身就是確認，不再多問一次。
+        await journeyRepo.delete(entry.id);
+    }
+    ref.invalidate(allJourneyItemsProvider);
+  }
+
+  Future<void> _confirmDeleteLooseEntry(
     BuildContext context,
     WidgetRef ref,
     JourneyEntry entry,
@@ -439,7 +486,11 @@ class _ItemsList extends ConsumerWidget {
                     address: entry.place.address,
                     imageUrl: entry.place.imageUrl,
                     onReplay: () => _replay(context, entry),
-                    onAddToTrip: () => _addToTrip(context, ref, entry),
+                    // 已經在某本旅程裡的記錄不顯示「加入旅程」——它已經加
+                    // 過了；要換一本走多選的「移至旅程」，要移出走刪除鍵。
+                    onAddToTrip: entry.tripId == null
+                        ? () => _addToTrip(context, ref, entry)
+                        : null,
                     onShare: () => _share(context, entry),
                     onDelete: () => _delete(context, ref, entry),
                   ),
@@ -482,6 +533,9 @@ class _ItemsList extends ConsumerWidget {
     );
   }
 }
+
+/// 旅程裡的一則記錄，按下刪除鍵後的兩種意圖。
+enum _EntryDeleteAction { removeFromTrip, deleteEntry }
 
 class _SelectableEntry extends StatelessWidget {
   final bool isSelected;

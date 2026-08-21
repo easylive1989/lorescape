@@ -4,6 +4,7 @@
 /// match the host platform's UX conventions.
 library;
 
+export 'adaptive_action_sheet.dart';
 export 'adaptive_bottom_sheet.dart';
 export 'adaptive_button.dart';
 export 'adaptive_dialog.dart';
