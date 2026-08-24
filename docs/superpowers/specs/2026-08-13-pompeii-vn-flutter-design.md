@@ -1,10 +1,10 @@
 # 龐貝景點包：Flutter 視覺小說引擎
 
-> **後記（2026-08-14）**：專案目錄最終定名為 `story/`（本文件寫作時暫稱 `vn/`），Dart package 為 `lorescape_story`。素材格式最終採用 WebP（143 MB → 8 MB，alpha 無損），非本文件 §決策 5 所寫的 PNG。
+> **後記（2026-08-14，路徑於 2026-08-24 更新）**：專案目錄最終定名為 `story/`（本文件寫作時暫稱 `vn/`，全文已改成定名後的寫法），Dart package 為 `lorescape_story`。素材格式最終採用 WebP（143 MB → 8 MB，alpha 無損），非本文件 §決策 5 所寫的 PNG。
 
 
 **日期**：2026-08-13
-**範圍**：新增 `vn/`（獨立 Flutter 專案，先跑 Flutter Web 驗證）；移除 `story/`（Vite + React SPA）
+**範圍**：新增 `story/`（獨立 Flutter 專案，先跑 Flutter Web 驗證）；移除同名的舊 `story/`（Vite + React SPA）
 **內容來源**：`writer/創作/龐貝/`（不進版控的 Obsidian vault，8 篇 `story.json` + 60 張美術）
 
 ## 問題
@@ -28,7 +28,7 @@ repo 裡現有的播放器是 `story/`（React SPA），它讀的是另一套 `s
 以下五項在設計討論中定案，是本規格的前提：
 
 1. **載體 = Flutter**，不繼續用 React。先跑 **Flutter Web** 驗證，確認後搬進 `frontend/`（Lorescape App）。
-2. **獨立專案 `vn/`**，不直接寫進 `frontend/`。但**程式結構必須是一包能整包搬進 `frontend/lib/features/visual_novel/` 的模組**。
+2. **獨立專案 `story/`**，不直接寫進 `frontend/`。但**程式結構必須是一包能整包搬進 `frontend/lib/features/visual_novel/` 的模組**。
 3. **8 篇一次到位**，不做單篇垂直切片。
 4. **`story/` 整個刪掉**，含兩篇舊劇本（`pompeii-bakery`、`tower-of-london-anne`）、引擎、`/editor` 工作台與 `plugins/editor-api/`。
 5. **不轉 WebP**。開發期直接用 PNG（`Flutter製作規範` §4.1 本來就把轉檔排在送審前）。
@@ -38,7 +38,7 @@ repo 裡現有的播放器是 `story/`（React SPA），它讀的是另一套 `s
 - **不做音訊。** 26 個 `sfx` id、15 個 `bgm` id 全部不存在，整包無聲。引擎照 `missingAssets` 靜音降級，留介面但不接播放套件。
 - **不做購買與解鎖。** `Flutter製作規範` §5.8 的景點包買斷／訂閱，等搬進 `frontend/` 再接既有的 RevenueCat。
 - **不做編輯器。** 劇本的唯一來源是 `writer/` 的 `story.json`，校稿走 `story_tool.py check` / `render`。
-- **不改劇本內容。** `story.json` 逐字複製進 `vn/assets/`，一個字不動。
+- **不改劇本內容。** `story.json` 逐字複製進 `story/assets/`，一個字不動。
 - **不做英文版。**
 
 ## 內容盤點（實測，非估算）
@@ -88,7 +88,7 @@ repo 裡現有的播放器是 `story/`（React SPA），它讀的是另一套 `s
 ### 1. 專案結構
 
 ```
-vn/
+story/
 ├── .fvmrc                    { "flutter": "3.44.2" }  ← 對齊 frontend/
 ├── pubspec.yaml
 ├── web/
@@ -223,7 +223,7 @@ PlayState choose(Story story, PlayState state, int i);    // 選第 i 個「可�
 - **`cg`**：全螢幕圖，`hideDialogue` 時關掉對話框，點擊繼續。
 - **`sfx` / `bgm`**：走 `AudioPort` 介面，本輪的實作是 no-op（見 §7）。
 
-**直式鎖定**：`vn/` 只跑直式。Web 上以 `AspectRatio` 9:16 置中呈現，兩側留黑，模擬手機。
+**直式鎖定**：`story/` 只跑直式。Web 上以 `AspectRatio` 9:16 置中呈現，兩側留黑，模擬手機。
 
 ### 5. 功能
 
@@ -250,17 +250,17 @@ PlayState choose(Story story, PlayState state, int i);    // 選第 i 個「可�
 
 `readNodes` 與 `endingsSeen` **另存兩份全域鍵**（跨 8 篇共用），`readNodes` 是排序後的字串陣列。8 篇合計 2,296 個唯一鍵、平均長 7 字元，全部讀完約 16 KB 原始字串（含 JSON 引號與逗號約 35 KB）——`shared_preferences` 吃得下，規範 §6 提到的 bitset 壓縮先不做。
 
-### 6. 匯入腳本（`vn/tool/import_pack.py`）
+### 6. 匯入腳本（`story/tool/import_pack.py`）
 
 純 Python + PIL + numpy（環境已有 PIL 12.1.1 / numpy 1.26.4）。可重跑，`writer/` 更新後重跑即同步。
 
 ```
-python3 vn/tool/import_pack.py [--webp] [--no-cache]
+python3 story/tool/import_pack.py [--webp] [--no-cache]
 ```
 
 流程：
 
-1. **複製劇本**：`writer/創作/龐貝/stories/<n>_<中文>/story.json` → `vn/assets/content/pompeii-79/stories/<order>-<slug>/story.json`，**逐字複製**。slug 取自 `meta.id` 去掉 `pompeii_NN_` 前綴。
+1. **複製劇本**：`writer/創作/龐貝/stories/<n>_<中文>/story.json` → `story/assets/content/pompeii-79/stories/<order>-<slug>/story.json`，**逐字複製**。slug 取自 `meta.id` 去掉 `pompeii_NN_` 前綴。
 2. **去重資產**：116 份參照 → 60 個檔案，依 basename 攤平成 `assets/backgrounds/` 與 `assets/sprites/`。`cg_*.png` 歸 `backgrounds/`（來源就放那裡）。**衝突偵測**：同名不同 hash 即中止並報錯。
 3. **立繪去背**：平灰底 → alpha。四邊界種子的容差 flood fill（8 連通）→ 邊緣 1px 羽化。只處理 `sprites/`，背景不動。
 4. **表情對齊**：同角色的差分對基底做**正規化互相關的縮放 + 平移搜尋**（縮放 0.92–1.08、平移 ±64px，先在 1/4 解析度粗搜再細修），輸出對齊後的差分。
@@ -270,7 +270,7 @@ python3 vn/tool/import_pack.py [--webp] [--no-cache]
 7. **驗證**：每篇 `story.json` 參照的每個背景、立繪、CG 檔案都在；不在就中止。
 8. `--webp`：轉 WebP（背景 q80、立繪 q85 帶 alpha）。**預設關閉**，送審前才開。
 
-**對照圖**：去背與對齊各輸出一張 before/after 拼接圖到 `vn/tool/_review/`，供人工驗收（風險 1、2 的處置）。
+**對照圖**：去背與對齊各輸出一張 before/after 拼接圖到 `story/tool/_review/`，供人工驗收（風險 1、2 的處置）。
 
 ### 7. 音訊與缺件降級
 
@@ -291,7 +291,7 @@ go_router，`storyId` 用 `meta.id`。
 
 ### 9. 刪除
 
-移除整個 `story/` 目錄（Vite + React SPA、兩篇舊劇本共 30 MB、`src/editor/` 15 檔、`plugins/editor-api/`）。同步更新 `CLAUDE.md` 的 repo 結構表：拿掉 `story/` 那列，加上 `vn/`。
+移除整個 `story/` 目錄（Vite + React SPA、兩篇舊劇本共 30 MB、`src/editor/` 15 檔、`plugins/editor-api/`）。同步更新 `CLAUDE.md` 的 repo 結構表：把 `story/` 那列從 React SPA 改寫成新的 Flutter 專案。
 
 ## 測試
 
@@ -312,7 +312,7 @@ go_router，`storyId` 用 `meta.id`。
 8. **分歧覆蓋**：每個 `choice` 的每個選項、每個 `if` 的兩側，至少被走過一次。
 9. **無死路**：任一組合都能走到某個結局，不會卡在沒有出口的節點。
 10. **變數邊界**：所有路徑上的變數不超過宣告的 `max`。
-11. **資產完整**：每個參照的檔案都在 `vn/assets/` 內。
+11. **資產完整**：每個參照的檔案都在 `story/assets/` 內。
 12. **文字長度**：所有 `n` / `d` 節點文字 ≤ 60 字（規範 §2 的硬規則；實測最長 57）。
 
 ### Widget test（`fvm flutter test`）
@@ -339,7 +339,7 @@ go_router，`storyId` 用 `meta.id`。
 | 3 | **Web 首次載圖延遲**——單張 2.5 MB PNG 走 HTTP | 進場卡頓 | `precacheImage` 預載下一節點的背景與立繪；搬手機端後消失 |
 | 4 | **整包無聲** | 災難敘事失去「時鐘」（規範 §5.4 說音效優先於美術精細度） | 本輪不解決，`AudioPort` 留介面 |
 | 5 | **搬進 `frontend/` 的架構債** | 屆時要大改 | `providers.dart` 當唯一公開介面、`domain/` 零 Flutter 依賴，這兩條從第一天守住 |
-| 6 | **`writer/` 不進版控** | 內容來源只在本機 Obsidian vault | 匯入後的 `vn/assets/content/` 進版控，等於一份快照 |
+| 6 | **`writer/` 不進版控** | 內容來源只在本機 Obsidian vault | 匯入後的 `story/assets/content/` 進版控，等於一份快照 |
 
 ## 未決（不阻擋本輪）
 

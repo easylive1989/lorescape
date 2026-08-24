@@ -1,11 +1,11 @@
 # 龐貝景點包 Flutter 視覺小說引擎 Implementation Plan
 
-> **後記（2026-08-14）**：本計畫全文的 `vn/` 最終定名為 `story/`，`package:lorescape_vn/` 為 `package:lorescape_story/`。素材改用 WebP（見最後一個 commit）。閱讀時請自行對應。
+> **後記（2026-08-14，路徑於 2026-08-24 更新）**：本計畫寫作時專案暫稱 `vn/`（package `lorescape_vn`），最終定名為 `story/`（`lorescape_story`）；全文的路徑與 package 名已改成定名後的寫法。兩個例外刻意保留當時的 `vn` 字樣，因為它們對應既成事實：各 task 的 commit 訊息（`feat(vn):` 等 scope 與訊息內的路徑，對得上 git history），以及 SharedPreferences 鍵的 `vn.` 前綴（程式碼至今如此）。素材改用 WebP（見最後一個 commit）。
 
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 新開獨立 Flutter 專案 `vn/`，在 Flutter Web 上播放 `writer/創作/龐貝/` 已完成的 8 篇視覺小說（73 場、2,380 節點、24 結局、60 張美術），並移除舊的 `story/` React SPA。
+**Goal:** 新開獨立 Flutter 專案 `story/`，在 Flutter Web 上播放 `writer/創作/龐貝/` 已完成的 8 篇視覺小說（73 場、2,380 節點、24 結局、60 張美術），並移除同名的舊 `story/`（Vite + React SPA，正是被這個新專案取代掉的那個目錄）。
 
 **Architecture:** 純 Dart 執行器（節點指標 ＝ 呼叫堆疊的投影）＋ Flutter 直式版面。所有程式碼收在 `lib/src/visual_novel/`，`domain/` 零 Flutter 依賴，`providers.dart` 是唯一對外介面——這一包日後整包搬進 `frontend/lib/features/visual_novel/`。素材由 `tool/import_pack.py` 從 writer vault 匯入（去背、對齊、去重）。
 
@@ -15,11 +15,11 @@
 
 ## Global Constraints
 
-- **Flutter 版本**：`vn/.fvmrc` 必須是 `{ "flutter": "3.44.2" }`，與 `frontend/` 一致。一律用 `fvm flutter` / `fvm dart` 執行指令。
-- **每個 task 結束前**必須跑 `cd vn && fvm flutter analyze --fatal-infos`，零問題才算完成。
+- **Flutter 版本**：`story/.fvmrc` 必須是 `{ "flutter": "3.44.2" }`，與 `frontend/` 一致。一律用 `fvm flutter` / `fvm dart` 執行指令。
+- **每個 task 結束前**必須跑 `cd story && fvm flutter analyze --fatal-infos`，零問題才算完成。
 - **`lib/src/visual_novel/domain/` 零 Flutter 依賴**：只可 import `dart:*`。不得 import `package:flutter/*`。這條是搬進 `frontend/` 的前提。
-- **跨層引用只能經 `providers.dart`**：`presentation/` 底下的**每一個**檔案都只准 import `package:lorescape_vn/src/visual_novel/providers.dart`，不得直接 import `data/` 或 `domain/` 下的任何檔案。**沒有例外**——包含被 `providers.dart` re-export 的 `play_controller.dart`：它用具名 `show` 就能拿到需要的型別與函式，循環 export 在 Dart 是合法的。規則愈簡單愈守得住，而且這條由 `test/architecture/import_rules_test.dart` 機器守門。
-- **lint**：`vn/analysis_options.yaml` 直接複製 `frontend/analysis_options.yaml`（含 `always_declare_return_types`、`prefer_final_locals`、`always_use_package_imports`、`prefer_single_quotes`、`avoid_print`）。
+- **跨層引用只能經 `providers.dart`**：`presentation/` 底下的**每一個**檔案都只准 import `package:lorescape_story/src/visual_novel/providers.dart`，不得直接 import `data/` 或 `domain/` 下的任何檔案。**沒有例外**——包含被 `providers.dart` re-export 的 `play_controller.dart`：它用具名 `show` 就能拿到需要的型別與函式，循環 export 在 Dart 是合法的。規則愈簡單愈守得住，而且這條由 `test/architecture/import_rules_test.dart` 機器守門。
+- **lint**：`story/analysis_options.yaml` 直接複製 `frontend/analysis_options.yaml`（含 `always_declare_return_types`、`prefer_final_locals`、`always_use_package_imports`、`prefer_single_quotes`、`avoid_print`）。
 - **劇本逐字複製**：`story.json` 的內容一個字都不改。任何「修劇本」的念頭都要回報而不是動手。
 - **文件用繁體中文**（技術名詞除外）。
 - **內容來源路徑**：`writer/創作/龐貝/stories/<NN>_<中文名>/`（含 CJK 與底線，路徑要引號包好）。
@@ -29,9 +29,9 @@
 
 去重後仍有 **60 張 PNG、約 133 MB**。這是**從 writer vault 可完整重生**的二進位檔，進 git 會永久撐大 repo。因此：
 
-- `vn/.gitignore` 排除 `assets/content/**/assets/**`（圖檔）
+- `story/.gitignore` 排除 `assets/content/**/assets/**`（圖檔）
 - **進版控**：`story.json` ×8、`pack.json`、`tool/import_pack.py`（合計約 330 KB 純文字）
-- 新環境或 CI 要跑起來，先執行 `python3 vn/tool/import_pack.py`
+- 新環境或 CI 要跑起來，先執行 `python3 story/tool/import_pack.py`
 
 > ⚠️ 代價：`writer/` 本身不在版控裡，圖檔的唯一副本是本機 Obsidian vault。這一點與現況相同（今天圖也只在 vault），不是本計畫造成的新風險，但要知道。
 
@@ -39,8 +39,8 @@
 
 | 檔案 | 責任 |
 |---|---|
-| `vn/tool/import_pack.py` | writer → assets 的匯入：複製劇本、去重、去背、對齊、產 pack.json、驗證 |
-| `vn/lib/main.dart` | 薄殼：`ProviderScope` ＋ `MaterialApp.router`。搬進 frontend 時丟掉 |
+| `story/tool/import_pack.py` | writer → assets 的匯入：複製劇本、去重、去背、對齊、產 pack.json、驗證 |
+| `story/lib/main.dart` | 薄殼：`ProviderScope` ＋ `MaterialApp.router`。搬進 frontend 時丟掉 |
 | `…/visual_novel/providers.dart` | 唯一公開介面：re-export domain 型別與所有 provider |
 | `…/domain/story.dart` | `Story` / `Scene` / `StoryNode`(sealed 11 型) / `Condition` / `ChoiceOption` / `BranchRule` |
 | `…/domain/cursor.dart` | `CursorStep` / `Cursor`：序列化、已讀鍵 |
@@ -63,12 +63,12 @@
 
 ---
 
-### Task 1: `vn/` Flutter 專案骨架
+### Task 1: `story/` Flutter 專案骨架
 
 **Files:**
-- Create: `vn/`（`flutter create` 產生）、`vn/.fvmrc`、`vn/analysis_options.yaml`、`vn/.gitignore`
-- Modify: `vn/pubspec.yaml`、`vn/lib/main.dart`
-- Test: `vn/test/smoke_test.dart`
+- Create: `story/`（`flutter create` 產生）、`story/.fvmrc`、`story/analysis_options.yaml`、`story/.gitignore`
+- Modify: `story/pubspec.yaml`、`story/lib/main.dart`
+- Test: `story/test/smoke_test.dart`
 
 **Interfaces:**
 - Consumes: 無
@@ -79,14 +79,14 @@
 ```bash
 cd /Users/paulwu/Documents/PLRepo/lorescape
 fvm use 3.44.2 --force --directory . 2>/dev/null || true
-mkdir -p vn && cd vn
+mkdir -p story && cd story
 echo '{ "flutter": "3.44.2" }' > .fvmrc
-fvm flutter create --project-name lorescape_vn --platforms web --empty .
+fvm flutter create --project-name lorescape_story --platforms web --empty .
 ```
 
 - [ ] **Step 2: 寫 pubspec 依賴**
 
-把 `vn/pubspec.yaml` 的 `dependencies` / `dev_dependencies` 換成：
+把 `story/pubspec.yaml` 的 `dependencies` / `dev_dependencies` 換成：
 
 ```yaml
 dependencies:
@@ -117,8 +117,8 @@ flutter:
 
 ```bash
 cd /Users/paulwu/Documents/PLRepo/lorescape
-cp frontend/analysis_options.yaml vn/analysis_options.yaml
-cat >> vn/.gitignore <<'EOF'
+cp frontend/analysis_options.yaml story/analysis_options.yaml
+cat >> story/.gitignore <<'EOF'
 
 # 匯入的美術素材：可由 tool/import_pack.py 從 writer vault 重生，不進版控
 assets/content/**/assets/backgrounds/
@@ -130,7 +130,7 @@ EOF
 
 - [ ] **Step 4: 寫 main.dart**
 
-`vn/lib/main.dart`：
+`story/lib/main.dart`：
 
 ```dart
 import 'package:flutter/material.dart';
@@ -165,11 +165,11 @@ class VnApp extends StatelessWidget {
 
 - [ ] **Step 5: 寫 smoke test**
 
-`vn/test/smoke_test.dart`：
+`story/test/smoke_test.dart`：
 
 ```dart
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lorescape_vn/main.dart';
+import 'package:lorescape_story/main.dart';
 
 void main() {
   testWidgets('啟動時顯示景點包名稱', (tester) async {
@@ -182,7 +182,7 @@ void main() {
 - [ ] **Step 6: 跑測試與 analyze**
 
 ```bash
-cd vn && fvm flutter pub get && fvm flutter test && fvm flutter analyze --fatal-infos
+cd story && fvm flutter pub get && fvm flutter test && fvm flutter analyze --fatal-infos
 ```
 
 Expected: 測試 PASS、analyze 零問題。
@@ -191,7 +191,7 @@ Expected: 測試 PASS、analyze 零問題。
 
 ```bash
 cd /Users/paulwu/Documents/PLRepo/lorescape
-git add vn/
+git add story/
 git commit -m "feat(vn): Flutter 專案骨架，鎖 3.44.2 對齊 frontend"
 ```
 
@@ -200,16 +200,16 @@ git commit -m "feat(vn): Flutter 專案骨架，鎖 3.44.2 對齊 frontend"
 ### Task 2: 匯入腳本 v1 — 劇本複製、資產去重、pack.json、驗證
 
 **Files:**
-- Create: `vn/tool/import_pack.py`
-- Modify: `vn/pubspec.yaml`（Step 5 補 assets 宣告）
-- Test: `vn/tool/test_import_pack.py`
+- Create: `story/tool/import_pack.py`
+- Modify: `story/pubspec.yaml`（Step 5 補 assets 宣告）
+- Test: `story/tool/test_import_pack.py`
 
 **Interfaces:**
 - Consumes: `writer/創作/龐貝/stories/*/story.json` 與 `*/assets/{backgrounds,sprites}/*.png`
 - Produces:
-  - `vn/assets/content/pompeii-79/stories/<order>-<slug>/story.json`（逐字複製）
-  - `vn/assets/content/pompeii-79/assets/{backgrounds,sprites}/*.png`（去重）
-  - `vn/assets/content/pompeii-79/pack.json`，形狀為：
+  - `story/assets/content/pompeii-79/stories/<order>-<slug>/story.json`（逐字複製）
+  - `story/assets/content/pompeii-79/assets/{backgrounds,sprites}/*.png`（去重）
+  - `story/assets/content/pompeii-79/pack.json`，形狀為：
     ```json
     { "id": "pompeii_79", "title": "龐貝 79", "place": "龐貝",
       "blurb": "…", "stories": [
@@ -220,12 +220,12 @@ git commit -m "feat(vn): Flutter 專案骨架，鎖 3.44.2 對齊 frontend"
 
 - [ ] **Step 1: 寫失敗的測試**
 
-`vn/tool/test_import_pack.py`：
+`story/tool/test_import_pack.py`：
 
 ```python
 import json, subprocess, sys, pathlib
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-OUT = ROOT / 'vn/assets/content/pompeii-79'
+OUT = ROOT / 'story/assets/content/pompeii-79'
 
 def test_slug_strips_order_prefix():
     sys.path.insert(0, str(pathlib.Path(__file__).parent))
@@ -234,7 +234,7 @@ def test_slug_strips_order_prefix():
     assert slug_of('pompeii_08_the_new_house') == '08-the-new-house'
 
 def test_import_produces_eight_stories_and_dedup_assets():
-    subprocess.run([sys.executable, str(ROOT / 'vn/tool/import_pack.py')], check=True)
+    subprocess.run([sys.executable, str(ROOT / 'story/tool/import_pack.py')], check=True)
     pack = json.loads((OUT / 'pack.json').read_text(encoding='utf-8'))
     assert len(pack['stories']) == 8
     assert [s['order'] for s in pack['stories']] == list(range(1, 9))
@@ -261,19 +261,19 @@ def test_every_referenced_asset_exists():
 
 - [ ] **Step 2: 跑測試確認失敗**
 
-Run: `cd /Users/paulwu/Documents/PLRepo/lorescape && python3 -m pytest vn/tool/test_import_pack.py -v`
+Run: `cd /Users/paulwu/Documents/PLRepo/lorescape && python3 -m pytest story/tool/test_import_pack.py -v`
 Expected: FAIL —「No module named 'import_pack'」
 
 - [ ] **Step 3: 實作腳本**
 
-`vn/tool/import_pack.py`：
+`story/tool/import_pack.py`：
 
 ```python
 #!/usr/bin/env python3
-"""把 writer vault 的龐貝景點包匯入 vn/assets/。可重跑。
+"""把 writer vault 的龐貝景點包匯入 story/assets/。可重跑。
 
 用法：
-    python3 vn/tool/import_pack.py [--webp] [--no-cache]
+    python3 story/tool/import_pack.py [--webp] [--no-cache]
 
 本階段只做「複製與去重」。去背與對齊在 Task 6 / Task 7 接進 process_sprite()。
 """
@@ -281,7 +281,7 @@ import argparse, hashlib, json, pathlib, shutil, sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 SRC = ROOT / 'writer/創作/龐貝/stories'
-OUT = ROOT / 'vn/assets/content/pompeii-79'
+OUT = ROOT / 'story/assets/content/pompeii-79'
 
 PACK_TITLE = '龐貝 79'
 PACK_PLACE = '龐貝'
@@ -377,12 +377,12 @@ if __name__ == '__main__':
 
 - [ ] **Step 4: 跑測試確認通過**
 
-Run: `cd /Users/paulwu/Documents/PLRepo/lorescape && python3 -m pytest vn/tool/test_import_pack.py -v`
+Run: `cd /Users/paulwu/Documents/PLRepo/lorescape && python3 -m pytest story/tool/test_import_pack.py -v`
 Expected: 4 PASS
 
 - [ ] **Step 5: 宣告 assets 並確認 Flutter 讀得到**
 
-素材目錄現在才真的存在，這時候才把 `vn/pubspec.yaml` 的 `flutter:` 區段補成：
+素材目錄現在才真的存在，這時候才把 `story/pubspec.yaml` 的 `flutter:` 區段補成：
 
 ```yaml
 flutter:
@@ -404,9 +404,9 @@ flutter:
 > Flutter 的 assets 宣告**不遞迴**，每個目錄都要單獨列一行。
 
 ```bash
-cd vn && fvm flutter pub get && fvm flutter test && fvm flutter analyze --fatal-infos
+cd story && fvm flutter pub get && fvm flutter test && fvm flutter analyze --fatal-infos
 du -sh assets/content/pompeii-79
-git status --short vn/assets | head
+git status --short story/assets | head
 ```
 
 Expected: 測試 PASS；`du` 約 133 MB；`git status` **不應列出任何 .png**（.gitignore 生效）。
@@ -414,7 +414,7 @@ Expected: 測試 PASS；`du` 約 133 MB；`git status` **不應列出任何 .png
 - [ ] **Step 6: Commit**
 
 ```bash
-git add vn/tool/ vn/assets/content/pompeii-79/pack.json vn/assets/content/pompeii-79/stories/
+git add story/tool/ story/assets/content/pompeii-79/pack.json story/assets/content/pompeii-79/stories/
 git commit -m "feat(vn): 匯入腳本與 8 篇劇本，素材去重 116→60 張"
 ```
 
@@ -423,8 +423,8 @@ git commit -m "feat(vn): 匯入腳本與 8 篇劇本，素材去重 116→60 張
 ### Task 3: Domain 資料模型與 story.json parser
 
 **Files:**
-- Create: `vn/lib/src/visual_novel/domain/story.dart`、`vn/lib/src/visual_novel/data/story_json_parser.dart`
-- Test: `vn/test/src/visual_novel/data/story_json_parser_test.dart`
+- Create: `story/lib/src/visual_novel/domain/story.dart`、`story/lib/src/visual_novel/data/story_json_parser.dart`
+- Test: `story/test/src/visual_novel/data/story_json_parser_test.dart`
 
 **Interfaces:**
 - Consumes: Task 2 產出的 `story.json`
@@ -473,15 +473,15 @@ Story parseStory(Map<String, dynamic> json);   // story_json_parser.dart
 
 - [ ] **Step 1: 寫失敗的測試**
 
-`vn/test/src/visual_novel/data/story_json_parser_test.dart`：
+`story/test/src/visual_novel/data/story_json_parser_test.dart`：
 
 ```dart
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lorescape_vn/src/visual_novel/data/story_json_parser.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/story.dart';
+import 'package:lorescape_story/src/visual_novel/data/story_json_parser.dart';
+import 'package:lorescape_story/src/visual_novel/domain/story.dart';
 
 Story loadFixture(String dir) {
   final file = File('assets/content/pompeii-79/stories/$dir/story.json');
@@ -591,12 +591,12 @@ void main() {
 
 - [ ] **Step 2: 跑測試確認失敗**
 
-Run: `cd vn && fvm flutter test test/src/visual_novel/data/story_json_parser_test.dart`
+Run: `cd story && fvm flutter test test/src/visual_novel/data/story_json_parser_test.dart`
 Expected: FAIL — 找不到 `story.dart` / `story_json_parser.dart`
 
 - [ ] **Step 3: 實作 domain 型別**
 
-`vn/lib/src/visual_novel/domain/story.dart`：
+`story/lib/src/visual_novel/domain/story.dart`：
 
 ```dart
 /// 劇本的領域模型。**不得 import package:flutter/***——這一層要能用 dart test 跑。
@@ -820,10 +820,10 @@ final class Story {
 
 - [ ] **Step 4: 實作 parser**
 
-`vn/lib/src/visual_novel/data/story_json_parser.dart`：
+`story/lib/src/visual_novel/data/story_json_parser.dart`：
 
 ```dart
-import 'package:lorescape_vn/src/visual_novel/domain/story.dart';
+import 'package:lorescape_story/src/visual_novel/domain/story.dart';
 
 /// story.json → Story。未知的節點型別一律丟 FormatException——靜默忽略會讓
 /// 劇本默默少走一段，那種錯到播放時才看得出來，而且看起來像文案問題。
@@ -985,13 +985,13 @@ BranchRule _branchRule(Map<String, dynamic> json) {
 
 - [ ] **Step 5: 跑測試確認通過**
 
-Run: `cd vn && fvm flutter test test/src/visual_novel/data/story_json_parser_test.dart && fvm flutter analyze --fatal-infos`
+Run: `cd story && fvm flutter test test/src/visual_novel/data/story_json_parser_test.dart && fvm flutter analyze --fatal-infos`
 Expected: 8 個 test 全 PASS、analyze 零問題
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add vn/lib/src/visual_novel/domain/story.dart vn/lib/src/visual_novel/data/story_json_parser.dart vn/test/
+git add story/lib/src/visual_novel/domain/story.dart story/lib/src/visual_novel/data/story_json_parser.dart story/test/
 git commit -m "feat(vn): story.json 的 domain 模型與 parser，含規範漏寫的 option.cond 與 show.filter"
 ```
 
@@ -1000,8 +1000,8 @@ git commit -m "feat(vn): story.json 的 domain 模型與 parser，含規範漏�
 ### Task 4: Cursor、PlayState 與存檔序列化
 
 **Files:**
-- Create: `vn/lib/src/visual_novel/domain/cursor.dart`、`vn/lib/src/visual_novel/domain/play_state.dart`、`vn/lib/src/visual_novel/domain/save_data.dart`
-- Test: `vn/test/src/visual_novel/domain/cursor_test.dart`、`vn/test/src/visual_novel/domain/save_data_test.dart`
+- Create: `story/lib/src/visual_novel/domain/cursor.dart`、`story/lib/src/visual_novel/domain/play_state.dart`、`story/lib/src/visual_novel/domain/save_data.dart`
+- Test: `story/test/src/visual_novel/domain/cursor_test.dart`、`story/test/src/visual_novel/domain/save_data_test.dart`
 
 **Interfaces:**
 - Consumes: Task 3 的 `domain/story.dart`
@@ -1048,11 +1048,11 @@ final class SaveData {
 
 - [ ] **Step 1: 寫失敗的測試**
 
-`vn/test/src/visual_novel/domain/cursor_test.dart`：
+`story/test/src/visual_novel/domain/cursor_test.dart`：
 
 ```dart
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/cursor.dart';
+import 'package:lorescape_story/src/visual_novel/domain/cursor.dart';
 
 void main() {
   group('Cursor', () {
@@ -1099,13 +1099,13 @@ void main() {
 }
 ```
 
-`vn/test/src/visual_novel/domain/save_data_test.dart`：
+`story/test/src/visual_novel/domain/save_data_test.dart`：
 
 ```dart
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/cursor.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/play_state.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/save_data.dart';
+import 'package:lorescape_story/src/visual_novel/domain/cursor.dart';
+import 'package:lorescape_story/src/visual_novel/domain/play_state.dart';
+import 'package:lorescape_story/src/visual_novel/domain/save_data.dart';
 
 void main() {
   test('存檔往返：游標、變數、台上立繪都一致', () {
@@ -1148,7 +1148,7 @@ void main() {
 
 - [ ] **Step 2: 跑測試確認失敗**
 
-Run: `cd vn && fvm flutter test test/src/visual_novel/domain/`
+Run: `cd story && fvm flutter test test/src/visual_novel/domain/`
 Expected: FAIL — 找不到 `cursor.dart`
 
 - [ ] **Step 3: 實作 cursor.dart**
@@ -1233,7 +1233,7 @@ final class Cursor {
 - [ ] **Step 4: 實作 play_state.dart**
 
 ```dart
-import 'package:lorescape_vn/src/visual_novel/domain/cursor.dart';
+import 'package:lorescape_story/src/visual_novel/domain/cursor.dart';
 
 enum PlayStatus { playing, choosing, ended }
 
@@ -1289,8 +1289,8 @@ final class PlayState {
 - [ ] **Step 5: 實作 save_data.dart**
 
 ```dart
-import 'package:lorescape_vn/src/visual_novel/domain/cursor.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/play_state.dart';
+import 'package:lorescape_story/src/visual_novel/domain/cursor.dart';
+import 'package:lorescape_story/src/visual_novel/domain/play_state.dart';
 
 /// 規範 §6 的存檔格式，外加 `stage`。
 ///
@@ -1373,13 +1373,13 @@ final class SaveData {
 
 - [ ] **Step 6: 跑測試確認通過**
 
-Run: `cd vn && fvm flutter test test/src/visual_novel/domain/ && fvm flutter analyze --fatal-infos`
+Run: `cd story && fvm flutter test test/src/visual_novel/domain/ && fvm flutter analyze --fatal-infos`
 Expected: 7 個 test 全 PASS
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add vn/lib/src/visual_novel/domain/ vn/test/src/visual_novel/domain/
+git add story/lib/src/visual_novel/domain/ story/test/src/visual_novel/domain/
 git commit -m "feat(vn): Cursor 與存檔序列化，存檔多帶 stage 避免讀檔重算分支"
 ```
 
@@ -1388,8 +1388,8 @@ git commit -m "feat(vn): Cursor 與存檔序列化，存檔多帶 stage 避免�
 ### Task 5: 執行器 `story_player.dart`
 
 **Files:**
-- Create: `vn/lib/src/visual_novel/domain/story_player.dart`
-- Test: `vn/test/src/visual_novel/domain/story_player_test.dart`
+- Create: `story/lib/src/visual_novel/domain/story_player.dart`
+- Test: `story/test/src/visual_novel/domain/story_player_test.dart`
 
 **Interfaces:**
 - Consumes: Task 3 的 `story.dart`、Task 4 的 `cursor.dart` / `play_state.dart`
@@ -1419,17 +1419,17 @@ final class VisibleOption { const VisibleOption(this.index, this.option);
 
 - [ ] **Step 1: 寫失敗的測試**
 
-`vn/test/src/visual_novel/domain/story_player_test.dart`：
+`story/test/src/visual_novel/domain/story_player_test.dart`：
 
 ```dart
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lorescape_vn/src/visual_novel/data/story_json_parser.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/play_state.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/story.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/story_player.dart';
+import 'package:lorescape_story/src/visual_novel/data/story_json_parser.dart';
+import 'package:lorescape_story/src/visual_novel/domain/play_state.dart';
+import 'package:lorescape_story/src/visual_novel/domain/story.dart';
+import 'package:lorescape_story/src/visual_novel/domain/story_player.dart';
 
 Story build(
   Map<String, dynamic> scenes, {
@@ -1954,17 +1954,17 @@ void main() {
 
 - [ ] **Step 2: 跑測試確認失敗**
 
-Run: `cd vn && fvm flutter test test/src/visual_novel/domain/story_player_test.dart`
+Run: `cd story && fvm flutter test test/src/visual_novel/domain/story_player_test.dart`
 Expected: FAIL — 找不到 `story_player.dart`
 
 - [ ] **Step 3: 實作執行器**
 
-`vn/lib/src/visual_novel/domain/story_player.dart`：
+`story/lib/src/visual_novel/domain/story_player.dart`：
 
 ```dart
-import 'package:lorescape_vn/src/visual_novel/domain/cursor.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/play_state.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/story.dart';
+import 'package:lorescape_story/src/visual_novel/domain/cursor.dart';
+import 'package:lorescape_story/src/visual_novel/domain/play_state.dart';
+import 'package:lorescape_story/src/visual_novel/domain/story.dart';
 
 final class VisibleOption {
   const VisibleOption(this.index, this.option);
@@ -2253,13 +2253,13 @@ List<SpriteOnStage> _switchExpression(List<SpriteOnStage> stage, String who, Str
 
 - [ ] **Step 4: 跑測試確認通過**
 
-Run: `cd vn && fvm flutter test test/src/visual_novel/domain/story_player_test.dart && fvm flutter analyze --fatal-infos`
+Run: `cd story && fvm flutter test test/src/visual_novel/domain/story_player_test.dart && fvm flutter analyze --fatal-infos`
 Expected: 全 PASS
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add vn/lib/src/visual_novel/domain/story_player.dart vn/test/src/visual_novel/domain/story_player_test.dart
+git add story/lib/src/visual_novel/domain/story_player.dart story/test/src/visual_novel/domain/story_player_test.dart
 git commit -m "feat(vn): 執行器——節點指標即呼叫堆疊，副作用節點不停頓"
 ```
 
@@ -2270,7 +2270,7 @@ git commit -m "feat(vn): 執行器——節點指標即呼叫堆疊，副作用�
 這是本專案最有價值的一組測試——內容是既成事實，引擎必須吃得下。
 
 **Files:**
-- Create: `vn/test/src/visual_novel/pack_walkthrough_test.dart`
+- Create: `story/test/src/visual_novel/pack_walkthrough_test.dart`
 - Test: 同上
 
 **Interfaces:**
@@ -2279,17 +2279,17 @@ git commit -m "feat(vn): 執行器——節點指標即呼叫堆疊，副作用�
 
 - [ ] **Step 1: 寫測試**
 
-`vn/test/src/visual_novel/pack_walkthrough_test.dart`：
+`story/test/src/visual_novel/pack_walkthrough_test.dart`：
 
 ```dart
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lorescape_vn/src/visual_novel/data/story_json_parser.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/play_state.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/story.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/story_player.dart';
+import 'package:lorescape_story/src/visual_novel/data/story_json_parser.dart';
+import 'package:lorescape_story/src/visual_novel/domain/play_state.dart';
+import 'package:lorescape_story/src/visual_novel/domain/story.dart';
+import 'package:lorescape_story/src/visual_novel/domain/story_player.dart';
 
 const String packRoot = 'assets/content/pompeii-79';
 
@@ -2591,7 +2591,7 @@ const Map<String, Set<String>> knownDeadBranches = <String, Set<String>>{
 
 - [ ] **Step 2: 跑測試**
 
-Run: `cd vn && fvm flutter test test/src/visual_novel/pack_walkthrough_test.dart`
+Run: `cd story && fvm flutter test test/src/visual_novel/pack_walkthrough_test.dart`
 
 - [ ] **Step 3: 處理失敗**
 
@@ -2605,7 +2605,7 @@ Run: `cd vn && fvm flutter test test/src/visual_novel/pack_walkthrough_test.dart
 - [ ] **Step 4: Commit**
 
 ```bash
-git add vn/test/src/visual_novel/pack_walkthrough_test.dart
+git add story/test/src/visual_novel/pack_walkthrough_test.dart
 git commit -m "test(vn): 8 篇真實劇本的窮舉走訪——24 結局可達、分歧全覆蓋、資產完整"
 ```
 
@@ -2614,8 +2614,8 @@ git commit -m "test(vn): 8 篇真實劇本的窮舉走訪——24 結局可達�
 ### Task 7: 立繪去背
 
 **Files:**
-- Modify: `vn/tool/import_pack.py`（新增 `remove_background()`，接進 `process_asset()`）
-- Test: `vn/tool/test_import_pack.py`（新增去背的斷言）
+- Modify: `story/tool/import_pack.py`（新增 `remove_background()`，接進 `process_asset()`）
+- Test: `story/tool/test_import_pack.py`（新增去背的斷言）
 
 **Interfaces:**
 - Consumes: Task 2 的 `process_asset(kind, src, dest, webp, use_cache)`
@@ -2625,7 +2625,7 @@ git commit -m "test(vn): 8 篇真實劇本的窮舉走訪——24 結局可達�
 
 - [ ] **Step 1: 寫失敗的測試**
 
-在 `vn/tool/test_import_pack.py` 追加：
+在 `story/tool/test_import_pack.py` 追加：
 
 ```python
 def test_sprites_have_alpha_and_opaque_subject():
@@ -2708,16 +2708,16 @@ def test_backgrounds_stay_opaque():
 
 - [ ] **Step 2: 跑測試確認失敗**
 
-Run: `cd /Users/paulwu/Documents/PLRepo/lorescape && python3 -m pytest vn/tool/test_import_pack.py::test_sprites_have_alpha_and_opaque_subject -v`
+Run: `cd /Users/paulwu/Documents/PLRepo/lorescape && python3 -m pytest story/tool/test_import_pack.py::test_sprites_have_alpha_and_opaque_subject -v`
 Expected: FAIL — `img.mode == 'RGB'`
 
 - [ ] **Step 3: 實作去背**
 
-在 `vn/tool/import_pack.py` 加入（並在檔案頂端 `import collections` / `from PIL import Image, ImageFilter` / `import numpy as np`）：
+在 `story/tool/import_pack.py` 加入（並在檔案頂端 `import collections` / `from PIL import Image, ImageFilter` / `import numpy as np`）：
 
 ```python
 CACHE = ROOT / 'writer/創作/龐貝/美術測試/_processed'
-REVIEW = ROOT / 'vn/tool/_review'
+REVIEW = ROOT / 'story/tool/_review'
 
 # 灰底判定的容差。AI 出的平灰底其實有輕微雜訊，純等值比對會留下一圈麻點。
 BG_TOLERANCE = 26
@@ -2897,32 +2897,32 @@ def process_asset(kind: str, src: pathlib.Path, dest: pathlib.Path,
 cd /Users/paulwu/Documents/PLRepo/lorescape
 python3 - <<'EOF'
 import sys, pathlib
-sys.path.insert(0, 'vn/tool')
+sys.path.insert(0, 'story/tool')
 from PIL import Image
 from import_pack import remove_background, write_review, ROOT
 src = ROOT / 'writer/創作/龐貝/stories/01_港口的外地人/assets/sprites/vibia_neutral.png'
 write_review(src.name, Image.open(src), remove_background(src))
-print('→ vn/tool/_review/cutout_vibia_neutral.png')
+print('→ story/tool/_review/cutout_vibia_neutral.png')
 EOF
 ```
 
-**停在這裡，把 `vn/tool/_review/cutout_vibia_neutral.png` 給 user 看過再往下。** 洋紅底上若有灰邊或人物缺角，調 `BG_TOLERANCE`（灰邊 → 調高；缺角 → 調低）後重看。
+**停在這裡，把 `story/tool/_review/cutout_vibia_neutral.png` 給 user 看過再往下。** 洋紅底上若有灰邊或人物缺角，調 `BG_TOLERANCE`（灰邊 → 調高；缺角 → 調低）後重看。
 
 > **實測基準**（`BG_TOLERANCE = 26` ＋ 眾數背景色）：透明比例落在 34–42%，人物中軸由上到下完全保留。若你的結果離這個區間很遠，先懷疑背景色估錯了，不要急著動容差——**容差能補的是雜訊，補不了採樣點選錯**。
 
 - [ ] **Step 5: 全跑並驗收**
 
 ```bash
-python3 vn/tool/import_pack.py --no-cache
-python3 -m pytest vn/tool/test_import_pack.py -v
+python3 story/tool/import_pack.py --no-cache
+python3 -m pytest story/tool/test_import_pack.py -v
 ```
 
-Expected: 全 PASS。另外把 `vn/tool/_review/` 裡幾張灰髮／灰袍角色（`pliny_*`、`priest_*`、`vibia_*`）挑出來給 user 看。
+Expected: 全 PASS。另外把 `story/tool/_review/` 裡幾張灰髮／灰袍角色（`pliny_*`、`priest_*`、`vibia_*`）挑出來給 user 看。
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add vn/tool/
+git add story/tool/
 git commit -m "feat(vn): 立繪去背——邊界泛洪避免吃掉人物身上的灰"
 ```
 
@@ -2931,8 +2931,8 @@ git commit -m "feat(vn): 立繪去背——邊界泛洪避免吃掉人物身上�
 ### Task 8: 表情差分對齊
 
 **Files:**
-- Modify: `vn/tool/import_pack.py`（新增 `align_to_base()`，接進 `process_asset()`）
-- Test: `vn/tool/test_import_pack.py`（新增對齊的斷言）
+- Modify: `story/tool/import_pack.py`（新增 `align_to_base()`，接進 `process_asset()`）
+- Test: `story/tool/test_import_pack.py`（新增對齊的斷言）
 
 **Interfaces:**
 - Consumes: Task 7 的 `remove_background()`
@@ -2944,7 +2944,7 @@ git commit -m "feat(vn): 立繪去背——邊界泛洪避免吃掉人物身上�
 
 - [ ] **Step 1: 寫失敗的測試**
 
-在 `vn/tool/test_import_pack.py` 追加：
+在 `story/tool/test_import_pack.py` 追加：
 
 ```python
 def test_skipped_sprites_are_untouched():
@@ -2957,7 +2957,7 @@ def test_skipped_sprites_are_untouched():
     import json
     from PIL import Image
     import numpy as np
-    manifest = json.loads((ROOT / 'vn/tool/_review/align_manifest.json').read_text())
+    manifest = json.loads((ROOT / 'story/tool/_review/align_manifest.json').read_text())
     skipped = [name for name, params in manifest.items() if params.get('skipped')]
     assert skipped, 'manifest 裡沒有任何 skipped 條目，這條測試等於沒驗到東西'
     for name in skipped:
@@ -2994,12 +2994,12 @@ def test_expression_variants_align_with_base():
 
 - [ ] **Step 2: 跑測試確認失敗**
 
-Run: `cd /Users/paulwu/Documents/PLRepo/lorescape && python3 -m pytest vn/tool/test_import_pack.py::test_expression_variants_align_with_base -v`
+Run: `cd /Users/paulwu/Documents/PLRepo/lorescape && python3 -m pytest story/tool/test_import_pack.py::test_expression_variants_align_with_base -v`
 Expected: FAIL（若意外通過，表示飄移本來就在容差內——記錄下來、保留這個 test 當回歸守門，直接跳到 Step 6）
 
 - [ ] **Step 3: 實作對齊**
 
-在 `vn/tool/import_pack.py` 加入：
+在 `story/tool/import_pack.py` 加入：
 
 ```python
 # 對齊搜尋範圍。菲勒蒙的基底取景較近，需要縮小才對得上（進度與交接 §3）。
@@ -3153,21 +3153,21 @@ def process_sprites(picked, use_cache: bool) -> None:
 
 ```bash
 cd /Users/paulwu/Documents/PLRepo/lorescape
-python3 vn/tool/import_pack.py --no-cache
-ls vn/tool/_review/align_*.png
+python3 story/tool/import_pack.py --no-cache
+ls story/tool/_review/align_*.png
 ```
 
 **停在這裡，把 `align_vibia_softened.png`、`align_philemon_warm.png`、`align_nikias_weary.png` 給 user 看。** 第三格（對齊後）的橘色輪廓應該貼合藍色基底。菲勒蒙若 `scale` 明顯小於 1（例如 0.90），那是預期的——他的基底取景較近。
 
 - [ ] **Step 5: 跑測試確認通過**
 
-Run: `python3 -m pytest vn/tool/test_import_pack.py -v`
+Run: `python3 -m pytest story/tool/test_import_pack.py -v`
 Expected: 全 PASS。**若某個角色始終對不上**，不要放寬容差——把該角色從差分清單移除、改成只用基底，並回報給 user（風險 2 的既定退路）。
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add vn/tool/
+git add story/tool/
 git commit -m "feat(vn): 表情差分對齊——互相關取代規範的眼距基準，環境無臉部偵測"
 ```
 
@@ -3176,9 +3176,9 @@ git commit -m "feat(vn): 表情差分對齊——互相關取代規範的眼距�
 ### Task 9: Repository、存檔儲存與 `providers.dart`
 
 **Files:**
-- Create: `vn/lib/src/visual_novel/data/pack_repository.dart`、`vn/lib/src/visual_novel/data/save_store.dart`、`vn/lib/src/visual_novel/providers.dart`
-- Modify: `vn/lib/main.dart`
-- Test: `vn/test/src/visual_novel/data/pack_repository_test.dart`、`vn/test/src/visual_novel/data/save_store_test.dart`
+- Create: `story/lib/src/visual_novel/data/pack_repository.dart`、`story/lib/src/visual_novel/data/save_store.dart`、`story/lib/src/visual_novel/providers.dart`
+- Modify: `story/lib/main.dart`
+- Test: `story/test/src/visual_novel/data/pack_repository_test.dart`、`story/test/src/visual_novel/data/save_store_test.dart`
 
 **Interfaces:**
 - Consumes: Task 3–5 的 domain 與 parser
@@ -3222,14 +3222,14 @@ final storyProvider = FutureProvider.family<Story, String>(...);
 
 - [ ] **Step 1: 寫失敗的測試**
 
-`vn/test/src/visual_novel/data/save_store_test.dart`：
+`story/test/src/visual_novel/data/save_store_test.dart`：
 
 ```dart
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lorescape_vn/src/visual_novel/data/save_store.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/cursor.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/play_state.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/save_data.dart';
+import 'package:lorescape_story/src/visual_novel/data/save_store.dart';
+import 'package:lorescape_story/src/visual_novel/domain/cursor.dart';
+import 'package:lorescape_story/src/visual_novel/domain/play_state.dart';
+import 'package:lorescape_story/src/visual_novel/domain/save_data.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -3291,12 +3291,12 @@ void main() {
 }
 ```
 
-`vn/test/src/visual_novel/data/pack_repository_test.dart`：
+`story/test/src/visual_novel/data/pack_repository_test.dart`：
 
 ```dart
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lorescape_vn/src/visual_novel/data/pack_repository.dart';
+import 'package:lorescape_story/src/visual_novel/data/pack_repository.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -3334,7 +3334,7 @@ void main() {
 
 - [ ] **Step 2: 跑測試確認失敗**
 
-Run: `cd vn && fvm flutter test test/src/visual_novel/data/`
+Run: `cd story && fvm flutter test test/src/visual_novel/data/`
 Expected: FAIL — 找不到 `save_store.dart` / `pack_repository.dart`
 
 - [ ] **Step 3: 實作 pack_repository.dart**
@@ -3343,8 +3343,8 @@ Expected: FAIL — 找不到 `save_store.dart` / `pack_repository.dart`
 import 'dart:convert';
 
 import 'package:flutter/services.dart';
-import 'package:lorescape_vn/src/visual_novel/data/story_json_parser.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/story.dart';
+import 'package:lorescape_story/src/visual_novel/data/story_json_parser.dart';
+import 'package:lorescape_story/src/visual_novel/domain/story.dart';
 
 const String packRoot = 'assets/content/pompeii-79';
 
@@ -3460,7 +3460,7 @@ final class BundlePackRepository implements PackRepository {
 ```dart
 import 'dart:convert';
 
-import 'package:lorescape_vn/src/visual_novel/domain/save_data.dart';
+import 'package:lorescape_story/src/visual_novel/domain/save_data.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 abstract interface class SaveStore {
@@ -3551,19 +3551,19 @@ library;
 
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lorescape_vn/src/visual_novel/data/pack_repository.dart';
-import 'package:lorescape_vn/src/visual_novel/data/save_store.dart';
-import 'package:lorescape_vn/src/visual_novel/domain/story.dart';
+import 'package:lorescape_story/src/visual_novel/data/pack_repository.dart';
+import 'package:lorescape_story/src/visual_novel/data/save_store.dart';
+import 'package:lorescape_story/src/visual_novel/domain/story.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-export 'package:lorescape_vn/src/visual_novel/data/pack_repository.dart'
+export 'package:lorescape_story/src/visual_novel/data/pack_repository.dart'
     show Pack, PackEntry, PackRepository;
-export 'package:lorescape_vn/src/visual_novel/data/save_store.dart' show SaveStore;
-export 'package:lorescape_vn/src/visual_novel/domain/cursor.dart';
-export 'package:lorescape_vn/src/visual_novel/domain/play_state.dart';
-export 'package:lorescape_vn/src/visual_novel/domain/save_data.dart';
-export 'package:lorescape_vn/src/visual_novel/domain/story.dart';
-export 'package:lorescape_vn/src/visual_novel/domain/story_player.dart';
+export 'package:lorescape_story/src/visual_novel/data/save_store.dart' show SaveStore;
+export 'package:lorescape_story/src/visual_novel/domain/cursor.dart';
+export 'package:lorescape_story/src/visual_novel/domain/play_state.dart';
+export 'package:lorescape_story/src/visual_novel/domain/save_data.dart';
+export 'package:lorescape_story/src/visual_novel/domain/story.dart';
+export 'package:lorescape_story/src/visual_novel/domain/story_player.dart';
 
 /// main() 於啟動時以 overrideWithValue 覆寫。
 final Provider<SharedPreferences> sharedPreferencesProvider =
@@ -3589,7 +3589,7 @@ final FutureProviderFamily<Story, String> storyProvider =
 ```dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lorescape_vn/src/visual_novel/providers.dart';
+import 'package:lorescape_story/src/visual_novel/providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> main() async {
@@ -3626,7 +3626,7 @@ class VnApp extends StatelessWidget {
 }
 ```
 
-同步把 `vn/test/smoke_test.dart` 包上 `ProviderScope`：
+同步把 `story/test/smoke_test.dart` 包上 `ProviderScope`：
 
 ```dart
 await tester.pumpWidget(const ProviderScope(child: VnApp()));
@@ -3634,13 +3634,13 @@ await tester.pumpWidget(const ProviderScope(child: VnApp()));
 
 - [ ] **Step 7: 跑測試與 analyze**
 
-Run: `cd vn && fvm flutter test && fvm flutter analyze --fatal-infos`
+Run: `cd story && fvm flutter test && fvm flutter analyze --fatal-infos`
 Expected: 全 PASS
 
 - [ ] **Step 8: Commit**
 
 ```bash
-git add vn/lib/src/visual_novel/data/ vn/lib/src/visual_novel/providers.dart vn/lib/main.dart vn/test/
+git add story/lib/src/visual_novel/data/ story/lib/src/visual_novel/providers.dart story/lib/main.dart story/test/
 git commit -m "feat(vn): repository、存檔儲存與 providers.dart 公開介面"
 ```
 
@@ -3649,9 +3649,9 @@ git commit -m "feat(vn): repository、存檔儲存與 providers.dart 公開介�
 ### Task 10: 播放版面
 
 **Files:**
-- Create: `vn/lib/src/visual_novel/presentation/play/layout.dart`、`background_layer.dart`、`sprite_layer.dart`、`dialogue_box.dart`、`choice_overlay.dart`、`play_page.dart`、`play_controller.dart`
-- Modify: `vn/lib/src/visual_novel/providers.dart`（export `playControllerProvider`）
-- Test: `vn/test/src/visual_novel/presentation/play/play_page_test.dart`
+- Create: `story/lib/src/visual_novel/presentation/play/layout.dart`、`background_layer.dart`、`sprite_layer.dart`、`dialogue_box.dart`、`choice_overlay.dart`、`play_page.dart`、`play_controller.dart`
+- Modify: `story/lib/src/visual_novel/providers.dart`（export `playControllerProvider`）
+- Test: `story/test/src/visual_novel/presentation/play/play_page_test.dart`
 
 **Interfaces:**
 - Consumes: Task 9 的 `providers.dart`
@@ -3679,16 +3679,16 @@ final playControllerProvider = NotifierProvider.family<PlayController, PlayState
 
 - [ ] **Step 1: 寫失敗的測試**
 
-`vn/test/src/visual_novel/presentation/play/play_page_test.dart`：
+`story/test/src/visual_novel/presentation/play/play_page_test.dart`：
 
 ```dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/play/dialogue_box.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/play/layout.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/play/play_page.dart';
-import 'package:lorescape_vn/src/visual_novel/providers.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/play/dialogue_box.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/play/layout.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/play/play_page.dart';
+import 'package:lorescape_story/src/visual_novel/providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> pumpPlayPage(WidgetTester tester, String storyId) async {
@@ -3793,7 +3793,7 @@ void main() {
 
 - [ ] **Step 2: 跑測試確認失敗**
 
-Run: `cd vn && fvm flutter test test/src/visual_novel/presentation/`
+Run: `cd story && fvm flutter test test/src/visual_novel/presentation/`
 Expected: FAIL — 找不到 `layout.dart`
 
 - [ ] **Step 3: 實作 layout.dart**
@@ -3855,14 +3855,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // 這個檔被 providers.dart re-export，形成循環——Dart 允許，但兩邊都要用具名
 // `show`，否則會互相看見對方的 export，名稱衝突時的錯誤訊息很難讀。
 // presentation/ 一律只 import providers.dart，這個檔也不例外。
-import 'package:lorescape_vn/src/visual_novel/providers.dart'
+import 'package:lorescape_story/src/visual_novel/providers.dart'
     show PlayState, PlayStatus, SaveData, Story, currentNode, initState, resume,
         saveStoreProvider, storyProvider;
 // `advance` / `choose` 與本類別的同名方法撞名。Dart 在 class 方法體內對裸名
 // 一律先解到 instance member（等於 `this.advance`），不會落到 import 進來的
 // 頂層函式——這是名稱解析規則本身，不是 import 寫法的問題，所以這兩個必須
 // 帶 prefix。守門測試看的是 import 的目標路徑而不是有沒有 prefix，規則不變。
-import 'package:lorescape_vn/src/visual_novel/providers.dart' as engine
+import 'package:lorescape_story/src/visual_novel/providers.dart' as engine
     show advance, choose;
 
 class PlayController extends FamilyNotifier<PlayState, String> {
@@ -3929,7 +3929,7 @@ final NotifierProviderFamily<PlayController, PlayState, String> playControllerPr
 在 `providers.dart` 追加 export：
 
 ```dart
-export 'package:lorescape_vn/src/visual_novel/presentation/play/play_controller.dart'
+export 'package:lorescape_story/src/visual_novel/presentation/play/play_controller.dart'
     show PlayController, playControllerProvider;
 ```
 
@@ -3966,8 +3966,8 @@ class BackgroundLayer extends StatelessWidget {
 
 ```dart
 import 'package:flutter/material.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/play/layout.dart';
-import 'package:lorescape_vn/src/visual_novel/providers.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/play/layout.dart';
+import 'package:lorescape_story/src/visual_novel/providers.dart';
 
 class SpriteLayer extends StatelessWidget {
   const SpriteLayer({
@@ -4033,7 +4033,7 @@ class SpriteLayer extends StatelessWidget {
 
 ```dart
 import 'package:flutter/material.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/play/layout.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/play/layout.dart';
 
 class DialogueBox extends StatelessWidget {
   const DialogueBox({
@@ -4121,8 +4121,8 @@ class DialogueBox extends StatelessWidget {
 
 ```dart
 import 'package:flutter/material.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/play/layout.dart';
-import 'package:lorescape_vn/src/visual_novel/providers.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/play/layout.dart';
+import 'package:lorescape_story/src/visual_novel/providers.dart';
 
 class ChoiceOverlay extends StatelessWidget {
   const ChoiceOverlay({
@@ -4189,12 +4189,12 @@ class ChoiceOverlay extends StatelessWidget {
 ```dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/play/background_layer.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/play/choice_overlay.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/play/dialogue_box.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/play/layout.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/play/sprite_layer.dart';
-import 'package:lorescape_vn/src/visual_novel/providers.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/play/background_layer.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/play/choice_overlay.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/play/dialogue_box.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/play/layout.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/play/sprite_layer.dart';
+import 'package:lorescape_story/src/visual_novel/providers.dart';
 
 class PlayPage extends ConsumerWidget {
   const PlayPage({required this.storyId, super.key});
@@ -4321,7 +4321,7 @@ class _EndingView extends StatelessWidget {
 
 - [ ] **Step 7: 寫架構守門測試**
 
-`vn/test/architecture/import_rules_test.dart`：
+`story/test/architecture/import_rules_test.dart`：
 
 ```dart
 import 'dart:io';
@@ -4334,8 +4334,8 @@ import 'package:flutter_test/flutter_test.dart';
 ///
 /// 用測試守而不是靠註解與 code review：規則要能自己叫。
 void main() {
-  const String providers = 'package:lorescape_vn/src/visual_novel/providers.dart';
-  const String presentation = 'package:lorescape_vn/src/visual_novel/presentation/';
+  const String providers = 'package:lorescape_story/src/visual_novel/providers.dart';
+  const String presentation = 'package:lorescape_story/src/visual_novel/presentation/';
 
   Iterable<File> dartFilesIn(String path) => Directory(path)
       .listSync(recursive: true)
@@ -4343,7 +4343,7 @@ void main() {
       .where((file) => file.path.endsWith('.dart'));
 
   test('presentation 底下只准 import providers.dart', () {
-    final RegExp importLine = RegExp("^import '(package:lorescape_vn/[^']+)'");
+    final RegExp importLine = RegExp("^import '(package:lorescape_story/[^']+)'");
     final List<String> offenders = <String>[];
 
     for (final File file in dartFilesIn('lib/src/visual_novel/presentation')) {
@@ -4379,13 +4379,13 @@ void main() {
 
 - [ ] **Step 8: 跑測試與 analyze**
 
-Run: `cd vn && fvm flutter test && fvm flutter analyze --fatal-infos`
+Run: `cd story && fvm flutter test && fvm flutter analyze --fatal-infos`
 Expected: 全 PASS
 
 - [ ] **Step 9: 用真機（瀏覽器）看一眼**
 
 ```bash
-cd vn && fvm flutter run -d chrome
+cd story && fvm flutter run -d chrome
 ```
 
 暫時把 `main.dart` 的 `home` 改成 `PlayPage(storyId: 'pompeii_01_harbour_stranger')`，確認背景、立繪、對話框、名牌都在正確位置。**把截圖給 user 看過再往下。**
@@ -4393,7 +4393,7 @@ cd vn && fvm flutter run -d chrome
 - [ ] **Step 9: Commit**
 
 ```bash
-git add vn/lib/src/visual_novel/presentation/ vn/lib/src/visual_novel/providers.dart vn/test/
+git add story/lib/src/visual_novel/presentation/ story/lib/src/visual_novel/providers.dart story/test/
 git commit -m "feat(vn): 播放版面——照規範 §2 的直式對話框、名牌與立繪站位"
 ```
 
@@ -4402,9 +4402,9 @@ git commit -m "feat(vn): 播放版面——照規範 §2 的直式對話框、�
 ### Task 11: 逐字顯示、點擊補完與圖片預載
 
 **Files:**
-- Create: `vn/lib/src/visual_novel/presentation/play/typewriter_text.dart`、`vn/lib/src/visual_novel/presentation/play/preloader.dart`
+- Create: `story/lib/src/visual_novel/presentation/play/typewriter_text.dart`、`story/lib/src/visual_novel/presentation/play/preloader.dart`
 - Modify: `dialogue_box.dart`、`play_page.dart`
-- Test: `vn/test/src/visual_novel/presentation/play/typewriter_text_test.dart`、追加 `play_page_test.dart`
+- Test: `story/test/src/visual_novel/presentation/play/typewriter_text_test.dart`、追加 `play_page_test.dart`
 
 **Interfaces:**
 - Consumes: Task 10 的 `DialogueBox` / `PlayPage`
@@ -4425,12 +4425,12 @@ Future<void> precacheNode(BuildContext context, PackRepository repository,
 
 - [ ] **Step 1: 寫失敗的測試**
 
-`vn/test/src/visual_novel/presentation/play/typewriter_text_test.dart`：
+`story/test/src/visual_novel/presentation/play/typewriter_text_test.dart`：
 
 ```dart
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/play/typewriter_text.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/play/typewriter_text.dart';
 
 Widget wrap(Widget child) => MaterialApp(home: Scaffold(body: child));
 
@@ -4547,7 +4547,7 @@ void main() {
 
 - [ ] **Step 2: 跑測試確認失敗**
 
-Run: `cd vn && fvm flutter test test/src/visual_novel/presentation/play/typewriter_text_test.dart`
+Run: `cd story && fvm flutter test test/src/visual_novel/presentation/play/typewriter_text_test.dart`
 Expected: FAIL — 找不到 `typewriter_text.dart`
 
 - [ ] **Step 3: 實作 typewriter_text.dart**
@@ -4718,7 +4718,7 @@ class _TypewriterTextState extends State<TypewriterText> {
 
 ```dart
 import 'package:flutter/material.dart';
-import 'package:lorescape_vn/src/visual_novel/providers.dart';
+import 'package:lorescape_story/src/visual_novel/providers.dart';
 
 /// Web 上單張 PNG 有 2.2–2.6 MB，AssetImage 是進到那個節點才走 HTTP 抓，
 /// 不預載就會看到背景先白一下。把「這一場的背景 ＋ 台上角色的所有表情」
@@ -4757,13 +4757,13 @@ Future<void> precacheNode(
 
 - [ ] **Step 7: 跑測試與 analyze**
 
-Run: `cd vn && fvm flutter test && fvm flutter analyze --fatal-infos`
+Run: `cd story && fvm flutter test && fvm flutter analyze --fatal-infos`
 Expected: 全 PASS
 
 - [ ] **Step 8: Commit**
 
 ```bash
-git add vn/lib/src/visual_novel/presentation/play/ vn/test/
+git add story/lib/src/visual_novel/presentation/play/ story/test/
 git commit -m "feat(vn): 逐字顯示與點擊補完，加上下一場背景的預載"
 ```
 
@@ -4772,9 +4772,9 @@ git commit -m "feat(vn): 逐字顯示與點擊補完，加上下一場背景的�
 ### Task 12: 回顧 backlog 與已讀跳過
 
 **Files:**
-- Create: `vn/lib/src/visual_novel/presentation/play/backlog_sheet.dart`
+- Create: `story/lib/src/visual_novel/presentation/play/backlog_sheet.dart`
 - Modify: `play_controller.dart`（加 `backlog` 與 `skipRead()`）、`play_page.dart`（工具列按鈕）
-- Test: 追加 `vn/test/src/visual_novel/presentation/play/play_page_test.dart`
+- Test: 追加 `story/test/src/visual_novel/presentation/play/play_page_test.dart`
 
 **Interfaces:**
 - Consumes: Task 10 的 `PlayController`、Task 9 的 `SaveStore.readNodes()`
@@ -4885,7 +4885,7 @@ Task 10 的截圖顯示，走到 `choice` 節點時畫面只剩背景與兩顆�
 
 - [ ] **Step 2: 跑測試確認失敗**
 
-Run: `cd vn && fvm flutter test test/src/visual_novel/presentation/play/play_page_test.dart`
+Run: `cd story && fvm flutter test test/src/visual_novel/presentation/play/play_page_test.dart`
 Expected: FAIL — 找不到 `PlayPage.backlogButtonKey`
 
 - [ ] **Step 3: PlayController 加 backlog 與 skipRead**
@@ -4940,7 +4940,7 @@ Expected: FAIL — 找不到 `PlayPage.backlogButtonKey`
 
 ```dart
 import 'package:flutter/material.dart';
-import 'package:lorescape_vn/src/visual_novel/providers.dart';
+import 'package:lorescape_story/src/visual_novel/providers.dart';
 
 class BacklogSheet extends StatelessWidget {
   const BacklogSheet({required this.entries, super.key});
@@ -5014,13 +5014,13 @@ class BacklogSheet extends StatelessWidget {
 
 - [ ] **Step 6: 跑測試與 analyze**
 
-Run: `cd vn && fvm flutter test && fvm flutter analyze --fatal-infos`
+Run: `cd story && fvm flutter test && fvm flutter analyze --fatal-infos`
 Expected: 全 PASS
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add vn/lib/src/visual_novel/presentation/play/ vn/test/
+git add story/lib/src/visual_novel/presentation/play/ story/test/
 git commit -m "feat(vn): 回顧 backlog 與已讀跳過，未讀節點一律不跳"
 ```
 
@@ -5029,9 +5029,9 @@ git commit -m "feat(vn): 回顧 backlog 與已讀跳過，未讀節點一律不�
 ### Task 13: 景點包首頁與 go_router 導覽
 
 **Files:**
-- Create: `vn/lib/src/visual_novel/presentation/pack/pack_page.dart`、`vn/lib/src/visual_novel/presentation/vn_router.dart`
-- Modify: `vn/lib/main.dart`、`providers.dart`
-- Test: `vn/test/src/visual_novel/presentation/pack/pack_page_test.dart`
+- Create: `story/lib/src/visual_novel/presentation/pack/pack_page.dart`、`story/lib/src/visual_novel/presentation/vn_router.dart`
+- Modify: `story/lib/main.dart`、`providers.dart`
+- Test: `story/test/src/visual_novel/presentation/pack/pack_page_test.dart`
 
 **Interfaces:**
 - Consumes: `packProvider`、`saveStoreProvider`
@@ -5043,8 +5043,8 @@ git commit -m "feat(vn): 回顧 backlog 與已讀跳過，未讀節點一律不�
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/pack/pack_page.dart';
-import 'package:lorescape_vn/src/visual_novel/providers.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/pack/pack_page.dart';
+import 'package:lorescape_story/src/visual_novel/providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> pumpPackPage(WidgetTester tester, {Map<String, Object>? prefsValues}) async {
@@ -5085,7 +5085,7 @@ void main() {
 
 - [ ] **Step 2: 跑測試確認失敗**
 
-Run: `cd vn && fvm flutter test test/src/visual_novel/presentation/pack/`
+Run: `cd story && fvm flutter test test/src/visual_novel/presentation/pack/`
 Expected: FAIL — 找不到 `pack_page.dart`
 
 - [ ] **Step 3: 實作 pack_page.dart**
@@ -5094,7 +5094,7 @@ Expected: FAIL — 找不到 `pack_page.dart`
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lorescape_vn/src/visual_novel/providers.dart';
+import 'package:lorescape_story/src/visual_novel/providers.dart';
 
 class PackPage extends ConsumerWidget {
   const PackPage({super.key});
@@ -5166,10 +5166,10 @@ class PackPage extends ConsumerWidget {
 
 ```dart
 import 'package:go_router/go_router.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/endings/endings_page.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/pack/pack_page.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/play/play_page.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/settings/settings_page.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/endings/endings_page.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/pack/pack_page.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/play/play_page.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/settings/settings_page.dart';
 
 GoRouter buildVnRouter() => GoRouter(
       routes: <RouteBase>[
@@ -5216,7 +5216,7 @@ GoRouter buildVnRouter() => GoRouter(
 - [ ] **Step 6: 跑測試與 analyze，並用瀏覽器走一遍**
 
 ```bash
-cd vn && fvm flutter test && fvm flutter analyze --fatal-infos
+cd story && fvm flutter test && fvm flutter analyze --fatal-infos
 fvm flutter run -d chrome
 ```
 
@@ -5225,7 +5225,7 @@ fvm flutter run -d chrome
 - [ ] **Step 7: Commit**
 
 ```bash
-git add vn/lib/ vn/test/
+git add story/lib/ story/test/
 git commit -m "feat(vn): 景點包首頁與 go_router 導覽，web 上鎖 9:16 直式"
 ```
 
@@ -5234,8 +5234,8 @@ git commit -m "feat(vn): 景點包首頁與 go_router 導覽，web 上鎖 9:16 �
 ### Task 14: 結局收藏與設定
 
 **Files:**
-- Create（取代 Task 13 的佔位）: `vn/lib/src/visual_novel/presentation/endings/endings_page.dart`、`vn/lib/src/visual_novel/presentation/settings/settings_page.dart`
-- Test: `vn/test/src/visual_novel/presentation/endings/endings_page_test.dart`、`vn/test/src/visual_novel/presentation/settings/settings_page_test.dart`
+- Create（取代 Task 13 的佔位）: `story/lib/src/visual_novel/presentation/endings/endings_page.dart`、`story/lib/src/visual_novel/presentation/settings/settings_page.dart`
+- Test: `story/test/src/visual_novel/presentation/endings/endings_page_test.dart`、`story/test/src/visual_novel/presentation/settings/settings_page_test.dart`
 
 **Interfaces:**
 - Consumes: `packProvider`、`storyProvider`、`saveStoreProvider`
@@ -5251,8 +5251,8 @@ git commit -m "feat(vn): 景點包首頁與 go_router 導覽，web 上鎖 9:16 �
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/endings/endings_page.dart';
-import 'package:lorescape_vn/src/visual_novel/providers.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/endings/endings_page.dart';
+import 'package:lorescape_story/src/visual_novel/providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> pump(WidgetTester tester, Map<String, Object> values) async {
@@ -5291,8 +5291,8 @@ void main() {
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lorescape_vn/src/visual_novel/presentation/settings/settings_page.dart';
-import 'package:lorescape_vn/src/visual_novel/providers.dart';
+import 'package:lorescape_story/src/visual_novel/presentation/settings/settings_page.dart';
+import 'package:lorescape_story/src/visual_novel/providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -5323,7 +5323,7 @@ void main() {
 
 - [ ] **Step 2: 跑測試確認失敗**
 
-Run: `cd vn && fvm flutter test test/src/visual_novel/presentation/endings/ test/src/visual_novel/presentation/settings/`
+Run: `cd story && fvm flutter test test/src/visual_novel/presentation/endings/ test/src/visual_novel/presentation/settings/`
 Expected: FAIL — 佔位頁沒有這些內容
 
 - [ ] **Step 3: 實作 endings_page.dart**
@@ -5331,7 +5331,7 @@ Expected: FAIL — 佔位頁沒有這些內容
 ```dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lorescape_vn/src/visual_novel/providers.dart';
+import 'package:lorescape_story/src/visual_novel/providers.dart';
 
 class EndingsPage extends ConsumerWidget {
   const EndingsPage({super.key});
@@ -5404,7 +5404,7 @@ class _StoryEndings extends ConsumerWidget {
 ```dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lorescape_vn/src/visual_novel/providers.dart';
+import 'package:lorescape_story/src/visual_novel/providers.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -5463,13 +5463,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
 - [ ] **Step 5: 跑測試與 analyze**
 
-Run: `cd vn && fvm flutter test && fvm flutter analyze --fatal-infos`
+Run: `cd story && fvm flutter test && fvm flutter analyze --fatal-infos`
 Expected: 全 PASS
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add vn/lib/src/visual_novel/presentation/ vn/test/
+git add story/lib/src/visual_novel/presentation/ story/test/
 git commit -m "feat(vn): 結局收藏與設定，未達成結局只顯示鎖頭"
 ```
 
@@ -5480,7 +5480,7 @@ git commit -m "feat(vn): 結局收藏與設定，未達成結局只顯示鎖頭"
 **Files:**
 - Delete: `story/`（整個目錄）
 - Modify: `CLAUDE.md`
-- Create: `vn/README.md`
+- Create: `story/README.md`
 
 **Interfaces:**
 - Consumes: 無
@@ -5514,14 +5514,14 @@ git rm -r --quiet story/
 換成：
 
 ```
-| `vn/` | 獨立 Flutter 專案：直式視覺小說引擎，播放 `writer/創作/龐貝/` 的龐貝景點包 8 篇。先跑 Flutter Web 驗證，之後整包搬進 `frontend/lib/features/visual_novel/`。素材由 `tool/import_pack.py` 從 writer vault 匯入（不進版控），見 `vn/README.md` |
+| `story/` | 獨立 Flutter 專案：直式視覺小說引擎，播放 `writer/創作/龐貝/` 的龐貝景點包 8 篇。先跑 Flutter Web 驗證，之後整包搬進 `frontend/lib/features/visual_novel/`。素材由 `tool/import_pack.py` 從 writer vault 匯入（不進版控），見 `story/README.md` |
 | `writer/` | Obsidian vault（**不進版控**）：劇本、美術與製作規範。`製作規範/story_tool.py` 驗 `story.json`，`創作/<景點>/` 放各景點包的內容與素材 |
 ```
 
-- [ ] **Step 4: 寫 vn/README.md**
+- [ ] **Step 4: 寫 story/README.md**
 
 ```markdown
-# vn — 龐貝景點包視覺小說
+# story — 龐貝景點包視覺小說
 
 直式手機視覺小說引擎，播放 `writer/創作/龐貝/` 的 8 篇群像短篇。
 目前跑 **Flutter Web** 做驗證，確認後整包搬進 `frontend/lib/features/visual_novel/`。
@@ -5531,7 +5531,7 @@ git rm -r --quiet story/
 素材與劇本來自 **`writer/`（Obsidian vault，不在版控裡）**。首次 clone 後必須先匯入：
 
 ```bash
-python3 vn/tool/import_pack.py
+python3 story/tool/import_pack.py
 ```
 
 沒跑這一步的話，`assets/content/pompeii-79/assets/` 是空的，測試會失敗、畫面會全黑。
@@ -5539,7 +5539,7 @@ python3 vn/tool/import_pack.py
 ## 執行
 
 ```bash
-cd vn
+cd story
 fvm flutter pub get
 fvm flutter run -d chrome        # Web 驗證
 fvm flutter test                 # 全部測試
@@ -5564,14 +5564,14 @@ fvm flutter analyze --fatal-infos
 - [ ] **Step 5: 全部測試最後跑一次**
 
 ```bash
-cd vn && fvm flutter test && fvm flutter analyze --fatal-infos
-cd .. && python3 -m pytest vn/tool/test_import_pack.py -v
+cd story && fvm flutter test && fvm flutter analyze --fatal-infos
+cd .. && python3 -m pytest story/tool/test_import_pack.py -v
 ```
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add -A CLAUDE.md vn/README.md story/
+git add -A CLAUDE.md story/README.md story/
 git commit -m "chore: 移除 story/ React SPA，改由 vn/ 承接龐貝景點包"
 ```
 
