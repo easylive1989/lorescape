@@ -9,13 +9,13 @@
 
 **Architecture:** 純 Dart 執行器（節點指標 ＝ 呼叫堆疊的投影）＋ Flutter 直式版面。所有程式碼收在 `lib/src/visual_novel/`，`domain/` 零 Flutter 依賴，`providers.dart` 是唯一對外介面——這一包日後整包搬進 `frontend/lib/features/visual_novel/`。素材由 `tool/import_pack.py` 從 writer vault 匯入（去背、對齊、去重）。
 
-**Tech Stack:** Flutter 3.38.5 (fvm) / Dart 3.10.4、flutter_riverpod ^2.6.1、go_router ^17.0.0、shared_preferences ^2.3.4、Python 3 + PIL + numpy（匯入腳本）
+**Tech Stack:** Flutter 3.44.2 (fvm) / Dart 3.12.2、flutter_riverpod ^2.6.1、go_router ^17.0.0、shared_preferences ^2.3.4、Python 3 + PIL + numpy（匯入腳本）
 
 **設計文件：** `docs/superpowers/specs/2026-08-13-pompeii-vn-flutter-design.md`
 
 ## Global Constraints
 
-- **Flutter 版本**：`vn/.fvmrc` 必須是 `{ "flutter": "3.38.5" }`，與 `frontend/` 一致。一律用 `fvm flutter` / `fvm dart` 執行指令。
+- **Flutter 版本**：`vn/.fvmrc` 必須是 `{ "flutter": "3.44.2" }`，與 `frontend/` 一致。一律用 `fvm flutter` / `fvm dart` 執行指令。
 - **每個 task 結束前**必須跑 `cd vn && fvm flutter analyze --fatal-infos`，零問題才算完成。
 - **`lib/src/visual_novel/domain/` 零 Flutter 依賴**：只可 import `dart:*`。不得 import `package:flutter/*`。這條是搬進 `frontend/` 的前提。
 - **跨層引用只能經 `providers.dart`**：`presentation/` 底下的**每一個**檔案都只准 import `package:lorescape_vn/src/visual_novel/providers.dart`，不得直接 import `data/` 或 `domain/` 下的任何檔案。**沒有例外**——包含被 `providers.dart` re-export 的 `play_controller.dart`：它用具名 `show` 就能拿到需要的型別與函式，循環 export 在 Dart 是合法的。規則愈簡單愈守得住，而且這條由 `test/architecture/import_rules_test.dart` 機器守門。
@@ -78,9 +78,9 @@
 
 ```bash
 cd /Users/paulwu/Documents/PLRepo/lorescape
-fvm use 3.38.5 --force --directory . 2>/dev/null || true
+fvm use 3.44.2 --force --directory . 2>/dev/null || true
 mkdir -p vn && cd vn
-echo '{ "flutter": "3.38.5" }' > .fvmrc
+echo '{ "flutter": "3.44.2" }' > .fvmrc
 fvm flutter create --project-name lorescape_vn --platforms web --empty .
 ```
 
@@ -192,7 +192,7 @@ Expected: 測試 PASS、analyze 零問題。
 ```bash
 cd /Users/paulwu/Documents/PLRepo/lorescape
 git add vn/
-git commit -m "feat(vn): Flutter 專案骨架，鎖 3.38.5 對齊 frontend"
+git commit -m "feat(vn): Flutter 專案骨架，鎖 3.44.2 對齊 frontend"
 ```
 
 ---

@@ -89,7 +89,7 @@ repo 裡現有的播放器是 `story/`（React SPA），它讀的是另一套 `s
 
 ```
 vn/
-├── .fvmrc                    { "flutter": "3.38.5" }  ← 對齊 frontend/
+├── .fvmrc                    { "flutter": "3.44.2" }  ← 對齊 frontend/
 ├── pubspec.yaml
 ├── web/
 ├── tool/

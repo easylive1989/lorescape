@@ -6,7 +6,7 @@
 
 **Architecture:** 兩段式。Stage 1 系統 SplashScreen（flutter_native_splash 產生：深墨底 + 米白 mark，蓋住 `init()` 期間）；Stage 2 Flutter 全螢幕 splash（`CustomPainter`+`PathMetric` 自繪山形描線動畫，固定 ~1.8s 後 `context.go('/')`）。路由以 `/splash` 為 `initialLocation`，播完交給既有 redirect gate。
 
-**Tech Stack:** Flutter 3.38.5、go_router、`CustomPainter`/`PathMetric`（零 runtime 依賴）、`flutter_native_splash`（build-time dev dependency）。
+**Tech Stack:** Flutter 3.44.2、go_router、`CustomPainter`/`PathMetric`（零 runtime 依賴）、`flutter_native_splash`（build-time dev dependency）。
 
 ## Global Constraints
 
