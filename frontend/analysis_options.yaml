@@ -9,6 +9,12 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  exclude:
+    # build/ 底下是建置產物與 SPM 檢出的第三方原始碼（含套件自己的測試），
+    # 不是我們的程式碼，不該讓 analyze --fatal-infos 掛掉。
+    - build/**
+
 linter:
   # The lint rules applied to this project can be customized in the
   # section below to disable rules from the `package:flutter_lints/flutter.yaml`
