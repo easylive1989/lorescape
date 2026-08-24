@@ -1,6 +1,6 @@
 # 龐貝景點包 Flutter 視覺小說引擎 Implementation Plan
 
-> **後記（2026-08-14，路徑於 2026-08-24 更新）**：本計畫寫作時專案暫稱 `vn/`（package `lorescape_vn`），最終定名為 `story/`（`lorescape_story`）；全文的路徑與 package 名已改成定名後的寫法。兩個例外刻意保留當時的 `vn` 字樣，因為它們對應既成事實：各 task 的 commit 訊息（`feat(vn):` 等 scope 與訊息內的路徑，對得上 git history），以及 SharedPreferences 鍵的 `vn.` 前綴（程式碼至今如此）。素材改用 WebP（見最後一個 commit）。
+> **後記（2026-08-14，路徑於 2026-08-24 更新）**：本計畫寫作時專案暫稱 `vn/`（package `lorescape_vn`），最終定名為 `story/`（`lorescape_story`）；全文的路徑與 package 名已改成定名後的寫法。兩個例外刻意保留當時的 `vn` 字樣，因為它們對應既成事實：各 task 的 commit 訊息（`feat(vn):` 等 scope、訊息內的路徑與版本號，一律照當時實際下的那句，對得上 git history），以及 SharedPreferences 鍵的 `vn.` 前綴（程式碼至今如此）。素材改用 WebP（見最後一個 commit）。
 
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -192,7 +192,7 @@ Expected: 測試 PASS、analyze 零問題。
 ```bash
 cd /Users/paulwu/Documents/PLRepo/lorescape
 git add story/
-git commit -m "feat(vn): Flutter 專案骨架，鎖 3.44.2 對齊 frontend"
+git commit -m "feat(vn): Flutter 專案骨架，鎖 3.38.5 對齊 frontend"
 ```
 
 ---
