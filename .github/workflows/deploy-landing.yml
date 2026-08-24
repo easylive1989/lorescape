@@ -6,7 +6,7 @@ name: Deploy Landing
 # The daily-story share pages (/[locale]/story/[date]) are statically
 # generated at build time from Supabase, so the site must be rebuilt after a
 # new story is published or that day's shared link 404s. `schedule` rebuilds
-# every 3 hours (UTC) as a freshness baseline; trigger `workflow_dispatch`
+# three times a day as a freshness baseline; trigger `workflow_dispatch`
 # manually right after publishing for an immediate refresh.
 #
 # Because the publish flow already dispatches this workflow, almost every
@@ -17,7 +17,9 @@ name: Deploy Landing
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 */3 * * *"
+    # 02:00 / 10:00 / 18:00 UTC = 10:00 / 18:00 / 02:00 台北時間。三個時點
+    # 相隔 8 小時，所以 UTC 與台北時間的小時集合剛好一樣。
+    - cron: "0 2,10,18 * * *"
 
 jobs:
   check:
