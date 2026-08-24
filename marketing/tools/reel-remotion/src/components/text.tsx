@@ -6,7 +6,7 @@ import React from "react";
  */
 export const splitHighlights = (
   line: string,
-  highlights: string[],
+  highlights: string[] = [],
 ): { text: string; highlight: boolean }[] => {
   if (highlights.length === 0 || line.length === 0) {
     return [{ text: line, highlight: false }];
@@ -25,14 +25,15 @@ export const splitHighlights = (
 
 export interface HighlightedLineProps {
   line: string;
-  highlights: string[];
+  /** Omitted (or undefined) means "emphasise nothing" — see Beat.highlights. */
+  highlights?: string[];
   highlightColor: string;
   highlightStyle?: "color" | "underline" | "brush";
 }
 
 export const HighlightedLine: React.FC<HighlightedLineProps> = ({
   line,
-  highlights,
+  highlights = [],
   highlightColor,
   highlightStyle = "color",
 }) => {

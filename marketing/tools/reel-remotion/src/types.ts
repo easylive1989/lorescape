@@ -14,8 +14,10 @@ export interface Beat {
   overlay?: "darker";
   /** Narration lines; an empty string marks a stanza break. */
   lines: string[];
-  /** Substrings inside `lines` to emphasise. */
-  highlights: string[];
+  /** Substrings inside `lines` to emphasise. Optional: a beat that emphasises
+   * nothing (the ending beat, typically) may omit the key entirely, and
+   * prepare_story.mjs carries carousel beats over without one. */
+  highlights?: string[];
   /** Spoken (for-the-ear) narration for this beat. Fuller than the on-screen
    * `lines`; the voiceover pipeline (reel_voiceover.py) reads it for TTS. */
   narration?: string;
