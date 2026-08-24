@@ -11,6 +11,9 @@ jobs:
   build-android:
     name: Build & Deploy Android AAB
     runs-on: ubuntu-latest
+    # 歷史上約 11 分鐘。沒有上限的話，卡住的 job 會吃掉 GitHub 預設的 360
+    # 分鐘才被砍。
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: frontend
@@ -128,6 +131,9 @@ jobs:
   build-ios:
     name: Build & Deploy iOS IPA
     runs-on: macos-latest
+    # 歷史上約 19 分鐘。macOS runner 計費是 Linux 的 10 倍，卡住不能放它跑滿
+    # 預設的 360 分鐘（2026-08-24 就發生過：TestFlight 上傳卡住兩小時）。
+    timeout-minutes: 45
     defaults:
       run:
         working-directory: frontend
@@ -240,6 +246,10 @@ jobs:
           echo '${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}' > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
 
       - name: Upload to TestFlight
+        # iTMSTransporter 卡死時 fastlane 不會自己放棄。step 層級超時只讓這
+        # 一步失敗，後面 if: always() 的 keychain 清理照樣會跑（job 層級超時
+        # 是直接取消，清理不保證執行）。
+        timeout-minutes: 20
         run: |
           cd ios
           bundle exec fastlane upload_testflight

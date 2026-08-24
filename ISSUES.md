@@ -6,6 +6,48 @@
 
 ---
 
+## ISSUE-008 — Flutter 升 3.44.2 後 TestFlight 上傳卡兩小時，且 Apple 判定建置失敗
+
+- **發生日**：2026-08-24（`deploy-app.yml` run 32686336935）
+- **影響**：iOS 上架流程。Android 同一跑成功上到 Play internal track
+  （`20260824.0326` / build `51852391`），不受影響
+
+### 現象
+
+1. iOS job 第一次跑掛在 `xcodebuild -downloadPlatform iOS`：
+   `Unable to connect to simulator`，exit 70，36 秒就死。重跑後正常，判斷
+   是 macOS runner 的偶發。
+2. 重跑後 `flutter build ipa --release` 成功（約 6 分鐘），但
+   `Upload to TestFlight` 這一步卡住**兩小時以上**沒有任何輸出。
+3. 同時 App Store Connect 顯示建置版本 `20260824.0342.0 (51853359)`
+   狀態為「失敗」，錯誤是
+   `ITMS-90683: Missing purpose string in Info.plist`，要求
+   `NSPhotoLibraryUsageDescription`。
+
+### 原因
+
+- **建置失敗**：`quill_native_bridge_ios`（`flutter_quill` 的傳遞依賴）在
+  `QuillNativeBridgeImpl.swift` 用了 `PHPhotoLibrary.authorizationStatus()`
+  這個讀取層級的 API，而 `Runner/Info.plist` 只有
+  `NSPhotoLibraryAddUsageDescription`（寫入），缺讀取的
+  `NSPhotoLibraryUsageDescription`。該依賴與 Xcode 版本（26.0.1）在 8/21
+  成功那次就已經是這樣，唯一變動的是 Flutter 3.38.5 → 3.44.2；是新版工具
+  鏈讓那個 symbol 被保留下來，還是 Apple 收緊了檢查，沒有查證到底。
+- **卡兩小時**：`Fastfile` 的 `upload_to_testflight` 帶
+  `skip_waiting_for_build_processing: true`，所以不是在等 Apple 處理；
+  IPA 在 03:50 UTC 就已抵達並被判失敗，fastlane 卻沒有收到收尾就一直掛著。
+  `deploy-app.yml` 當時兩個 job 都沒設 `timeout-minutes`，吃 GitHub 預設的
+  360 分鐘，等於白燒 macOS runner 額度（計費是 Linux 的 10 倍）。
+
+### 當下處理
+
+1. `Runner/Info.plist` 補上 `NSPhotoLibraryUsageDescription`。
+2. `deploy-app.yml` 補 `timeout-minutes`：Android job 30、iOS job 45、
+   `Upload to TestFlight` 這一步 20（step 層級超時才會讓後面
+   `if: always()` 的 keychain 清理照樣執行）。
+
+---
+
 ## ISSUE-007 — wander 圖組模板兩處字級／字型缺陷（同日各撞一次）
 
 - **發生日**：2026-08-19（伽倻古墳群那天的 carousel）
