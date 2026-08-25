@@ -85,15 +85,24 @@ def parse_style_map() -> dict[str, dict]:
         return f"{year}-{int(mm):02d}-{int(dd):02d}"
 
     # 表格列：4 欄（日期｜景點｜DB 標題｜類型）或 5 欄（多一個 style）
+    #
+    # calendar 裡還有其他同樣以 `| M/D |` 開頭的表（期末結算的週別 reach/pv 表、
+    # 各期的「hook 方向」表），欄數也是 4，會被誤判成選點列並覆寫掉景點與類型
+    # （2026-08-25 實際踩到：8/03 的景點被寫成週觸及 18,977、類型寫成 0.97%）。
+    # 兩道護欄：日期後的星期字必填（週別表沒有），DB 標題欄不得含中日文
+    # （hook 方向表的第 3 欄是中文 hook 句）。
     row_re = re.compile(
-        r"^\|\s*(\d{1,2})/(\d{1,2})\s*[一二三四五六日]?\s*\|\s*([^|]+?)\s*\|"
+        r"^\|\s*(\d{1,2})/(\d{1,2})\s*[一二三四五六日]\s*\|\s*([^|]+?)\s*\|"
         r"\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|(?:\s*(謎|閉)\s*\|)?\s*$"
     )
+    cjk_re = re.compile(r"[　-〿一-鿿＀-￯]")
     for line in text.splitlines():
         m = row_re.match(line.strip())
         if not m:
             continue
         mm, dd, place, _title, kind, style = m.groups()
+        if cjk_re.search(_title):
+            continue
         entry = out.setdefault(key_of(mm, dd), {})
         entry["place"] = re.sub(r"\*\*|（.*?）", "", place).strip()
         entry["kind"] = kind.strip()
