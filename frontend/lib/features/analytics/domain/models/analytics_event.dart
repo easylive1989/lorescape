@@ -317,3 +317,100 @@ class HookSelected extends StoryHookAnalyticsEvent {
   @override
   List<Object?> get props => [...super.props, hookIndex, hookCount];
 }
+
+/// Events for expanding a selected hook into the full playable story.
+///
+/// [generationId] joins the request and result, including retries for the
+/// same place. This closes the analytics gap between `hook_selected` and
+/// `narration_started` without pretending a failed generation was a listen.
+sealed class StoryGenerationAnalyticsEvent extends AnalyticsEvent {
+  final String generationId;
+  final String placeId;
+  final String language;
+  final bool usedHook;
+
+  StoryGenerationAnalyticsEvent({
+    super.eventId,
+    required this.generationId,
+    required this.placeId,
+    required this.language,
+    required this.usedHook,
+    super.occurredAt,
+  });
+
+  @override
+  Map<String, dynamic> envelope() => {
+    'generation_id': generationId,
+    'place_id': placeId,
+    'language': language,
+    'used_hook': usedHook,
+  };
+
+  @override
+  List<Object?> get props => [
+    ...super.props,
+    generationId,
+    placeId,
+    language,
+    usedHook,
+  ];
+}
+
+/// Fired immediately before full-story generation starts.
+class StoryGenerationRequested extends StoryGenerationAnalyticsEvent {
+  StoryGenerationRequested({
+    super.eventId,
+    required super.generationId,
+    required super.placeId,
+    required super.language,
+    required super.usedHook,
+    super.occurredAt,
+  });
+
+  @override
+  String get type => 'story_generation_requested';
+
+  @override
+  Map<String, dynamic> payload() => const {};
+}
+
+/// Fired when full-story generation succeeds or fails.
+///
+/// [outcome] is `success` or the stable wire name of the mapped generation
+/// error. Keeping the failure category on the result makes quota, network,
+/// source-quality and backend failures separable in the first-value funnel.
+class StoryGenerationReturned extends StoryGenerationAnalyticsEvent {
+  final String outcome;
+  final int latencyMs;
+  final int contentLength;
+
+  StoryGenerationReturned({
+    super.eventId,
+    required super.generationId,
+    required super.placeId,
+    required super.language,
+    required super.usedHook,
+    required this.outcome,
+    required this.latencyMs,
+    required this.contentLength,
+    super.occurredAt,
+  });
+
+  @override
+  String get type => 'story_generation_returned';
+
+  @override
+  Map<String, dynamic> payload() => {
+    'outcome': outcome,
+    'latency_ms': latencyMs,
+    'content_length': contentLength,
+  };
+
+  @override
+  List<Object?> get props => [
+    ...super.props,
+    outcome,
+    latencyMs,
+    contentLength,
+  ];
+}

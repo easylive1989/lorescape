@@ -5,6 +5,9 @@
 // that real users hit when the network blips.
 
 import 'package:context_app/core/errors/app_error.dart';
+import 'package:context_app/features/analytics/domain/models/analytics_event.dart';
+import 'package:context_app/features/analytics/domain/services/analytics_emitter.dart';
+import 'package:context_app/features/analytics/providers.dart';
 import 'package:context_app/features/explore/domain/models/place.dart';
 import 'package:context_app/features/explore/domain/models/place_category.dart';
 import 'package:context_app/features/explore/domain/models/place_location.dart';
@@ -22,6 +25,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../fakes/in_memory_journey_repository.dart';
 import '../../../fakes/in_memory_trip_repository.dart';
+import '../../../fakes/recording_analytics_service.dart';
 
 const _place = Place(
   id: 'p',
@@ -52,9 +56,11 @@ void main() {
           'recovery text',
         ]);
         final journey = InMemoryJourneyRepository();
+        final analytics = RecordingAnalyticsService();
         final container = _buildContainer(
           narration: narration,
           journey: journey,
+          analytics: analytics,
         );
         addTearDown(container.dispose);
 
@@ -84,6 +90,23 @@ void main() {
           await journey.getAll(),
           hasLength(1),
           reason: 'a successful retry should persist the journey entry',
+        );
+
+        final requested = analytics.events
+            .whereType<StoryGenerationRequested>()
+            .toList();
+        final returned = analytics.events
+            .whereType<StoryGenerationReturned>()
+            .toList();
+        expect(requested, hasLength(2));
+        expect(returned.map((event) => event.outcome), ['network', 'success']);
+        expect(returned.last.contentLength, greaterThan(0));
+        expect(returned.first.generationId, requested.first.generationId);
+        expect(returned.last.generationId, requested.last.generationId);
+        expect(
+          requested.first.generationId,
+          isNot(requested.last.generationId),
+          reason: 'each retry must be measurable as a separate attempt',
         );
       },
     );
@@ -130,7 +153,9 @@ void main() {
 ProviderContainer _buildContainer({
   required _SequencedNarrationService narration,
   InMemoryJourneyRepository? journey,
+  RecordingAnalyticsService? analytics,
 }) {
+  final analyticsService = analytics ?? RecordingAnalyticsService();
   return ProviderContainer(
     overrides: [
       narrationServiceProvider.overrideWithValue(narration),
@@ -138,6 +163,12 @@ ProviderContainer _buildContainer({
         journey ?? InMemoryJourneyRepository(),
       ),
       tripRepositoryProvider.overrideWithValue(InMemoryTripRepository()),
+      analyticsEmitterProvider.overrideWithValue(
+        AnalyticsEmitter(
+          consentEnabled: () async => true,
+          service: analyticsService,
+        ),
+      ),
     ],
   );
 }

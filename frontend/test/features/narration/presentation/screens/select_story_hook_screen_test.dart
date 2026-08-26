@@ -257,6 +257,8 @@ void main() {
           'hooks_requested',
           'hooks_returned',
           'hook_selected',
+          'story_generation_requested',
+          'story_generation_returned',
         ]);
 
         final returned = analytics.firstOfType<HooksReturned>()!;
@@ -268,6 +270,11 @@ void main() {
         expect(selected.hookCount, 2);
         expect(selected.placeId, isNotEmpty);
         expect(selected.language, 'zh-TW');
+
+        final generated = analytics.firstOfType<StoryGenerationReturned>()!;
+        expect(generated.outcome, 'success');
+        expect(generated.usedHook, isTrue);
+        expect(generated.contentLength, greaterThan(0));
       },
     );
 

@@ -1,5 +1,7 @@
 import 'package:context_app/core/errors/app_error.dart';
 import 'package:context_app/core/errors/app_error_type.dart';
+import 'package:context_app/features/analytics/domain/models/analytics_event.dart';
+import 'package:context_app/features/analytics/providers.dart';
 import 'package:context_app/features/explore/domain/models/place.dart';
 import 'package:context_app/features/journey/domain/models/journey_entry.dart';
 import 'package:context_app/features/journey/providers.dart';
@@ -87,8 +89,19 @@ class NarrationGenerationController
     required Language language,
     StoryHook? hook,
   }) async {
+    final generationId = const Uuid().v4();
+    final stopwatch = Stopwatch()..start();
+    final usedHook = hook != null;
     state = const NarrationGenerationState(
       status: NarrationGenerationStatus.generating,
+    );
+    _emit(
+      StoryGenerationRequested(
+        generationId: generationId,
+        placeId: place.id,
+        language: language.code,
+        usedHook: usedHook,
+      ),
     );
 
     try {
@@ -102,11 +115,34 @@ class NarrationGenerationController
         status: NarrationGenerationStatus.success,
         content: content,
       );
+      _emit(
+        StoryGenerationReturned(
+          generationId: generationId,
+          placeId: place.id,
+          language: language.code,
+          usedHook: usedHook,
+          outcome: 'success',
+          latencyMs: stopwatch.elapsedMilliseconds,
+          contentLength: content.text.length,
+        ),
+      );
     } on AppError catch (e) {
+      final errorType = _mapAppError(e.type);
       state = NarrationGenerationState(
         status: NarrationGenerationStatus.error,
-        errorType: _mapAppError(e.type),
+        errorType: errorType,
         errorMessage: e.message,
+      );
+      _emit(
+        StoryGenerationReturned(
+          generationId: generationId,
+          placeId: place.id,
+          language: language.code,
+          usedHook: usedHook,
+          outcome: errorType.wireName,
+          latencyMs: stopwatch.elapsedMilliseconds,
+          contentLength: 0,
+        ),
       );
     }
   }
@@ -154,4 +190,20 @@ class NarrationGenerationController
       // Fail silently - don't affect the generation flow.
     }
   }
+
+  void _emit(AnalyticsEvent event) =>
+      ref.read(analyticsEmitterProvider).emit(event);
+}
+
+extension on NarrationGenerationErrorType {
+  String get wireName => switch (this) {
+    NarrationGenerationErrorType.network => 'network',
+    NarrationGenerationErrorType.server => 'server',
+    NarrationGenerationErrorType.configurationError => 'configuration_error',
+    NarrationGenerationErrorType.contentGenerationFailed =>
+      'content_generation_failed',
+    NarrationGenerationErrorType.insufficientSource => 'insufficient_source',
+    NarrationGenerationErrorType.quotaExceeded => 'quota_exceeded',
+    NarrationGenerationErrorType.unknown => 'unknown',
+  };
 }

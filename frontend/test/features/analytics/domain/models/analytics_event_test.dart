@@ -241,6 +241,40 @@ void main() {
 
         expect(types, ['requested', 'returned', 'selected']);
       });
+
+      test(
+        'should let callers pattern-match every story-generation subtype',
+        () {
+          final events = <StoryGenerationAnalyticsEvent>[
+            StoryGenerationRequested(
+              generationId: 'g',
+              placeId: 'p',
+              language: 'zh-TW',
+              usedHook: true,
+            ),
+            StoryGenerationReturned(
+              generationId: 'g',
+              placeId: 'p',
+              language: 'zh-TW',
+              usedHook: true,
+              outcome: 'success',
+              latencyMs: 123,
+              contentLength: 456,
+            ),
+          ];
+
+          final types = events
+              .map(
+                (event) => switch (event) {
+                  StoryGenerationRequested() => 'requested',
+                  StoryGenerationReturned() => 'returned',
+                },
+              )
+              .toList();
+
+          expect(types, ['requested', 'returned']);
+        },
+      );
     });
 
     group('story hook events', () {
@@ -302,6 +336,37 @@ void main() {
           'hook_index': null,
           'hook_count': 0,
           'selected_default': true,
+        });
+      });
+    });
+
+    group('story generation events', () {
+      test('given generation succeeds, when serialising, then the joined '
+          'result includes latency and content length', () {
+        final event = StoryGenerationReturned(
+          eventId: 'e1',
+          generationId: 'g1',
+          placeId: 'place-1',
+          language: 'zh-TW',
+          usedHook: true,
+          outcome: 'success',
+          latencyMs: 842,
+          contentLength: 1200,
+          occurredAt: DateTime.utc(2026, 8, 26, 12),
+        );
+
+        expect(event.type, 'story_generation_returned');
+        expect(event.toJson(), {
+          'event_id': 'e1',
+          'event_type': 'story_generation_returned',
+          'occurred_at': '2026-08-26T12:00:00.000Z',
+          'generation_id': 'g1',
+          'place_id': 'place-1',
+          'language': 'zh-TW',
+          'used_hook': true,
+          'outcome': 'success',
+          'latency_ms': 842,
+          'content_length': 1200,
         });
       });
     });
