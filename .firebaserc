@@ -7,9 +7,6 @@
       "hosting": {
         "landing": [
           "instant-explore-7b442"
-        ],
-        "story": [
-          "story-lorescape"
         ]
       }
     }

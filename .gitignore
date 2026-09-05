@@ -79,16 +79,3 @@ dashboard/out/
 # Graphify 產出的知識圖譜（本地分析工具，不進版控）
 graphify-out/
 dashboard/out/
-
-# writer/ 是 Obsidian vault：劇本、製作規範、出圖腳本與美術定版原圖都進版控。
-# 那 61 張定版圖不可重生——AI 出圖非決定性，重跑會得到不同的臉，美術驗收記錄
-# 顯示七輪才收斂到一致。以下四類不收，理由各異：
-
-# 去背與對齊的快取，import_pack.py 可完整重生
-writer/創作/*/美術測試/_processed/
-# distribute.py 從 美術測試/ 複製過去的複本（實測 116 張全部同內容）
-writer/創作/*/stories/*/assets/
-# 被淘汰的舊輪次
-writer/創作/*/美術測試/_作廢_*/
-# 重出前的壞圖備份
-writer/創作/*/美術測試/_壞素材備份/
