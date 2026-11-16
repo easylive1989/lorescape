@@ -88,9 +88,12 @@ jobs:
           ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts 2>/dev/null
           # .env 與 service-account.json 只存在於 VPS（不進版控），必須排除，
           # 否則 --delete 會把它們清掉，api 起不來。
+          # docker-compose.override.yml 也只在 VPS 上：它把 api 接上 VPS 的共用反向代理網路，
+          # 被清掉的話容器照樣 healthy，但 api.lorescape.app 對外是 502（2026-11-16 發生過）。
           rsync -az --delete \
             --exclude='.env' \
             --exclude='service-account.json' \
+            --exclude='docker-compose.override.yml' \
             -e "ssh -i ~/.ssh/deploy_key" \
             backend/ "$VPS_USER@$VPS_HOST:/opt/lorescape/backend/"
 
