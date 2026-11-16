@@ -86,7 +86,8 @@ Triggered manually via the GitHub Actions UI (`deploy-backend.yml`,
 Plain `master` pushes only run CI (lint + unit tests); they do **not** deploy.
 
 Required GitHub secrets:
-- `VPS_HOST` — VPS IP or hostname
+- `VPS_HOST` — the VPS's address on the tailnet (the deploy jobs join Tailscale first; the VPS's SSH is not
+  reached over its public IP)
 - `VPS_USER` — SSH user (e.g. `root`)
 - `VPS_SSH_KEY` — SSH private key with permission to write `/opt/lorescape`
 

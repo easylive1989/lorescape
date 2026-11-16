@@ -49,11 +49,28 @@ jobs:
     name: Deploy Backend to VPS
     runs-on: ubuntu-latest
     needs: [push-supabase-db]
+    permissions:
+      contents: read
+      # Tailscale 用這個 job 的 GitHub OIDC token 換臨時金鑰
+      id-token: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           ref: master
+
+      # VPS 的 SSH 不走公網，改走 Tailscale：runner 以臨時的 tag:ci 節點加入 tailnet，job 結束就移除；
+      # tailnet 的 policy 只讓 tag:ci 連 VPS 的 tcp:22。認證用 GitHub OIDC（需要上面的 id-token: write），
+      # 不存長期金鑰；Tailscale 那邊的 trust credential 只認這個 repo 的 master 分支，
+      # 所以要從 master 觸發。client ID 與 audience 不是機密。VPS_HOST secret 是 VPS 的 tailnet 位址。
+      - name: Join the tailnet
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: TvVFsiXw1i11CNTRL-kJxwReLwzA11CNTRL
+          audience: api.tailscale.com/TvVFsiXw1i11CNTRL-kJxwReLwzA11CNTRL
+          tags: tag:ci
+          # 等到連得上 VPS 再往下走
+          ping: ${{ secrets.VPS_HOST }}
 
       # code 由 deploy 推上去，VPS 不再自己 git fetch：VPS 的 remote 是匿名
       # HTTPS，repo 於 2026-08-07 轉為 private 後就再也拉不動（deploy 全掛）。
